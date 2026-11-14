@@ -24,6 +24,8 @@ pub(crate) fn nav_selected(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts
 		close_locked_chats(state, parts);
 	}
 	parts.conversations_parts.calls_btn_panel.show(idx == 6);
+	parts.conversations_parts.create_call_link_btn.show(idx == 6);
+	parts.conversations_parts.join_call_link_btn.show(idx == 6);
 	parts.conversations_parts.search_label.set_label(crate::i18n::tr(if idx == 6 {
 		"Search or enter phone number to place call"
 	} else if idx == 1 {

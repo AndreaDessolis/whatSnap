@@ -1623,6 +1623,15 @@ pub fn bind_input_handlers(
 		let _ = tx_join_call.send(UiCommand::JoinGroupCall(None));
 	});
 
+	let tx_create_link = ui_tx.clone();
+	parts.conversations_parts.create_call_link_btn.on_click(move |_| {
+		let _ = tx_create_link.send(UiCommand::CreateCallLink);
+	});
+	let tx_join_link = ui_tx.clone();
+	parts.conversations_parts.join_call_link_btn.on_click(move |_| {
+		let _ = tx_join_link.send(UiCommand::AskCallLink);
+	});
+
 	let tx_calls_call = ui_tx.clone();
 	parts.conversations_parts.calls_call_btn.on_click(move |_| {
 		let _ = tx_calls_call.send(UiCommand::PlaceCall);

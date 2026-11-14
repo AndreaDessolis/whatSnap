@@ -15,6 +15,10 @@ pub struct ConversationsPanelParts {
 	pub locked_chats_btn: Button,
 	pub post_media_status_btn: Button,
 	pub status_privacy_btn: Button,
+	/// The Calls tab's own buttons for call links, as WA Web has at the top
+	/// of its calls list (also under the menu bar's Calls menu).
+	pub create_call_link_btn: Button,
+	pub join_call_link_btn: Button,
 
 	pub conversations_label: StaticText,
 	pub conversations_list: ListBox,
@@ -548,6 +552,20 @@ pub fn build_conversations_panel(parent: &impl WxWidget) -> ConversationsPanelPa
 	);
 	status_privacy_btn.show(false);
 
+	let call_link_sizer = BoxSizer::builder(Orientation::Horizontal).build();
+	let create_call_link_btn = Button::builder(&panel).with_label(crate::i18n::tr("Create call link")).build();
+	call_link_sizer.add(&create_call_link_btn, 1, SizerFlag::Right, 5);
+	let join_call_link_btn = Button::builder(&panel).with_label(crate::i18n::tr("Join call link")).build();
+	call_link_sizer.add(&join_call_link_btn, 1, SizerFlag::empty(), 0);
+	left_sizer.add_sizer(
+		&call_link_sizer,
+		0,
+		SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right | SizerFlag::Bottom,
+		10,
+	);
+	create_call_link_btn.show(false);
+	join_call_link_btn.show(false);
+
 	let list_divider = StaticLine::builder(&panel).build();
 	theme::style_divider(&list_divider);
 	left_sizer.add(&list_divider, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 10);
@@ -963,6 +981,8 @@ pub fn build_conversations_panel(parent: &impl WxWidget) -> ConversationsPanelPa
 		locked_chats_btn,
 		post_media_status_btn,
 		status_privacy_btn,
+		create_call_link_btn,
+		join_call_link_btn,
 		conversations_label,
 		conversations_list,
 		calls_btn_panel,
