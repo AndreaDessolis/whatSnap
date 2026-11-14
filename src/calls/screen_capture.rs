@@ -6,8 +6,9 @@ use windows::{
 			Gdi::{
 				BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLACKNESS, CAPTUREBLT, CreateCompatibleBitmap,
 				CreateCompatibleDC, CreateDIBSection, DIB_RGB_COLORS, DeleteDC, DeleteObject, EnumDisplayMonitors,
-				GetDC, GetMonitorInfoW, HALFTONE, HBITMAP, HDC, HGDIOBJ, HMONITOR, MONITORINFO, PatBlt, ReleaseDC,
-				SRCCOPY, SelectObject, SetBrushOrgEx, SetStretchBltMode, StretchBlt,
+				GetDC, GetMonitorInfoW, HALFTONE, HBITMAP, HDC, HGDIOBJ, HMONITOR, MONITOR_DEFAULTTONEAREST,
+				MONITORINFO, MonitorFromPoint, PatBlt, ReleaseDC, SRCCOPY, SelectObject, SetBrushOrgEx,
+				SetStretchBltMode, StretchBlt, StretchDIBits,
 			},
 		},
 		Storage::Xps::{PRINT_WINDOW_FLAGS, PrintWindow},
@@ -204,6 +205,9 @@ pub(crate) struct ScreenCapture {
 	width: i32,
 	height: i32,
 	surface: Option<WindowSurface>,
+	/// Windows Graphics Capture, when Windows offers it for the target; the
+	/// GDI copy above is the fallback.
+	wgc: Option<crate::calls::wgc_capture::WgcCapture>,
 }
 
 impl ScreenCapture {
@@ -247,6 +251,22 @@ impl ScreenCapture {
 			let previous = SelectObject(mem_dc, bitmap.into());
 			SetStretchBltMode(mem_dc, HALFTONE);
 			let _ = SetBrushOrgEx(mem_dc, 0, 0, None);
+			let wgc_target = match target {
+				ShareTarget::Window(hwnd) => crate::calls::wgc_capture::WgcTarget::Window(HWND(hwnd as *mut _)),
+				ShareTarget::Monitor { left, top, width, height } => crate::calls::wgc_capture::WgcTarget::Monitor(
+					MonitorFromPoint(POINT { x: left + width / 2, y: top + height / 2 }, MONITOR_DEFAULTTONEAREST),
+				),
+			};
+			let wgc = match crate::calls::wgc_capture::WgcCapture::new(wgc_target) {
+				Ok(wgc) => {
+					crate::calls::video_send::log_line("Screen capture: Windows Graphics Capture");
+					Some(wgc)
+				}
+				Err(e) => {
+					crate::calls::video_send::log_line(&format!("Screen capture: GDI (Graphics Capture refused: {e})"));
+					None
+				}
+			};
 			Ok(Self {
 				target,
 				screen_dc,
@@ -257,6 +277,7 @@ impl ScreenCapture {
 				width: width as i32,
 				height: height as i32,
 				surface: None,
+				wgc,
 			})
 		}
 	}
@@ -266,6 +287,23 @@ impl ScreenCapture {
 	}
 
 	pub(crate) fn grab_nv12(&mut self, out: &mut [u8]) -> crate::error::Result<()> {
+		if let Some(wgc) = self.wgc.as_mut() {
+			match wgc.update() {
+				Ok(_) if wgc.width > 0 => {
+					self.draw_wgc_frame();
+					let bgra =
+						unsafe { std::slice::from_raw_parts(self.pixels, (self.width * self.height * 4) as usize) };
+					bgra_to_nv12(bgra, self.width as usize, self.height as usize, out);
+					return Ok(());
+				}
+				// No picture yet: GDI's until the first one comes.
+				Ok(_) => {}
+				Err(e) => {
+					crate::calls::video_send::log_line(&format!("Graphics Capture failed, back to GDI: {e}"));
+					self.wgc = None;
+				}
+			}
+		}
 		let (origin, size, placement) = match self.target {
 			ShareTarget::Monitor { left, top, width, height } => {
 				let placement = fit(width, height, self.width, self.height);
@@ -347,6 +385,44 @@ impl ScreenCapture {
 				crate::error::bail!("{}", crate::i18n::tr("the window couldn't be read"));
 			}
 			Ok(((rect.left, rect.top), (width, height), placement))
+		}
+	}
+
+	/// Scales the Graphics Capture picture into the frame, black around it.
+	/// The pointer is already in it.
+	fn draw_wgc_frame(&self) {
+		let Some(wgc) = self.wgc.as_ref() else { return };
+		let (width, height) = (wgc.width as i32, wgc.height as i32);
+		let placement = fit(width, height, self.width, self.height);
+		let info = BITMAPINFO {
+			bmiHeader: BITMAPINFOHEADER {
+				biSize: size_of::<BITMAPINFOHEADER>() as u32,
+				biWidth: width,
+				biHeight: -height,
+				biPlanes: 1,
+				biBitCount: 32,
+				biCompression: BI_RGB.0,
+				..Default::default()
+			},
+			..Default::default()
+		};
+		unsafe {
+			let _ = PatBlt(self.mem_dc, 0, 0, self.width, self.height, BLACKNESS);
+			StretchDIBits(
+				self.mem_dc,
+				placement.x,
+				placement.y,
+				placement.width,
+				placement.height,
+				0,
+				0,
+				width,
+				height,
+				Some(wgc.pixels.as_ptr() as *const _),
+				&info,
+				DIB_RGB_COLORS,
+				SRCCOPY,
+			);
 		}
 	}
 
@@ -449,7 +525,12 @@ mod tests {
 		let primary = ShareTarget::Monitor { left: 0, top: 0, width: 1920, height: 1080 };
 		let mut capture = ScreenCapture::new(primary, 1280, 720).unwrap();
 		let mut frame = vec![0u8; 1280 * 720 * 3 / 2];
-		capture.grab_nv12(&mut frame).unwrap();
+		// Graphics Capture's first frame takes a moment to come.
+		for _ in 0..10 {
+			capture.grab_nv12(&mut frame).unwrap();
+			std::thread::sleep(std::time::Duration::from_millis(50));
+		}
+		eprintln!("captured with {}", if capture.wgc.is_some() { "Graphics Capture" } else { "GDI" });
 		let luma = &frame[..1280 * 720];
 		let (darkest, brightest) = (luma.iter().min().unwrap(), luma.iter().max().unwrap());
 		assert!(brightest - darkest > 32, "the grab is one flat shade ({darkest}..{brightest})");

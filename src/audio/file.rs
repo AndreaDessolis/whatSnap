@@ -108,7 +108,7 @@ impl MfSource {
 		let (format_tx, format_rx) = sync_channel(1);
 		let (chunk_tx, chunks) = sync_channel(CHUNKS_AHEAD);
 		let path = path.to_string();
-		std::thread::spawn(move || {
+		crate::util::spawn_named("audio file decode", move || {
 			let _com = ComGuard::new();
 			foundation::ensure_started();
 			unsafe { decode(&path, start, &format_tx, &chunk_tx) };

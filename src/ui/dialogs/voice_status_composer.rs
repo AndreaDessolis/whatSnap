@@ -284,7 +284,7 @@ pub fn show_voice_status_composer(parent: &impl WxWidget, state: &Rc<RefCell<App
 			};
 			let (_, background) = STATUS_PALETTE[colour_idx.get()];
 			let ws_tx = state.borrow().ws_tx.clone();
-			std::thread::spawn(move || {
+			crate::util::spawn_named("voice status composer", move || {
 				let waveform = compute_voice_waveform(&path);
 				let ogg_path = path.replace(".wav", ".ogg");
 				let converted = convert_wav_to_opus_ogg(&path, &ogg_path);

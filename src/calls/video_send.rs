@@ -647,6 +647,53 @@ fn send_sample(output: &mut Output, sample: &IMFSample) -> crate::error::Result<
 	Ok(())
 }
 
+/// Encodes `count` frames of one NV12 colour the way a call sends them, and
+/// returns the access units, for the receive side's decoder test.
+#[cfg(test)]
+pub(crate) fn encode_solid_frames_for_test(colour: (u8, u8, u8), count: usize) -> Vec<Vec<u8>> {
+	use std::{io::Read, net::TcpListener};
+	let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+	let port = listener.local_addr().unwrap().port();
+	let reader = std::thread::spawn(move || {
+		let (mut conn, _) = listener.accept().unwrap();
+		let mut units = Vec::new();
+		let mut header = [0u8; 8];
+		while conn.read_exact(&mut header).is_ok() {
+			let mut unit = vec![0u8; u32::from_be_bytes(header[..4].try_into().unwrap()) as usize];
+			conn.read_exact(&mut unit).unwrap();
+			units.push(unit);
+		}
+		units
+	});
+	let mut output = open_output(port, TARGET_FPS, TARGET_BITRATE).unwrap();
+	let (w, h) = (TARGET_WIDTH as usize, TARGET_HEIGHT as usize);
+	let mut frame = vec![colour.0; w * h];
+	frame.extend(std::iter::repeat_n([colour.1, colour.2], w * h / 4).flatten());
+	let no_keyframe = Arc::new(AtomicBool::new(false));
+	for i in 0..count {
+		unsafe {
+			let buffer = MFCreateMemoryBuffer(frame.len() as u32).unwrap();
+			let mut ptr: *mut u8 = std::ptr::null_mut();
+			buffer.Lock(&mut ptr, None, None).unwrap();
+			std::ptr::copy_nonoverlapping(frame.as_ptr(), ptr, frame.len());
+			buffer.Unlock().unwrap();
+			buffer.SetCurrentLength(frame.len() as u32).unwrap();
+			let sample = MFCreateSample().unwrap();
+			sample.AddBuffer(&buffer).unwrap();
+			sample.SetSampleTime(i as i64 * 333_333).unwrap();
+			sample.SetSampleDuration(333_333).unwrap();
+			encode(&mut output, &sample, &no_keyframe).unwrap();
+		}
+	}
+	unsafe {
+		let _ = output.encoder.ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+		let _ = output.encoder.ProcessMessage(windows::Win32::Media::MediaFoundation::MFT_MESSAGE_COMMAND_DRAIN, 0);
+	}
+	let _ = drain_encoder_output(&mut output);
+	drop(output);
+	reader.join().unwrap()
+}
+
 #[cfg(test)]
 mod tests {
 	use std::{io::Read, net::TcpListener};

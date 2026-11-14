@@ -115,7 +115,7 @@ pub fn track_foreground() {
 			DispatchMessageW, EVENT_SYSTEM_FOREGROUND, GetMessageW, MSG, TranslateMessage, WINEVENT_OUTOFCONTEXT,
 		},
 	};
-	std::thread::spawn(|| unsafe {
+	crate::util::spawn_named("focus watch", || unsafe {
 		let hook = SetWinEventHook(
 			EVENT_SYSTEM_FOREGROUND,
 			EVENT_SYSTEM_FOREGROUND,
@@ -144,7 +144,7 @@ pub fn restore_previous_after_toast() {
 	if raw == 0 {
 		return;
 	}
-	std::thread::spawn(move || {
+	crate::util::spawn_named("focus restore", move || {
 		let target = HWND(raw as *mut _);
 		for _ in 0..12 {
 			std::thread::sleep(std::time::Duration::from_millis(100));

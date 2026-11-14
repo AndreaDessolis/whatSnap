@@ -103,7 +103,7 @@ fn decoder() -> &'static mpsc::Sender<DecodeRequest> {
 	static DECODER: std::sync::OnceLock<mpsc::Sender<DecodeRequest>> = std::sync::OnceLock::new();
 	DECODER.get_or_init(|| {
 		let (tx, rx) = mpsc::channel::<DecodeRequest>();
-		std::thread::spawn(move || {
+		crate::util::spawn_named("thumbnail decoder", move || {
 			use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize};
 			let initialized = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }.is_ok();
 			for (id, path, w, h) in rx {

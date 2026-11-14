@@ -148,8 +148,9 @@ func (acc *Account) isOwnJID(jid types.JID) bool {
 
 // peerVideoEvent maps the raw state of a <video> stanza from the other side
 // of the call to the call_video_state event the frontend announces, or ""
-// for states that don't need announcing. 4/5 (upgrade accept/reject) only
-// answer an upgrade we asked for, and we never ask.
+// for states that don't need announcing. 4 (upgrade accept) needs nothing:
+// the peer's video follows. 5 answers an upgrade we asked for (StartVideo);
+// 8 withdraws one the peer asked for.
 func peerVideoEvent(raw int) string {
 	switch raw {
 	case signaling.VideoStateEnabled:
@@ -158,6 +159,10 @@ func peerVideoEvent(raw int) string {
 		return "off"
 	case signaling.VideoStateUpgradeRequest, signaling.VideoStateUpgradeRequestV2:
 		return "upgrade_requested"
+	case signaling.VideoStateUpgradeReject:
+		return "upgrade_rejected"
+	case signaling.VideoStateUpgradeCancel:
+		return "upgrade_cancelled"
 	}
 	return ""
 }
@@ -204,11 +209,26 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 			}
 		}
 
+		// The peer's video, camera or shared screen, for the app to show.
+		videoInPort := 0
+		if receiver, rport, err := NewVideoReceiveBridge(call.RequestPeerVideoKeyframe); err != nil {
+			log.Println("Failed to create video receive bridge:", err)
+		} else {
+			videoInPort = rport
+			acc.activeVideoBridgesMutex.Lock()
+			acc.activeVideoReceivers[call.ID()] = receiver
+			acc.activeVideoBridgesMutex.Unlock()
+			call.OnParticipantVideoFrame(receiver.Offer)
+			call.OnParticipantScreenFrame(receiver.Offer)
+			go receiver.Run()
+		}
+
 		acc.broadcastEvent("call_connected", map[string]interface{}{
-			"call_id":     call.ID(),
-			"audio_port":  port,
-			"video_port":  videoPort,
-			"screen_port": screenPort,
+			"call_id":       call.ID(),
+			"audio_port":    port,
+			"video_port":    videoPort,
+			"screen_port":   screenPort,
+			"video_in_port": videoInPort,
 		})
 	})
 	call.OnEnd(func(reason string) {
@@ -233,6 +253,12 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 		if bridge, ok := acc.activeScreenBridges[call.ID()]; ok {
 			bridge.Close()
 			delete(acc.activeScreenBridges, call.ID())
+		}
+		if receiver, ok := acc.activeVideoReceivers[call.ID()]; ok {
+			call.OnParticipantVideoFrame(nil)
+			call.OnParticipantScreenFrame(nil)
+			receiver.Close()
+			delete(acc.activeVideoReceivers, call.ID())
 		}
 		acc.activeVideoBridgesMutex.Unlock()
 		acc.forgetScreenShare(call.ID())
@@ -266,6 +292,21 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 		event := peerVideoEvent(vs.Raw)
 		if event == "" {
 			return
+		}
+		if event == "upgrade_requested" {
+			// WA's engine accepts a peer's switch to video by itself
+			// (handle_peer_video_auto_accept_upgrade in the voip wasm), and
+			// the requester gives up after 5 s (call_video_upgrade_timer,
+			// 5000 ms), so there is no time to ask. Our camera stays off.
+			go func() {
+				if err := call.AcceptVideo(); err != nil {
+					log.Println("Failed to accept the peer's video:", err)
+					acc.broadcastEvent("call_video_state", map[string]string{
+						"call_id":    call.ID(),
+						"peer_video": "upgrade_failed",
+					})
+				}
+			}()
 		}
 		acc.broadcastEvent("call_video_state", map[string]string{
 			"call_id":    call.ID(),

@@ -43,7 +43,15 @@ unsafe extern "system" fn on_fault_raised(info: *mut EXCEPTION_POINTERS) -> i32 
 			let info = &record.ExceptionInformation[..(record.NumberParameters as usize).min(2)];
 			append(
 				"crash.log",
-				&format!("fault {code:#010x} raised at {} ({info:x?}), stack:{}", describe(address), stack()),
+				&format!(
+					"fault {code:#010x} raised at {} ({info:x?}) in build {}, stack:{}
+named stack:
+{}",
+					describe(address),
+					env!("WHATSNAP_SHORT_HASH"),
+					stack(),
+					named_stack()
+				),
 			);
 		}
 	}
@@ -54,6 +62,19 @@ fn stack() -> String {
 	let mut frames = [std::ptr::null_mut(); 32];
 	let count = unsafe { RtlCaptureStackBackTrace(0, &mut frames, None) } as usize;
 	frames[..count].iter().map(|&frame| format!("\n    {}", describe(frame as usize))).collect()
+}
+
+/// The same stack with function names and source lines, read from the .pdb
+/// beside the exe: a build of your own has one, so its crashes name the code.
+/// A copy without it gets addresses only, which the raw stack above already has.
+fn named_stack() -> String {
+	let trace = std::backtrace::Backtrace::force_capture().to_string();
+	// The frames of the handler and the exception dispatch come first and say
+	// nothing about the crash; 40 frames is plenty for what's below them.
+	trace.lines().take(80).collect::<Vec<_>>().join(
+		"
+",
+	)
 }
 
 fn describe(address: usize) -> String {
@@ -101,5 +122,15 @@ fn module_of(address: usize) -> Option<(String, usize)> {
 		let path = String::from_utf16_lossy(&path[..len.min(path.len())]);
 		let name = path.rsplit('\\').next().unwrap_or(&path).to_string();
 		Some((name, module.0 as usize))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	#[test]
+	fn the_named_stack_names_the_code() {
+		let stack = super::named_stack();
+		assert!(stack.contains("the_named_stack_names_the_code"), "no function names in:\n{stack}");
+		assert!(stack.contains("crash_log.rs"), "no source lines in:\n{stack}");
 	}
 }

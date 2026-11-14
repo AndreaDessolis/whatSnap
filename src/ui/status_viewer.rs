@@ -165,6 +165,7 @@ pub(crate) fn show(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, start
 	// A dialog built per use must be destroyed, or it and every closure bound
 	// to it live on hidden.
 	viewer.dialog.destroy();
+	crate::platform::memory::give_back_memory_soon();
 	viewer.outcome.borrow_mut().take().unwrap_or(ViewerOutcome::Closed)
 }
 

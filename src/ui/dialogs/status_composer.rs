@@ -599,7 +599,7 @@ fn build_media_status_dialog(
 		let ws_tx = state_ok.borrow().ws_tx.clone();
 		if media_type_ok == "video" {
 			let path_thumb = path_ok.clone();
-			std::thread::spawn(move || {
+			crate::util::spawn_named("status composer", move || {
 				if let Some(png) = crate::media::video_thumbnail::first_frame_png(&path_thumb) {
 					payload["data"]["thumbnail"] = serde_json::json!(crate::util::base64(&png));
 				}

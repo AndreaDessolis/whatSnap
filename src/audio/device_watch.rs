@@ -48,7 +48,7 @@ impl IMMNotificationClient_Impl for Watcher_Impl {
 /// created it, so this thread just blocks forever after registering instead
 /// of returning and dropping them (which would unregister the callback).
 pub fn start(ui_tx: UiCommandSender) {
-	std::thread::spawn(move || unsafe {
+	crate::util::spawn_named("audio device watch", move || unsafe {
 		if CoInitializeEx(None, COINIT_MULTITHREADED).is_err() {
 			return;
 		}

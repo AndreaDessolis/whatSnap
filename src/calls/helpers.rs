@@ -526,20 +526,20 @@ pub(crate) fn format_call_window_title(
 /// say who sent it). `was_on` is their last known camera state, so a
 /// repeated state isn't announced twice.
 ///
-/// "upgrade_requested" means the PEER wants to add video so THEY can send
-/// us their camera - unrelated to whether we're sending ours. Receiving and
-/// rendering incoming video is a separate, later piece of work (see
-/// [[video_calls_work_status]]), so this app never calls `AcceptVideo()` and
-/// just says so.
+/// "upgrade_requested" means the PEER switched a voice call to video so THEY
+/// can send us their camera - unrelated to whether we're sending ours. The
+/// backend accepts it straight away, as WhatsApp's own engine does, so it
+/// reads like their camera coming on. "upgrade_rejected" answers our own
+/// switch to video; "upgrade_failed" is our accept not going through.
 pub(crate) fn peer_video_announcement(event: &str, was_on: Option<bool>, peer: Option<&str>) -> Option<String> {
 	let who = peer.unwrap_or_else(|| crate::i18n::tr("Someone"));
 	match event {
-		"on" if was_on != Some(true) => Some(format!("{who} {}", crate::i18n::tr("turned their camera on."))),
+		"on" | "upgrade_requested" if was_on != Some(true) => {
+			Some(format!("{who} {}", crate::i18n::tr("turned their camera on.")))
+		}
 		"off" if was_on != Some(false) => Some(format!("{who} {}", crate::i18n::tr("turned their camera off."))),
-		"upgrade_requested" => Some(format!(
-			"{who} {}",
-			crate::i18n::tr("wants to switch to video. Turn on your camera (Ctrl+Shift+V) to switch to video.")
-		)),
+		"upgrade_rejected" => Some(format!("{who} {}", crate::i18n::tr("didn't accept video. Your camera is off."))),
+		"upgrade_failed" => Some(format!("{} {who}{}", crate::i18n::tr("Couldn't receive video from"), ".")),
 		_ => None,
 	}
 }
@@ -669,8 +669,18 @@ mod call_participant_tests {
 		assert_eq!(peer_video_announcement("off", Some(false), Some("Asha")), None);
 		assert_eq!(
 			peer_video_announcement("upgrade_requested", Some(false), Some("Asha")).as_deref(),
-			Some("Asha wants to switch to video. Turn on your camera (Ctrl+Shift+V) to switch to video.")
+			Some("Asha turned their camera on.")
 		);
+		assert_eq!(peer_video_announcement("upgrade_requested", Some(true), Some("Asha")), None);
+		assert_eq!(
+			peer_video_announcement("upgrade_rejected", Some(false), Some("Asha")).as_deref(),
+			Some("Asha didn't accept video. Your camera is off.")
+		);
+		assert_eq!(
+			peer_video_announcement("upgrade_failed", None, Some("Asha")).as_deref(),
+			Some("Couldn't receive video from Asha.")
+		);
+		assert_eq!(peer_video_announcement("upgrade_cancelled", Some(true), Some("Asha")), None);
 		assert_eq!(peer_video_announcement("bogus", None, Some("Asha")), None);
 	}
 

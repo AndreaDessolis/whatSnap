@@ -1,5 +1,4 @@
 use std::{
-	collections::VecDeque,
 	net::UdpSocket,
 	sync::{
 		Arc, Mutex,
@@ -360,10 +359,12 @@ struct CaptureDsp {
 	system: Arc<Mutex<SystemMix>>,
 	frame: Vec<f32>,
 	send_buf: Vec<u8>,
-	opus: Option<opus::Encoder>,
+	opus: Option<crate::audio::libopus::Encoder>,
 	/// The packet-loss percentage last given to `opus`.
 	applied_loss_percent: i32,
 	slices_since_mic_check: u32,
+	/// Mic checks since the last echo diagnostics line.
+	checks_since_echo_report: u32,
 	logged_echo_delay: Option<u32>,
 }
 
@@ -379,9 +380,14 @@ pub(crate) fn set_call_packet_loss_percent(percent: i32) {
 	CALL_PACKET_LOSS_PERCENT.store(percent.clamp(0, MAX_PLANNED_LOSS_PERCENT), Ordering::Relaxed);
 }
 
-fn new_call_opus_encoder() -> Option<opus::Encoder> {
-	let mut encoder = opus::Encoder::new(NETWORK_SAMPLE_RATE, opus::Channels::Mono, opus::Application::Voip).ok()?;
-	encoder.set_bitrate(opus::Bitrate::Bits(OPUS_BITRATE)).ok()?;
+fn new_call_opus_encoder() -> Option<crate::audio::libopus::Encoder> {
+	let mut encoder = crate::audio::libopus::Encoder::new(
+		NETWORK_SAMPLE_RATE,
+		crate::audio::libopus::Channels::Mono,
+		crate::audio::libopus::Application::Voip,
+	)
+	.ok()?;
+	encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(OPUS_BITRATE)).ok()?;
 	encoder.set_complexity(OPUS_COMPLEXITY).ok()?;
 	let _ = encoder.set_inband_fec(true);
 	// WhatsApp's own encoder starts at 0% expected loss and follows what the
@@ -463,7 +469,7 @@ impl Drop for MicLevelController {
 	}
 }
 
-fn pack_call_frame(frame: &[f32], opus: Option<&mut opus::Encoder>, out: &mut Vec<u8>) {
+fn pack_call_frame(frame: &[f32], opus: Option<&mut crate::audio::libopus::Encoder>, out: &mut Vec<u8>) {
 	out.clear();
 	for sample in frame {
 		out.extend_from_slice(&sample.to_le_bytes());
@@ -502,6 +508,7 @@ impl CaptureDsp {
 			opus: new_call_opus_encoder(),
 			applied_loss_percent: 0,
 			slices_since_mic_check: 0,
+			checks_since_echo_report: 0,
 			logged_echo_delay: None,
 		}
 	}
@@ -553,30 +560,79 @@ impl CaptureDsp {
 				self.logged_echo_delay = delay;
 				log_line(&format!("echo canceller: played sound comes back after about {:?} ms", delay));
 			}
+			// Every 10 s, enough to tell a real echo (removed dB well above 0)
+			// from none, and the mic and played streams' alignment.
+			self.checks_since_echo_report += 1;
+			if self.checks_since_echo_report >= 10 {
+				self.checks_since_echo_report = 0;
+				let queued = self.echo_reference.lock().unwrap().queued();
+				log_line(&format!(
+					"echo: delay={:?} ms removed={:.1} dB share={:.2} played_queued={} ms mic_waiting={} ms",
+					delay,
+					self.voice.echo_removed_db(),
+					self.voice.echo_share(),
+					queued / 16,
+					self.resampled.len() / 16
+				));
+			}
 		}
 	}
 }
 
-const PLAYOUT_REFILL_SAMPLES: usize = FRAME_SAMPLES * 2;
+/// The playout runs at 48 kHz: Opus is decoded straight to it with libopus's
+/// bandwidth extension (calls/opus_jitter.rs), and audio the backend decoded
+/// (MLow, 16 kHz) is upsampled to it.
+const PLAYOUT_RATE: u32 = 48000;
+const PLAYOUT_SCALE: usize = (PLAYOUT_RATE / NETWORK_SAMPLE_RATE) as usize;
+/// One network frame (60 ms) at the playout rate.
+const PLAYOUT_FRAME: usize = FRAME_SAMPLES * PLAYOUT_SCALE;
+const PLAYOUT_REFILL_SAMPLES: usize = PLAYOUT_FRAME * 2;
 /// Where playback likes to sit: the refill level plus one packet of jitter.
-const PLAYOUT_TARGET_SAMPLES: usize = PLAYOUT_REFILL_SAMPLES + FRAME_SAMPLES;
-/// Above this (smoothed) the buffer is played slightly fast to work it off.
-const PLAYOUT_CATCH_UP_ABOVE: f64 = (PLAYOUT_TARGET_SAMPLES + FRAME_SAMPLES) as f64;
-/// How much faster: 1.5%, a quarter of a semitone, not something a listener
-/// notices, and 480 ms of backlog is gone in about half a minute.
-const PLAYOUT_CATCH_UP_RATE: f64 = 1.015;
+const PLAYOUT_TARGET_SAMPLES: usize = PLAYOUT_REFILL_SAMPLES + PLAYOUT_FRAME;
+/// Above this (smoothed) the waiting audio is shortened by accelerate.
+const PLAYOUT_CATCH_UP_ABOVE: f64 = (PLAYOUT_TARGET_SAMPLES + PLAYOUT_FRAME) as f64;
+
+/// The call's sound, from the network to the output device: the playout
+/// (calls/playout.rs: WhatsApp's NetEQ-style expand, merge and accelerate) at
+/// 48 kHz, then linear resampling to the device's rate.
+/// What the backend sends the playout: audio it decoded (MLow, group mixes),
+/// or one of the peer's standard Opus packets, which the playout decodes
+/// itself (calls/opus_jitter.rs).
+pub(crate) enum Incoming {
+	Pcm(Vec<f32>),
+	Opus { timestamp: u32, packet: Vec<u8> },
+}
+
+/// One datagram from the backend's audio bridge (backend/audio_udp.go):
+/// `[1][f32 LE samples...]`, or `[2][ssrc u32][seq u16][timestamp u32][Opus packet]`
+/// (little endian).
+fn parse_incoming(datagram: &[u8]) -> Option<Incoming> {
+	match datagram.split_first()? {
+		(1, pcm) => Some(Incoming::Pcm(pcm.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect())),
+		(2, rest) if rest.len() > 10 => Some(Incoming::Opus {
+			timestamp: u32::from_le_bytes(rest[6..10].try_into().ok()?),
+			packet: rest[10..].to_vec(),
+		}),
+		_ => None,
+	}
+}
 
 struct RenderDsp {
 	channels: u16,
-	src_accum: VecDeque<f32>,
-	resample_phase: f64,
-	/// Source samples per output sample at normal speed, and the smoothed
-	/// buffer level that decides whether to play a little faster.
-	base_step: f64,
-	upsample_step: f64,
+	/// Output rounds since the playout's counters were last logged.
+	rounds_since_report: u32,
+	playout: crate::calls::playout::Playout,
+	/// Decoded 16 kHz audio from the backend, to the playout's 48 kHz.
+	upsampler: crate::audio::call_voice::Upsampler3,
+	upsampled: Vec<f32>,
+	/// Playout samples per output sample, and where between `previous` and
+	/// `upcoming` the next output sample falls.
+	step: f64,
+	phase: f64,
+	previous: f32,
+	upcoming: f32,
 	smoothed_level: f64,
 	max_buffered_src: usize,
-	refilling: bool,
 	played: Arc<AtomicU64>,
 	starved: Arc<AtomicU64>,
 	accum_len: Arc<AtomicUsize>,
@@ -592,94 +648,100 @@ impl RenderDsp {
 	) -> Self {
 		Self {
 			channels,
-			src_accum: VecDeque::new(),
-			resample_phase: 0.0,
-			base_step: NETWORK_SAMPLE_RATE as f64 / sample_rate as f64,
-			upsample_step: NETWORK_SAMPLE_RATE as f64 / sample_rate as f64,
+			rounds_since_report: 0,
+			playout: crate::calls::playout::Playout::new(PLAYOUT_REFILL_SAMPLES, PLAYOUT_RATE),
+			upsampler: crate::audio::call_voice::Upsampler3::new(),
+			upsampled: Vec::new(),
+			step: PLAYOUT_RATE as f64 / sample_rate as f64,
+			phase: 0.0,
+			previous: 0.0,
+			upcoming: 0.0,
 			smoothed_level: 0.0,
-			max_buffered_src: FRAME_SAMPLES * 8,
-			refilling: true,
+			max_buffered_src: PLAYOUT_FRAME * 8,
 			played,
 			starved,
 			accum_len,
 		}
 	}
 
-	fn process(&mut self, data: &mut [f32], frame_rx: &mpsc::Receiver<Vec<f32>>) {
+	fn process(&mut self, data: &mut [f32], frame_rx: &mpsc::Receiver<Incoming>) {
 		let channels = self.channels as usize;
-		let out_frames = data.len() / channels;
-		// `needed` must be scaled by upsample_step: this call will only actually
-		// consume out_frames*upsample_step source samples this round (advancing
-		// resample_phase by exactly that much below), not one source sample per
-		// output frame.
-		//
 		// Everything waiting in the channel is taken every round, so this one
 		// buffer holds the whole backlog: when it overflows the OLDEST audio
 		// goes (the channel itself would drop the newest), and a backlog left
-		// by a burst of late packets is played off slightly fast instead of
-		// sitting there as delay for the rest of the sentence.
-		while let Ok(frame) = frame_rx.try_recv() {
-			self.src_accum.extend(frame);
-		}
-		while self.src_accum.len() > self.max_buffered_src {
-			self.src_accum.pop_front();
-		}
-		self.smoothed_level += (self.src_accum.len() as f64 - self.smoothed_level) * 0.02;
-		self.upsample_step = if !self.refilling && self.smoothed_level > PLAYOUT_CATCH_UP_ABOVE {
-			self.base_step * PLAYOUT_CATCH_UP_RATE
-		} else {
-			self.base_step
-		};
-
-		if self.refilling {
-			if self.src_accum.len() < PLAYOUT_REFILL_SAMPLES {
-				data.fill(0.0);
-				self.starved.fetch_add(out_frames as u64, Ordering::Relaxed);
-				self.accum_len.store(self.src_accum.len(), Ordering::Relaxed);
-				return;
+		// by a burst of late packets is worked off by accelerate.
+		let (queue, opus) = (&mut self.playout.queue, &mut self.playout.opus);
+		while let Ok(item) = frame_rx.try_recv() {
+			match item {
+				Incoming::Pcm(frame) => {
+					// Decoded audio again (MLow, or a group's mix): the Opus
+					// stream, if there was one, is over.
+					*opus = None;
+					self.upsampled.clear();
+					self.upsampler.process(&frame, &mut self.upsampled);
+					queue.extend(&self.upsampled);
+				}
+				Incoming::Opus { timestamp, packet } => {
+					if opus.is_none() {
+						match crate::calls::opus_jitter::OpusJitter::new(PLAYOUT_RATE) {
+							Ok(jitter) => {
+								log_line(
+									"playout: the peer sends standard Opus; decoding it here at 48 kHz (Deep PLC, NoLACE, bandwidth extension)",
+								);
+								*opus = Some(jitter);
+							}
+							Err(e) => log_line(&format!("playout: no Opus decoder: {e}")),
+						}
+					}
+					if let Some(jitter) = opus.as_mut() {
+						jitter.push(timestamp, packet);
+						jitter.drain_ready(queue);
+					}
+				}
 			}
-			self.refilling = false;
 		}
+		while queue.len() > self.max_buffered_src {
+			queue.pop_front();
+		}
+		self.smoothed_level += (queue.len() as f64 - self.smoothed_level) * 0.02;
+		let backlog = self.smoothed_level > PLAYOUT_CATCH_UP_ABOVE;
 
-		let (mut played, mut starved) = (0u64, 0u64);
+		let concealed_before = self.playout.concealed;
+		let mut pulled = 0u64;
 		for out_frame in data.chunks_mut(channels) {
-			let idx = self.resample_phase.floor() as usize;
-			let sample = if idx + 1 < self.src_accum.len() {
-				let frac = (self.resample_phase - idx as f64) as f32;
-				self.src_accum[idx] + (self.src_accum[idx + 1] - self.src_accum[idx]) * frac
-			} else if idx < self.src_accum.len() {
-				self.src_accum[idx]
-			} else {
-				// Nothing buffered at this position - play silence and, critically, do
-				// NOT advance resample_phase past what's actually in src_accum (see the
-				// cpal-era version of this comment for why: it's what previously caused
-				// playback to go silent for the rest of a call after any starvation).
-				// Refill before playing again.
-				starved += 1;
-				self.refilling = true;
-				0.0
-			};
-			if idx < self.src_accum.len() {
-				played += 1;
-			}
+			let sample = self.previous + (self.upcoming - self.previous) * self.phase as f32;
 			for slot in out_frame.iter_mut() {
 				*slot = sample;
 			}
-			if (idx as f64) < self.src_accum.len() as f64 {
-				self.resample_phase += self.upsample_step;
+			self.phase += self.step;
+			while self.phase >= 1.0 {
+				self.phase -= 1.0;
+				self.previous = self.upcoming;
+				self.upcoming = self.playout.next(backlog);
+				pulled += 1;
 			}
 		}
-		let consumed = (self.resample_phase.floor() as usize).min(self.src_accum.len());
-		if consumed > 0 {
-			self.src_accum.drain(0..consumed);
-			self.resample_phase -= consumed as f64;
+		let concealed = self.playout.concealed - concealed_before;
+		self.played.fetch_add(pulled - concealed, Ordering::Relaxed);
+		self.starved.fetch_add(concealed, Ordering::Relaxed);
+		self.accum_len.store(self.playout.queue.len(), Ordering::Relaxed);
+
+		self.rounds_since_report += 1;
+		if self.rounds_since_report >= 1000 {
+			self.rounds_since_report = 0;
+			let p = &self.playout;
+			let (plc, fec, late) = p.opus.as_ref().map_or((0, 0, 0), |j| (j.concealed, j.recovered, j.dropped_late));
+			log_line(&format!(
+				"playout: queued={} ms concealed={} ms (expand {} ms, opus plc {} ms) fec_rebuilt={} ms late_dropped={} accelerated={} ms",
+				p.queue.len() / 48,
+				p.concealed / 48 + plc / 16,
+				p.concealed / 48,
+				plc / 16,
+				fec / 16,
+				late,
+				p.accelerated / 48
+			));
 		}
-		if self.src_accum.is_empty() && self.resample_phase > 0.0 {
-			self.resample_phase = 0.0;
-		}
-		self.played.fetch_add(played, Ordering::Relaxed);
-		self.starved.fetch_add(starved, Ordering::Relaxed);
-		self.accum_len.store(self.src_accum.len(), Ordering::Relaxed);
 	}
 }
 
@@ -802,7 +864,7 @@ fn run_capture_session(
 
 fn run_render(
 	stop: &AtomicBool,
-	frame_rx: mpsc::Receiver<Vec<f32>>,
+	frame_rx: mpsc::Receiver<Incoming>,
 	played: Arc<AtomicU64>,
 	starved: Arc<AtomicU64>,
 	accum_len: Arc<AtomicUsize>,
@@ -825,7 +887,7 @@ fn run_render(
 
 fn run_render_session(
 	stop: &AtomicBool,
-	frame_rx: &mpsc::Receiver<Vec<f32>>,
+	frame_rx: &mpsc::Receiver<Incoming>,
 	played: &Arc<AtomicU64>,
 	starved: &Arc<AtomicU64>,
 	accum_len: &Arc<AtomicUsize>,
@@ -1025,7 +1087,7 @@ pub fn start_audio_streams(
 	// thread; a plain background thread blocks on the socket and hands decoded
 	// frames to the render thread through a small bounded channel, which the
 	// render loop only ever drains with a non-blocking try_recv.
-	let (frame_tx, frame_rx) = mpsc::sync_channel::<Vec<f32>>(8);
+	let (frame_tx, frame_rx) = mpsc::sync_channel::<Incoming>(16);
 	let stop = Arc::new(AtomicBool::new(false));
 	let reader_stop_thread = Arc::clone(&stop);
 
@@ -1042,7 +1104,7 @@ pub fn start_audio_streams(
 
 	log_line(&format!("start_audio_streams: target_port={}", target_port));
 
-	std::thread::spawn(move || {
+	crate::util::spawn_named("call audio reader", move || {
 		let _ = socket_read.set_read_timeout(Some(Duration::from_millis(200)));
 		disable_udp_connreset(&socket_read);
 		let mut buf = vec![0u8; 65536];
@@ -1050,12 +1112,10 @@ pub fn start_audio_streams(
 			match socket_read.recv_from(&mut buf) {
 				Ok((size, _)) => {
 					reader_recv_count_thread.fetch_add(1, Ordering::Relaxed);
-					let frame: Vec<f32> = buf[..size]
-						.as_chunks::<4>()
-						.0
-						.iter()
-						.map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-						.collect();
+					let Some(frame) = parse_incoming(&buf[..size]) else {
+						reader_error_count_thread.fetch_add(1, Ordering::Relaxed);
+						continue;
+					};
 					if frame_tx.try_send(frame).is_err() {
 						tx_drop_count_thread.fetch_add(1, Ordering::Relaxed);
 					}
@@ -1079,7 +1139,7 @@ pub fn start_audio_streams(
 		let output_played_samples = Arc::clone(&output_played_samples);
 		let output_starved_samples = Arc::clone(&output_starved_samples);
 		let output_src_accum_len = Arc::clone(&output_src_accum_len);
-		std::thread::spawn(move || {
+		crate::util::spawn_named("call audio health", move || {
 			while !health_stop.load(Ordering::Relaxed) {
 				std::thread::sleep(Duration::from_secs(2));
 				if health_stop.load(Ordering::Relaxed) {
@@ -1112,7 +1172,7 @@ pub fn start_audio_streams(
 		let preferred_output = Arc::clone(&preferred_output);
 		let force_reopen_echo = Arc::clone(&force_reopen_echo);
 		let echo_reference = Arc::clone(&echo_reference);
-		std::thread::spawn(move || {
+		crate::util::spawn_named("call echo reference", move || {
 			run_echo_reference(&stop, &preferred_output, &force_reopen_echo, &echo_reference);
 		});
 	}
@@ -1124,7 +1184,7 @@ pub fn start_audio_streams(
 		let preferred_input = Arc::clone(&preferred_input);
 		let force_reopen_input = Arc::clone(&force_reopen_input);
 		let system_mix = Arc::clone(&system_mix);
-		std::thread::spawn(move || {
+		crate::util::spawn_named("call capture", move || {
 			run_capture(
 				&stop,
 				&is_muted,
@@ -1142,7 +1202,7 @@ pub fn start_audio_streams(
 		let stop = Arc::clone(&stop);
 		let preferred_output = Arc::clone(&preferred_output);
 		let force_reopen_output = Arc::clone(&force_reopen_output);
-		std::thread::spawn(move || {
+		crate::util::spawn_named("call render", move || {
 			run_render(
 				&stop,
 				frame_rx,
@@ -1219,7 +1279,9 @@ mod tests {
 	#[test]
 	fn a_call_frame_carries_its_pcm_then_one_60ms_opus_packet() {
 		let mut encoder = new_call_opus_encoder().expect("libopus encoder");
-		let mut decoder = opus::Decoder::new(NETWORK_SAMPLE_RATE, opus::Channels::Mono).expect("libopus decoder");
+		let mut decoder =
+			crate::audio::libopus::Decoder::new(NETWORK_SAMPLE_RATE, crate::audio::libopus::Channels::Mono)
+				.expect("libopus decoder");
 		let mut datagram = Vec::new();
 		let mut energy = 0.0f32;
 		for n in 0..10 {
@@ -1232,7 +1294,10 @@ mod tests {
 			assert_eq!(sent, frame, "the PCM half is the frame, untouched");
 
 			assert!(!packet.is_empty(), "frame {n} has no Opus packet");
-			assert_eq!(opus::packet::get_nb_samples(packet, NETWORK_SAMPLE_RATE).unwrap(), FRAME_SAMPLES);
+			assert_eq!(
+				crate::audio::libopus::packet::get_nb_samples(packet, NETWORK_SAMPLE_RATE).unwrap(),
+				FRAME_SAMPLES
+			);
 			assert_eq!(packet[0], 0x58, "frame {n} is not one 60 ms SILK wideband frame");
 
 			let mut decoded = vec![0.0f32; FRAME_SAMPLES];
@@ -1249,61 +1314,130 @@ mod tests {
 		RenderDsp::new(NETWORK_SAMPLE_RATE, 1, counter(), counter(), Arc::new(AtomicUsize::new(0)))
 	}
 
+	fn mean(x: &[f32]) -> f32 {
+		x.iter().sum::<f32>() / x.len() as f32
+	}
+
 	#[test]
 	fn playback_waits_for_the_refill_level_again_after_running_dry() {
 		let mut dsp = render_dsp();
-		let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(8);
+		let (tx, rx) = mpsc::sync_channel::<Incoming>(8);
 		let mut out = vec![0.0f32; 160];
 
-		tx.send(vec![0.5; FRAME_SAMPLES]).unwrap();
+		tx.send(Incoming::Pcm(vec![0.5; FRAME_SAMPLES])).unwrap();
 		dsp.process(&mut out, &rx);
 		assert!(out.iter().all(|&s| s == 0.0), "started before the refill level");
 
-		tx.send(vec![0.5; FRAME_SAMPLES]).unwrap();
+		tx.send(Incoming::Pcm(vec![0.5; FRAME_SAMPLES])).unwrap();
 		dsp.process(&mut out, &rx);
-		assert!(out.iter().all(|&s| s == 0.5), "did not start once the refill level arrived");
+		dsp.process(&mut out, &rx);
+		assert!(out.iter().all(|&s| (s - 0.5).abs() < 0.01), "did not start once the refill level arrived");
 
 		for _ in 0..(2 * FRAME_SAMPLES / out.len()) {
 			dsp.process(&mut out, &rx);
 		}
-		assert!(dsp.refilling, "running dry did not start a refill");
+		assert!(dsp.playout.refilling, "running dry did not start a refill");
 
-		tx.send(vec![0.25; FRAME_SAMPLES]).unwrap();
+		// While refilling, the sound carries on (expand), not silence.
+		tx.send(Incoming::Pcm(vec![0.25; FRAME_SAMPLES])).unwrap();
 		dsp.process(&mut out, &rx);
-		assert!(out.iter().all(|&s| s == 0.0), "played a lone frame before refilling");
-		tx.send(vec![0.25; FRAME_SAMPLES]).unwrap();
-		dsp.process(&mut out, &rx);
-		assert!(out.iter().all(|&s| s == 0.25), "did not resume after refilling");
+		assert!(mean(&out) > 0.2, "went silent while waiting: {}", mean(&out));
+		tx.send(Incoming::Pcm(vec![0.25; FRAME_SAMPLES])).unwrap();
+		for _ in 0..3 {
+			dsp.process(&mut out, &rx);
+		}
+		assert!(out.iter().all(|&s| (s - 0.25).abs() < 0.01), "did not resume after refilling");
 	}
 
 	#[test]
 	fn a_backlog_from_a_burst_is_played_off_and_overflow_drops_the_oldest() {
 		let mut dsp = render_dsp();
-		let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(16);
+		let (tx, rx) = mpsc::sync_channel::<Incoming>(16);
 		let mut out = vec![0.0f32; 160];
-		// A burst: eight frames at once, numbered so overflow shows which went.
+		// A burst: ten frames at once, numbered so overflow shows which went.
 		for i in 0..10 {
-			let _ = tx.try_send(vec![i as f32; FRAME_SAMPLES]);
+			let _ = tx.try_send(Incoming::Pcm(vec![i as f32; FRAME_SAMPLES]));
 		}
 		dsp.process(&mut out, &rx);
-		assert_eq!(dsp.src_accum.len(), FRAME_SAMPLES * 8 - out.len());
-		assert_eq!(out[0], 2.0, "overflow dropped the newest audio instead of the oldest");
+		dsp.process(&mut out, &rx);
+		assert!((out[100] - 2.0).abs() < 0.02, "overflow dropped the newest audio instead of the oldest");
 		// Then packets keep coming at exactly real time.
 		let mut fed = 0;
 		for round in 0..6000 {
 			if round % 6 == 0 {
-				tx.send(vec![0.5; FRAME_SAMPLES]).unwrap();
+				tx.send(Incoming::Pcm(vec![0.5; FRAME_SAMPLES])).unwrap();
 				fed += 1;
 			}
 			dsp.process(&mut out, &rx);
 		}
 		assert!(fed > 900);
 		assert!(
-			dsp.src_accum.len() <= PLAYOUT_TARGET_SAMPLES + FRAME_SAMPLES * 2,
+			dsp.playout.queue.len() <= PLAYOUT_TARGET_SAMPLES + PLAYOUT_FRAME * 2,
 			"backlog still {} samples after a minute",
-			dsp.src_accum.len()
+			dsp.playout.queue.len()
 		);
-		assert!(!dsp.refilling, "caught up so far that it ran dry");
+		assert!(dsp.playout.accelerated > 0, "the backlog wasn't shortened by accelerate");
+		assert!(!dsp.playout.refilling, "caught up so far that it ran dry");
+	}
+
+	#[test]
+	fn datagrams_from_the_backend_are_told_apart() {
+		let mut pcm = vec![1u8];
+		pcm.extend(0.5f32.to_le_bytes());
+		pcm.extend((-0.25f32).to_le_bytes());
+		assert!(matches!(parse_incoming(&pcm), Some(Incoming::Pcm(s)) if s == [0.5, -0.25]));
+		let mut opus = vec![2u8, 0xD4, 0xC3, 0xB2, 0xA1, 7, 0];
+		opus.extend(96000u32.to_le_bytes());
+		opus.extend([0x58, 1, 2]);
+		assert!(matches!(
+			parse_incoming(&opus),
+			Some(Incoming::Opus { timestamp: 96000, packet }) if packet == [0x58, 1, 2]
+		));
+		assert!(parse_incoming(&[]).is_none());
+		assert!(parse_incoming(&[9, 1, 2]).is_none());
+	}
+
+	/// The peer's Opus through the playout as the render thread runs it: one
+	/// packet lost, one 40 ms late. The sound never stops for either.
+	#[test]
+	fn opus_from_the_peer_plays_through_loss_and_lateness_without_silence() {
+		let mut dsp = render_dsp();
+		let (tx, rx) = mpsc::sync_channel::<Incoming>(64);
+		let mut encoder = new_call_opus_encoder().expect("libopus encoder");
+		let _ = encoder.set_packet_loss_perc(20);
+		let mut out = vec![0.0f32; 160];
+		let mut played = Vec::new();
+		let mut late = None;
+		for n in 0..40usize {
+			let mut packet = vec![0u8; OPUS_MAX_PACKET];
+			let len = encoder.encode_float(&tone_frame(n * FRAME_SAMPLES), &mut packet).unwrap();
+			packet.truncate(len);
+			let item = Incoming::Opus { timestamp: (n * FRAME_SAMPLES) as u32, packet };
+			match n {
+				20 => {}                 // lost
+				30 => late = Some(item), // held back 40 ms
+				_ => tx.send(item).unwrap(),
+			}
+			// 60 ms of playback per packet, 10 ms at a time.
+			for round in 0..6 {
+				if n == 30
+					&& round == 4
+					&& let Some(item) = late.take()
+				{
+					tx.send(item).unwrap();
+				}
+				dsp.process(&mut out, &rx);
+				played.extend_from_slice(&out);
+			}
+		}
+		let jitter = dsp.playout.opus.as_ref().expect("no Opus decoder");
+		assert!(jitter.recovered + jitter.concealed > 0, "nothing was concealed or rebuilt");
+		// From the first packet on, no 10 ms stretch is silent.
+		let start = played.iter().position(|&s| s != 0.0).expect("nothing played");
+		for (i, chunk) in played[start..].chunks(160).enumerate() {
+			let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len() as f32).sqrt();
+			assert!(rms > 0.05, "silence {} ms in (rms {rms})", i * 10);
+		}
 	}
 
 	#[test]

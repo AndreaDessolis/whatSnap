@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, thread};
+use std::{cell::RefCell, rc::Rc};
 
 use wxdragon::prelude::*;
 
@@ -397,7 +397,7 @@ pub(crate) fn send_voice_message(state: &Rc<RefCell<AppState>>, parts: &Rc<Windo
 			+ if is_paused { pause_inst.map(|i| i.elapsed()).unwrap_or_default() } else { std::time::Duration::ZERO };
 		let active_secs = total_elapsed.saturating_sub(total_paused).as_secs().max(1);
 
-		thread::spawn(move || {
+		crate::util::spawn_named("voice message send", move || {
 			let is_multi_segment = segments.len() > 1;
 			let wav_path = if !is_multi_segment {
 				segments[0].clone()

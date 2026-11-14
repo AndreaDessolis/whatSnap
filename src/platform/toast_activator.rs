@@ -70,7 +70,7 @@ pub fn launched_for_toast(args: impl Iterator<Item = String>) -> bool {
 /// lives in its apartment); call it as early as possible, since a copy
 /// started for a notification has to answer before Windows gives up on it.
 pub fn start() {
-	std::thread::spawn(|| unsafe {
+	crate::util::spawn_named("toast activator", || unsafe {
 		if CoInitializeEx(None, COINIT_MULTITHREADED).is_err() {
 			eprintln!("[NOTIFY] Toast activator: COM wouldn't start");
 			return;

@@ -1,11 +1,17 @@
-use wxdragon::prelude::*;
+use wxdragon::{prelude::*, widgets::GenericStaticBitmap};
 
 use crate::ui::theme;
 
 #[derive(Clone)]
 pub struct CallWindowParts {
 	pub frame: Frame,
+	/// The panel everything sits on, re-laid out when the video shows or hides.
+	pub panel: Panel,
 	pub avatar_bitmap: StaticBitmap,
+	/// The other side's video, in place of the avatar while it plays. A static
+	/// picture: it never takes keyboard focus, so Tab and a screen reader stay
+	/// on the call's controls.
+	pub peer_video: GenericStaticBitmap,
 	pub status_label: StaticText,
 	/// Who the call is with: name, phone number, duration, mic/camera status,
 	/// and for a call we placed "Calling..."/"Ringing..."/"Connecting...". Read-only,
@@ -124,6 +130,22 @@ pub fn build_call_window() -> CallWindowParts {
 	let avatar_bm = empty_avatar_bitmap(112);
 	let avatar_bitmap = StaticBitmap::builder(&panel).with_bitmap(Some(avatar_bm)).build();
 	sizer.add(&avatar_bitmap, 0, SizerFlag::AlignCenterHorizontal | SizerFlag::Top | SizerFlag::Bottom, 14);
+
+	let black = wxdragon::bitmap::Bitmap::from_rgba(&[0, 0, 0, 255], 1, 1)
+		.unwrap_or_else(|| wxdragon::bitmap::Bitmap::new(1, 1).unwrap());
+	let peer_video = GenericStaticBitmap::builder(&panel)
+		.with_bitmap(Some(black))
+		.with_scale_mode(Some(ScaleMode::AspectFit))
+		.build();
+	peer_video.set_background_color(Colour::rgb(0, 0, 0));
+	peer_video.set_min_size(Size::new(480, 270));
+	sizer.add(
+		&peer_video,
+		1,
+		SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right | SizerFlag::Top | SizerFlag::Bottom,
+		10,
+	);
+	peer_video.show(false);
 
 	let status_label = StaticText::builder(&panel).with_label(crate::i18n::tr("Incoming call...")).build();
 	status_label.set_font(&theme::Fonts::heading());
@@ -291,7 +313,9 @@ pub fn build_call_window() -> CallWindowParts {
 
 	CallWindowParts {
 		frame,
+		panel,
 		avatar_bitmap,
+		peer_video,
 		status_label,
 		caller_info,
 		announcer,

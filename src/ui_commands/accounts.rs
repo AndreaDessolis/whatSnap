@@ -751,7 +751,7 @@ fn start_removal(state: &Rc<RefCell<AppState>>, id: &str, log_out: bool) {
 	}
 	let ui_tx = state.borrow().ui_tx.clone();
 	let id = id.to_string();
-	std::thread::spawn(move || {
+	crate::util::spawn_named("account removal", move || {
 		std::thread::sleep(LOGOUT_WAIT);
 		let _ = ui_tx.send(UiCommand::FinishAccountRemoval(id));
 	});

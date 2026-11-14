@@ -52,6 +52,7 @@ type Account struct {
 	activeVideoBridges         map[string]*VideoBridge
 	activeVideoBridgesMutex    sync.Mutex
 	activeScreenBridges        map[string]*VideoBridge
+	activeVideoReceivers       map[string]*VideoReceiveBridge
 	activeAudioBridges         map[string]*UDPBridge
 	activeAudioBridgesMutex    sync.Mutex
 	incomingGroupCallJIDs      map[string]types.JID
@@ -189,6 +190,7 @@ func (acc *Account) initAccountState() {
 	acc.activeCalls = make(map[string]*meowcaller.Call)
 	acc.activeVideoBridges = make(map[string]*VideoBridge)
 	acc.activeScreenBridges = make(map[string]*VideoBridge)
+	acc.activeVideoReceivers = make(map[string]*VideoReceiveBridge)
 	acc.activeAudioBridges = make(map[string]*UDPBridge)
 	acc.incomingGroupCallJIDs = make(map[string]types.JID)
 	acc.localScreenShares = make(map[string]*localScreenShare)

@@ -219,7 +219,7 @@ pub fn on_activation(handler: impl Fn(Option<LaunchRequest>) + Send + 'static) {
 /// answering while this copy is still starting up; what arrives early waits
 /// for [`on_activation`].
 pub fn listen_for_activation() {
-	std::thread::spawn(move || {
+	crate::util::spawn_named("single instance", move || {
 		let mut listener = loop {
 			match PipeListener::bind(ACTIVATE_PIPE_NAME) {
 				Ok(listener) => break listener,
@@ -234,7 +234,7 @@ pub fn listen_for_activation() {
 			};
 			// Read each hand-off on its own thread: one that connects and
 			// never finishes must not keep every later launch waiting.
-			std::thread::spawn(move || {
+			crate::util::spawn_named("single instance client", move || {
 				let mut message = String::new();
 				let _ = (&mut conn).take(1024 * 1024).read_to_string(&mut message);
 				if !message.starts_with("activate") {

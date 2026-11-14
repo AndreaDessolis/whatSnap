@@ -10,6 +10,31 @@ use shipfitter::{
 	windows::{VersionInfo, embed_manifest},
 };
 
+/// libopus 1.6.1 from third_party/opus, with its neural decoder features that
+/// calls use (src/audio/libopus.rs): Deep PLC (packet-loss concealment), and
+/// OSCE - LACE/NoLACE speech enhancement and the blind bandwidth extension that
+/// turns a 16 kHz call into 48 kHz sound. DRED stays off (its data isn't kept).
+fn build_libopus() {
+	println!("cargo:rerun-if-changed=third_party/opus");
+	let out = cmake::Config::new("third_party/opus")
+		.define("OPUS_DEEP_PLC", "ON")
+		.define("OPUS_DRED", "OFF")
+		.define("OPUS_OSCE", "ON")
+		// The bandwidth extension: only libopus's autotools build defines it.
+		.cflag("-DENABLE_OSCE_BWE")
+		.define("OPUS_BUILD_TESTING", "OFF")
+		.define("OPUS_BUILD_PROGRAMS", "OFF")
+		.define("OPUS_BUILD_SHARED_LIBRARY", "OFF")
+		.define("OPUS_INSTALL_PKG_CONFIG_MODULE", "OFF")
+		.define("OPUS_INSTALL_CMAKE_CONFIG_MODULE", "OFF")
+		// A Rust build links the release C runtime (/MD) in every profile.
+		.define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
+		.profile("Release")
+		.build();
+	println!("cargo:rustc-link-search=native={}", out.join("lib").display());
+	println!("cargo:rustc-link-lib=static=opus");
+}
+
 fn main() {
 	println!("cargo:rerun-if-changed=build.rs");
 	println!("cargo:rerun-if-changed=backend");
@@ -22,6 +47,7 @@ fn main() {
 		let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
 		Path::new(&root).join("target").join(env::var("PROFILE").unwrap_or_default())
 	});
+	build_libopus();
 	build_mo_catalogs();
 	build_language_table();
 	build_backend(&target_dir);

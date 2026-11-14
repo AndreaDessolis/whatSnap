@@ -20,11 +20,10 @@ func TestPeerVideoEventMapsOnlyAnnouncableStates(t *testing.T) {
 		{"peer stopped video", signaling.VideoStateStopped, "off"},
 		{"peer asks to switch to video", signaling.VideoStateUpgradeRequest, "upgrade_requested"},
 		{"peer asks to switch to video, v2", signaling.VideoStateUpgradeRequestV2, "upgrade_requested"},
-		// Accept and reject only ever answer an upgrade we asked for, and we
-		// never ask: announcing them would describe a negotiation the user was
-		// never part of.
-		{"upgrade accept is not ours to hear", signaling.VideoStateUpgradeAccept, ""},
-		{"upgrade reject is not ours to hear", signaling.VideoStateUpgradeReject, ""},
+		// The peer's video simply follows an accept of our upgrade.
+		{"upgrade accept needs no announcement", signaling.VideoStateUpgradeAccept, ""},
+		{"peer declines our switch to video", signaling.VideoStateUpgradeReject, "upgrade_rejected"},
+		{"peer withdraws its switch to video", signaling.VideoStateUpgradeCancel, "upgrade_cancelled"},
 		{"unknown state stays silent", 999, ""},
 	}
 	for _, tc := range cases {

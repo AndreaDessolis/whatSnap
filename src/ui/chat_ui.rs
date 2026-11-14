@@ -2,7 +2,6 @@ use std::{
 	cell::RefCell,
 	io::{BufRead, BufReader, Write},
 	rc::Rc,
-	thread,
 };
 
 use wxdragon::prelude::*;
@@ -112,7 +111,7 @@ pub(crate) fn request_backend_shutdown(pipe_id: &str) {
 	// full chat list, writing it before it reads anything. Left undrained the
 	// pipe fills, the backend blocks mid-write, and it never reaches our
 	// command -- so the reader has to run concurrently with the write.
-	thread::spawn(move || {
+	crate::util::spawn_named("chat pipe drain", move || {
 		let mut reader = BufReader::new(drain_socket);
 		let mut buf = String::new();
 		while matches!(reader.read_line(&mut buf), Ok(n) if n > 0) {

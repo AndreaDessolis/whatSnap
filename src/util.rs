@@ -49,3 +49,14 @@ mod tests {
 		assert_ne!(a, b);
 	}
 }
+
+/// `std::thread::spawn` with a name: crash.log and panic.log say which thread
+/// failed by its name, and an unnamed one only says "unnamed".
+pub(crate) fn spawn_named<F, T>(name: &str, f: F) -> std::thread::JoinHandle<T>
+where
+	F: FnOnce() -> T + Send + 'static,
+	T: Send + 'static,
+{
+	// Fails only when the OS refuses a thread, where std::thread::spawn panics too.
+	std::thread::Builder::new().name(name.to_string()).spawn(f).expect("failed to spawn thread")
+}

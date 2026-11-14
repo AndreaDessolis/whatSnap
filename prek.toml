@@ -1,5 +1,5 @@
 # Vendored upstream code stays byte-for-byte as it came.
-exclude = "^backend/third_party/"
+exclude = "^(backend/)?third_party/"
 
 [[repos]]
 repo = "builtin"

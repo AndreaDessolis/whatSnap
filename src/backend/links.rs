@@ -208,7 +208,7 @@ fn pipe_loop(ui_tx: UiCommandSender, alive: Arc<AtomicBool>, out_rx: Arc<Mutex<m
 			let resend_tx = backend.out_tx.clone();
 			let reader_done = Arc::new(AtomicBool::new(false));
 			let writer_done = reader_done.clone();
-			thread::spawn(move || {
+			crate::util::spawn_named("backend link", move || {
 				while writer_alive.load(Ordering::SeqCst)
 					&& !backend.stopped.load(Ordering::SeqCst)
 					&& !writer_done.load(Ordering::SeqCst)
@@ -297,7 +297,7 @@ pub fn stop(account: &str, done: impl FnOnce() + Send + 'static) {
 		.insert(account.to_string(), closed_tx);
 	let _ = backend.out_tx.send(format!("{{\"action\":\"close_account\",\"account\":{}}}", json_str(account)));
 	let account = account.to_string();
-	thread::spawn(move || {
+	crate::util::spawn_named("backend link reader", move || {
 		if closed_rx.recv_timeout(CLOSE_WAIT).is_err() {
 			crate::backend::events::ui_timing_log(&format!("Backend: account {account} didn't close in time"));
 			CLOSING.lock().unwrap_or_else(|e| e.into_inner()).as_mut().map(|m| m.remove(&account));

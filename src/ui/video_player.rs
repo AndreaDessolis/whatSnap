@@ -132,6 +132,9 @@ pub(crate) fn show(parent: &impl WxWidget, path: &str, title: &str, save_name: &
 	// A dialog built per use must be destroyed, or it and every closure bound
 	// to it live on hidden.
 	dialog.destroy();
+	// Playing loads the graphics driver and fills decoder buffers; hand back
+	// what isn't needed now, so the app doesn't sit on hundreds of MB.
+	crate::platform::memory::give_back_memory_soon();
 	if elsewhere.get() { VideoChoice::OpenElsewhere } else { VideoChoice::Closed }
 }
 

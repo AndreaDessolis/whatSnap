@@ -1,6 +1,10 @@
 pub mod audio;
 pub mod helpers;
 pub mod hotkeys;
+pub mod opus_jitter;
+pub mod playout;
 pub mod screen_capture;
 pub mod video_devices;
+pub mod video_receive;
 pub mod video_send;
+pub mod wgc_capture;

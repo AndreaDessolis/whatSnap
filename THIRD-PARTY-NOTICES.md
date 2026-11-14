@@ -16,7 +16,7 @@ BSD, Zlib, or dual MIT/Apache-2.0):
 | AccessKit | MIT / Apache-2.0 |
 | rodio | MIT / Apache-2.0 |
 | rodio-wsola | Apache-2.0 |
-| opus (libopus bindings) | BSD-3-Clause |
+| libopus 1.6.1 with Deep PLC (`third_party/opus`, Xiph.Org and contributors; license in `third_party/opus/COPYING`) | BSD-3-Clause |
 | nnnoiseless (RNNoise) | BSD-3-Clause |
 | qrcode, serde, serde_json, windows | MIT / Apache-2.0 |
 | wx-utils, key-chord | MIT |

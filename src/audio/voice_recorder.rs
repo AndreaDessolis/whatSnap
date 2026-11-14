@@ -39,7 +39,7 @@ impl RecordingSession {
 		let path = path.to_string();
 		let (ready_tx, ready_rx) = mpsc::channel::<crate::error::Result<()>>();
 
-		let thread = std::thread::spawn(move || {
+		let thread = crate::util::spawn_named("voice recorder", move || {
 			run_recording_session(&stop_thread, &path, preferred_device_name.as_deref(), clean_up, ready_tx);
 		});
 
@@ -70,7 +70,7 @@ impl RecordingSession {
 		on_ready: impl FnOnce(crate::error::Result<Self>) + Send + 'static,
 	) {
 		let path = path.to_string();
-		std::thread::spawn(move || {
+		crate::util::spawn_named("voice recorder stop", move || {
 			let result = Self::start(&path, preferred_device_name, clean_up);
 			on_ready(result);
 		});

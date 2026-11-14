@@ -237,6 +237,16 @@ impl EchoCanceller {
 		}
 	}
 
+	/// How much quieter the canceller's output is than the mic while sound is
+	/// played, in dB: around 0 when there is no echo to remove (earphones),
+	/// well above 0 when it is removing one.
+	pub(crate) fn echo_removed_db(&self) -> f32 {
+		if self.mic_power <= 0.0 || self.out_power <= 0.0 {
+			return 0.0;
+		}
+		10.0 * (self.mic_power / self.out_power).log10()
+	}
+
 	/// The delay between played and recorded sound, in ms, once found.
 	pub(crate) fn delay_ms(&self) -> Option<u32> {
 		self.delay.found.map(|blocks| (blocks * BLOCK * 1000 / SAMPLE_RATE as usize) as u32)

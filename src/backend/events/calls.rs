@@ -22,6 +22,14 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 						data.get("video_port").and_then(|p| p.as_u64()).map(|p| p as u16).filter(|&p| p != 0);
 					s.call_video.screen_port =
 						data.get("screen_port").and_then(|p| p.as_u64()).map(|p| p as u16).filter(|&p| p != 0);
+					s.call_video.peer_video = data
+						.get("video_in_port")
+						.and_then(|p| p.as_u64())
+						.filter(|&p| p != 0)
+						.map(|p| crate::calls::video_receive::start_peer_video(p as u16, s.ui_tx.clone()));
+					let is_group = s.call_participants.len() > 1 || s.call_video.peer_name.is_none();
+					s.call_video.peer_video_held = !is_group && !s.call_peer_is_saved;
+					s.call_video.peer_video_ignored = false;
 					stop_call_ringing_sound(&mut s);
 					if let Ok(streams) = crate::calls::audio::start_audio_streams(
 						audio_port as u16,
@@ -334,7 +342,9 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				let announcement =
 					peer_video_announcement(event, s.call_video.peer_camera_on, s.call_video.peer_name.as_deref());
 				match event {
-					"on" => {
+					// The backend accepts a switch to video at once, as WhatsApp
+					// does, so a request means their camera is coming on.
+					"on" | "upgrade_requested" => {
 						s.call_video.peer_camera_on = Some(true);
 						if !s.call_video.video_call {
 							s.call_video.video_call = true;
@@ -373,11 +383,18 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 						crate::calls::helpers::show_call_device_combos(&s, parts);
 					}
 					"off" => s.call_video.peer_camera_on = Some(false),
+					"upgrade_failed" => s.call_video.peer_camera_on = Some(false),
 					_ => {}
 				}
+				// They didn't take our switch to video: our camera goes off again,
+				// as meowcaller already stopped sending it.
+				let camera_refused = event == "upgrade_rejected" && s.call_video.local_camera_on;
 				drop(s);
 				if let Some(text) = announcement {
 					announce_call(parts, &text, Priority::High);
+				}
+				if camera_refused {
+					crate::ui_commands::calls::toggle_camera(state, parts);
 				}
 			}
 		}

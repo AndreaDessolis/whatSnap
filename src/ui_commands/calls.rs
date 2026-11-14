@@ -1049,6 +1049,148 @@ pub(crate) fn screen_share_failed(state: &Rc<RefCell<AppState>>, parts: &Rc<Wind
 /// The screen being shared is reaching the others as a black picture, or has
 /// stopped doing so. Said out loud because nothing else would tell someone
 /// using a screen reader's screen curtain that the curtain is all anyone sees.
+/// The other side's video: draw the newest picture, or hide the video when it
+/// stopped or the call's receiver went away.
+pub(crate) fn peer_video(
+	state: &Rc<RefCell<AppState>>,
+	parts: &Rc<WindowParts>,
+	event: crate::calls::video_receive::PeerVideoEvent,
+) {
+	use crate::calls::video_receive::{PeerVideoEvent, take_picture};
+	let session = state.borrow().call_video.peer_video.as_ref().map(|v| v.session);
+	match event {
+		PeerVideoEvent::Picture => {
+			let Some(picture) = session.and_then(take_picture) else { return };
+			let (held, ignored) = {
+				let s = state.borrow();
+				(s.call_video.peer_video_held, s.call_video.peer_video_ignored)
+			};
+			if held {
+				if !ignored {
+					ask_to_show_peer_video(state, parts);
+				}
+				return;
+			}
+			let Some(bitmap) = wxdragon::bitmap::Bitmap::from_rgba(&picture.rgba, picture.width, picture.height) else {
+				return;
+			};
+			parts.call_parts.peer_video.set_bitmap(&bitmap);
+			if !parts.call_parts.peer_video.is_shown() {
+				show_peer_video(parts, true);
+			}
+		}
+		PeerVideoEvent::Stopped => {
+			if session.is_some() {
+				// Like WA Web's banner, the question goes with the video; it's
+				// asked again if the video comes back.
+				state.borrow_mut().call_video.peer_video_ignored = false;
+				close_peer_video_prompt();
+				show_peer_video(parts, false);
+			}
+		}
+		PeerVideoEvent::Ended(ended) => {
+			if session.is_none_or(|current| current == ended) {
+				close_peer_video_prompt();
+				show_peer_video(parts, false);
+			}
+		}
+	}
+}
+
+thread_local! {
+	static PEER_VIDEO_PROMPT: RefCell<Option<Dialog>> = const { RefCell::new(None) };
+}
+
+fn close_peer_video_prompt() {
+	if let Some(dialog) = PEER_VIDEO_PROMPT.with(|p| p.borrow_mut().take()) {
+		dialog.destroy();
+	}
+}
+
+/// WA Web's banner for video from someone who isn't a saved contact:
+/// "{name} is sharing video", Accept or Ignore. A small dialog over the call
+/// window instead of a banner, so it takes focus and a screen reader reads it;
+/// the call's controls stay usable while it's open. Escape ignores.
+fn ask_to_show_peer_video(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
+	if PEER_VIDEO_PROMPT.with(|p| p.borrow().is_some()) {
+		return;
+	}
+	let name = state.borrow().call_peer_name.clone();
+	let message = crate::i18n::tr_fmt("{} is sharing video", &[&name]);
+	let dialog = Dialog::builder(&parts.call_parts.frame, &message).with_style(DialogStyle::DefaultDialogStyle).build();
+	crate::ui::theme::style_content(&dialog);
+	let panel = Panel::builder(&dialog).build();
+	crate::ui::theme::style_content(&panel);
+	let sizer = BoxSizer::builder(Orientation::Vertical).build();
+	let text = StaticText::builder(&panel).with_label(&message).build();
+	text.set_font(&crate::ui::theme::Fonts::body_strong());
+	sizer.add(&text, 0, SizerFlag::All, 12);
+	let accept_btn = Button::builder(&panel).with_label(crate::i18n::tr("Accept")).build();
+	crate::ui::dialog_look::pill_button(&accept_btn, true, crate::ui::theme::Palette::CONTENT_BG());
+	let ignore_btn = Button::builder(&panel).with_label(crate::i18n::tr("Ignore")).build();
+	crate::ui::dialog_look::pill_button(&ignore_btn, false, crate::ui::theme::Palette::CONTENT_BG());
+	crate::ui::dialog_look::button_row(&sizer, &[&accept_btn, &ignore_btn]);
+	panel.set_sizer(sizer, true);
+	let outer = BoxSizer::builder(Orientation::Vertical).build();
+	outer.add(&panel, 1, SizerFlag::Expand, 0);
+	dialog.set_sizer_and_fit(outer, true);
+	dialog.center();
+
+	let accept_state = Rc::clone(state);
+	accept_btn.on_click(move |_| {
+		accept_state.borrow_mut().call_video.peer_video_held = false;
+		dialog.close(false);
+	});
+	let ignore_state = Rc::clone(state);
+	ignore_btn.on_click(move |_| {
+		ignore_state.borrow_mut().call_video.peer_video_ignored = true;
+		dialog.close(false);
+	});
+	let escape_state = Rc::clone(state);
+	dialog.bind_internal(EventType::CHAR_HOOK, move |event| {
+		let event = WindowEventData::new(event);
+		if let WindowEventData::Keyboard(ref key) = event
+			&& crate::ui::keys::is_escape(key.get_key_code())
+		{
+			event.skip(false);
+			escape_state.borrow_mut().call_video.peer_video_ignored = true;
+			dialog.close(false);
+		} else {
+			event.skip(true);
+		}
+	});
+	let call_frame = parts.call_parts.frame;
+	dialog.on_close(move |event| {
+		event.skip(false);
+		PEER_VIDEO_PROMPT.with(|p| p.borrow_mut().take());
+		dialog.destroy();
+		call_frame.raise();
+	});
+	PEER_VIDEO_PROMPT.with(|p| *p.borrow_mut() = Some(dialog));
+	dialog.show(true);
+	accept_btn.set_focus();
+}
+
+/// Shows the video in the avatar's place, or puts the avatar back. Nothing is
+/// announced: the camera announcements already say when it comes and goes,
+/// and focus stays where it was.
+fn show_peer_video(parts: &Rc<WindowParts>, show: bool) {
+	let c = &parts.call_parts;
+	if c.peer_video.is_shown() == show {
+		return;
+	}
+	c.peer_video.show(show);
+	c.avatar_bitmap.show(!show);
+	if show {
+		let size = c.frame.get_size();
+		if size.width < 760 || size.height < 820 {
+			c.frame.set_size(Size::new(size.width.max(760), size.height.max(820)));
+		}
+	}
+	c.panel.layout();
+	c.frame.layout();
+}
+
 pub(crate) fn screen_share_black(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, black: bool) {
 	if !state.borrow().call_video.local_screen_on {
 		return;

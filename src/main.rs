@@ -428,7 +428,7 @@ fn main() {
 		None => return,
 	};
 	if !background_start {
-		std::thread::spawn(platform::autostart::refresh);
+		crate::util::spawn_named("autostart refresh", platform::autostart::refresh);
 	}
 	platform::single_instance::listen_for_activation();
 	#[cfg(target_os = "windows")]
@@ -438,7 +438,7 @@ fn main() {
 	}
 	platform::paths::migrate_legacy_data();
 	#[cfg(target_os = "windows")]
-	std::thread::spawn(platform::link_handler::register);
+	crate::util::spawn_named("link handler register", platform::link_handler::register);
 	for name in ["backend_process.log", "call_audio.log", "call_video_send.log", "panic.log", "crash.log"] {
 		platform::paths::rotate_log(name);
 	}
@@ -1287,6 +1287,7 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::ToggleScreenShare => ui_commands::calls::toggle_screen_share(state, parts),
 		UiCommand::ScreenShareFailed(reason) => ui_commands::calls::screen_share_failed(state, parts, reason),
 		UiCommand::ScreenShareBlack(black) => ui_commands::calls::screen_share_black(state, parts, black),
+		UiCommand::PeerVideo(event) => ui_commands::calls::peer_video(state, parts, event),
 		UiCommand::SystemAudioFailed(reason) => ui_commands::calls::system_audio_failed(state, parts, reason),
 		UiCommand::ShowMemberChanges => ui_commands::member_extras::request_member_changes(state),
 		UiCommand::FilterGroupMembers(query) => ui_commands::contacts_groups::filter_group_members(state, parts, query),

@@ -309,6 +309,8 @@ pub enum UiCommand {
 	/// The shared screen started (`true`) or stopped coming out completely
 	/// black - what a screen reader's screen curtain does to a capture.
 	ScreenShareBlack(bool),
+	/// News from the call's video receiver (calls/video_receive.rs).
+	PeerVideo(crate::calls::video_receive::PeerVideoEvent),
 	AudioDeviceChanged,
 	UpdateGroupSettings {
 		name: String,
@@ -590,7 +592,6 @@ pub(crate) struct StatusGroup {
 /// `call_participants` event. `state` is WhatsApp's roster state, e.g.
 /// Video details of the active call: what we're sending (camera or screen)
 /// and what's known about the other side, which drives what's announced.
-/// Incoming video is never shown.
 #[derive(Default)]
 pub(crate) struct CallVideo {
 	pub(crate) is_video: bool,
@@ -619,6 +620,15 @@ pub(crate) struct CallVideo {
 	pub(crate) can_remove: bool,
 	pub(crate) approval_required: bool,
 	pub(crate) waiting: Vec<CallParticipant>,
+	/// The other side's video, received and decoded from `call_connected`
+	/// until the call ends; dropping it hides the video.
+	pub(crate) peer_video: Option<crate::calls::video_receive::PeerVideo>,
+	/// The other side of a 1:1 call isn't a saved contact, so their video is
+	/// held back until it's accepted, as WA Web does for an unknown peer (its
+	/// "{name} is sharing video" banner with Accept and Ignore).
+	pub(crate) peer_video_held: bool,
+	/// Ignore was chosen: don't ask again until their video stops and restarts.
+	pub(crate) peer_video_ignored: bool,
 }
 
 #[derive(Clone)]

@@ -31,7 +31,18 @@ type UDPBridge struct {
 	writeBuf   []byte
 }
 
-var _ meowcaller.OpusFrameSource = (*UDPBridge)(nil)
+var (
+	_ meowcaller.OpusFrameSource = (*UDPBridge)(nil)
+	_ meowcaller.OpusPacketSink  = (*UDPBridge)(nil)
+)
+
+// What the app is sent, one datagram each (little endian): audio decoded
+// here, or one of the peer's standard Opus packets, which the app decodes at
+// playout time (src/calls/audio.rs parse_incoming, src/calls/opus_jitter.rs).
+const (
+	datagramPCM  = 1 // [1][f32 samples...]
+	datagramOpus = 2 // [2][ssrc u32][seq u16][timestamp u32][packet]
+)
 
 func splitMicDatagram(datagram []byte) (pcm, opusFrame []byte) {
 	const pcmBytes = meowcaller.FrameSamples * 4
@@ -58,7 +69,7 @@ func NewUDPBridge() (*UDPBridge, int, error) {
 		conn:     conn,
 		readBuf:  make([]byte, meowcaller.FrameSamples*4+maxOpusPacket),
 		frameBuf: make([]float32, meowcaller.FrameSamples),
-		writeBuf: make([]byte, meowcaller.FrameSamples*4),
+		writeBuf: make([]byte, 1+meowcaller.FrameSamples*4),
 	}, conn.LocalAddr().(*net.UDPAddr).Port, nil
 }
 
@@ -107,15 +118,35 @@ func (b *UDPBridge) WriteFrame(frame []float32) error {
 		return nil
 	}
 
+	size := 1 + len(frame)*4
 	buf := b.writeBuf
-	if len(buf) < len(frame)*4 {
-		buf = make([]byte, len(frame)*4)
+	if len(buf) < size {
+		buf = make([]byte, size)
 		b.writeBuf = buf
 	}
-	buf = buf[:len(frame)*4]
+	buf = buf[:size]
+	buf[0] = datagramPCM
 	for i, f := range frame {
-		binary.LittleEndian.PutUint32(buf[i*4:], math.Float32bits(f))
+		binary.LittleEndian.PutUint32(buf[1+i*4:], math.Float32bits(f))
 	}
+	_, err := b.conn.WriteToUDP(buf, paddr)
+	return err
+}
+
+// WriteOpusPacket hands the app one of the peer's Opus packets undecoded.
+func (b *UDPBridge) WriteOpusPacket(ssrc uint32, sequence uint16, timestamp uint32, packet []byte) error {
+	b.peerAddrMu.Lock()
+	paddr := b.peerAddr
+	b.peerAddrMu.Unlock()
+	if paddr == nil {
+		return nil
+	}
+	buf := make([]byte, 11+len(packet))
+	buf[0] = datagramOpus
+	binary.LittleEndian.PutUint32(buf[1:], ssrc)
+	binary.LittleEndian.PutUint16(buf[5:], sequence)
+	binary.LittleEndian.PutUint32(buf[7:], timestamp)
+	copy(buf[11:], packet)
 	_, err := b.conn.WriteToUDP(buf, paddr)
 	return err
 }

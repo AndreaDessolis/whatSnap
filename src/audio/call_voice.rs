@@ -194,17 +194,17 @@ fn resample_taps() -> [f32; RESAMPLE_TAPS] {
 }
 
 /// 16 kHz to 48 kHz: three samples out for each one in.
-struct Upsampler3 {
+pub(crate) struct Upsampler3 {
 	taps: [f32; RESAMPLE_TAPS],
 	history: [f32; RESAMPLE_TAPS / 3 + 1],
 }
 
 impl Upsampler3 {
-	fn new() -> Self {
+	pub(crate) fn new() -> Self {
 		Self { taps: resample_taps(), history: [0.0; RESAMPLE_TAPS / 3 + 1] }
 	}
 
-	fn process(&mut self, input: &[f32], out: &mut Vec<f32>) {
+	pub(crate) fn process(&mut self, input: &[f32], out: &mut Vec<f32>) {
 		for &sample in input {
 			self.history.copy_within(..RESAMPLE_TAPS / 3, 1);
 			self.history[0] = sample;
@@ -346,6 +346,11 @@ impl EchoReference {
 		ready
 	}
 
+	/// How much played sound is queued ahead of the mic, in samples.
+	pub(crate) fn queued(&self) -> u64 {
+		self.written - self.read
+	}
+
 	/// Lines the played sound up with the mic afresh, for when either stream
 	/// reports it dropped samples.
 	pub(crate) fn line_up_again(&mut self) {
@@ -432,6 +437,16 @@ impl CallVoice {
 	/// The delay the echo canceller found between played and recorded sound.
 	pub(crate) fn echo_delay_ms(&self) -> Option<u32> {
 		self.canceller.delay_ms()
+	}
+
+	/// How much echo the canceller is removing, in dB (see EchoCanceller).
+	pub(crate) fn echo_removed_db(&self) -> f32 {
+		self.canceller.echo_removed_db()
+	}
+
+	/// The echo suppressor's largest echo share over the last hops.
+	pub(crate) fn echo_share(&self) -> f32 {
+		self.echo.iter().copied().fold(0.0, f32::max)
 	}
 
 	/// Takes mic samples and, beside them, what the computer was playing
@@ -636,6 +651,37 @@ mod tests {
 		}
 		let removed = level_db(&echo[from..to]) - level_db(&clean[from..to]);
 		assert!(removed > 25.0, "filter and suppressor removed {removed} dB");
+	}
+
+	#[test]
+	fn with_earphones_the_echo_stages_leave_our_voice_alone() {
+		// Earphones: the far end plays but none of it reaches the mic, which
+		// only hears us, talking over and between the far end. Nothing here
+		// is echo, so nothing should be turned down.
+		let len = 16_000 * 20;
+		let far = chatter(1, len, 0.3);
+		let voice = chatter(5, len, 0.2);
+		let mut canceller = EchoCanceller::new();
+		let mut suppressor = EchoSuppressor::new();
+		let (mut cancelled, mut residual) = (Vec::new(), Vec::new());
+		for (m, f) in voice.chunks(160).zip(far.chunks(160)) {
+			canceller.process(m, f, &mut cancelled, &mut residual);
+		}
+		let to = cancelled.len() / 160 * 160;
+		let mut clean = vec![0.0; to];
+		for ((c, r), o) in cancelled[..to].chunks(160).zip(residual.chunks(160)).zip(clean.chunks_mut(160)) {
+			suppressor.process_hop(c, r, o);
+		}
+		// The suppressor's output trails by one hop.
+		let (from, to) = (16_000 * 5, to - 160);
+		let lost = level_db(&voice[from - 160..to - 160]) - level_db(&clean[from..to]);
+		assert!(lost < 1.0, "our voice was turned down {lost:.1} dB with no echo to remove");
+		// And no hop of it was cut down hard.
+		let worst = (from / 160..to / 160)
+			.filter(|h| level_db(&voice[(h - 1) * 160..h * 160]) > -40.0)
+			.map(|h| level_db(&voice[(h - 1) * 160..h * 160]) - level_db(&clean[h * 160..(h + 1) * 160]))
+			.fold(0.0f32, f32::max);
+		assert!(worst < 6.0, "a hop of our voice lost {worst:.1} dB");
 	}
 
 	#[test]

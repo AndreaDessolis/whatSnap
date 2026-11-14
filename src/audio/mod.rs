@@ -6,6 +6,7 @@ pub mod device_watch;
 pub mod devices;
 pub mod fft;
 pub mod file;
+pub mod libopus;
 pub mod limiter;
 pub mod ogg;
 pub mod ringback;
@@ -223,7 +224,7 @@ fn play_on_own_stream(
 	preview: Option<u64>,
 	fill: impl FnOnce(&Player) + Send + 'static,
 ) {
-	std::thread::spawn(move || {
+	crate::util::spawn_named("sound player", move || {
 		use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize};
 		struct ComGuard(bool);
 		impl Drop for ComGuard {
@@ -425,7 +426,7 @@ pub(crate) fn do_seek(stream_handle: &MixerDeviceSink, path: &str, target_secs: 
 }
 
 pub(crate) fn decode_opus(data: &[u8]) -> Option<rodio::buffer::SamplesBuffer> {
-	use opus::{Channels, Decoder};
+	use crate::audio::libopus::{Channels, Decoder};
 
 	fn feed_packet(
 		packet: &[u8],
@@ -632,9 +633,8 @@ pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str) -> crate::
 		io::{BufWriter, Write},
 	};
 
-	use opus::{Application, Channels, Encoder};
-
 	use crate::audio::{
+		libopus::{Application, Channels, Encoder},
 		ogg::{OggWriter, PacketEnd},
 		wav::WavReader,
 	};

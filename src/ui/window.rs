@@ -2577,7 +2577,7 @@ pub fn bind_input_handlers(
 		}
 		let running = share_menu_running.clone();
 		let tx = tx_share_menu.clone();
-		std::thread::spawn(move || {
+		crate::util::spawn_named("share menu setup", move || {
 			let dir = std::env::current_exe().ok().and_then(|exe| exe.parent().map(|d| d.to_path_buf()));
 			let result_file = dir.as_ref().map(|d| d.join("share").join("enable-result.txt"));
 			if let Some(file) = &result_file {

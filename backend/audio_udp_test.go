@@ -6,6 +6,7 @@ import (
 	"math"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/purpshell/meowcaller"
 )
@@ -65,5 +66,51 @@ func TestUDPBridgeHandsOverTheOpusPacketThatCameWithTheFrame(t *testing.T) {
 
 	if pcmPart, opusPart := splitMicDatagram(make([]byte, 4)); len(pcmPart) != 4 || opusPart != nil {
 		t.Fatalf("hello datagram split into %d PCM bytes and %d Opus bytes", len(pcmPart), len(opusPart))
+	}
+}
+
+// The app tells decoded audio from an Opus packet by the first byte.
+func TestUDPBridgeTagsDecodedAudioAndOpusPackets(t *testing.T) {
+	bridge, port, err := NewUDPBridge()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bridge.Close()
+	app, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Close()
+	// The app's first mic datagram tells the bridge where it is.
+	if _, err := app.Write(make([]byte, meowcaller.FrameSamples*4)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bridge.ReadFrame(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := bridge.WriteFrame([]float32{0.5, -0.25}); err != nil {
+		t.Fatal(err)
+	}
+	if err := bridge.WriteOpusPacket(0xA1B2C3D4, 7, 96000, []byte{0x58, 1, 2}); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 64)
+	_ = app.SetReadDeadline(time.Now().Add(2 * time.Second))
+	n, err := app.Read(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 9 || buf[0] != datagramPCM || math.Float32frombits(binary.LittleEndian.Uint32(buf[1:])) != 0.5 {
+		t.Fatalf("PCM datagram = %x", buf[:n])
+	}
+	n, err = app.Read(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 14 || buf[0] != datagramOpus || binary.LittleEndian.Uint32(buf[1:]) != 0xA1B2C3D4 ||
+		binary.LittleEndian.Uint16(buf[5:]) != 7 || binary.LittleEndian.Uint32(buf[7:]) != 96000 ||
+		!bytes.Equal(buf[11:n], []byte{0x58, 1, 2}) {
+		t.Fatalf("Opus datagram = %x", buf[:n])
 	}
 }

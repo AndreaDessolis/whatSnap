@@ -355,14 +355,14 @@ pub(crate) fn send_files(
 		let ws_tx = ws_tx.clone();
 		if file_type == "audio" {
 			let path = path.clone();
-			std::thread::spawn(move || {
+			crate::util::spawn_named("attachment worker", move || {
 				payload["data"]["duration"] = serde_json::json!(crate::audio::audio_file_seconds(&path));
 				payload["data"]["waveform"] = serde_json::json!(crate::audio::audio_file_waveform(&path));
 				let _ = ws_tx.send(payload.to_string());
 			});
 		} else if file_type == "image" && path.to_lowercase().ends_with(".gif") {
 			let path = path.clone();
-			std::thread::spawn(move || {
+			crate::util::spawn_named("attachment worker", move || {
 				let mp4 = std::env::temp_dir().join(format!("whantv_gif_{}.mp4", crate::util::random_hex()));
 				let mp4 = mp4.to_string_lossy().to_string();
 				match crate::media::gif_video::gif_to_mp4(&path, &mp4) {
@@ -378,7 +378,7 @@ pub(crate) fn send_files(
 			});
 		} else if file_type == "video" {
 			let path = path.clone();
-			std::thread::spawn(move || {
+			crate::util::spawn_named("attachment worker", move || {
 				if let Some(png) = crate::media::video_thumbnail::first_frame_png(&path) {
 					payload["data"]["thumbnail"] = serde_json::json!(crate::util::base64(&png));
 				}
