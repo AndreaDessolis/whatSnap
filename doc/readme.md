@@ -45,20 +45,18 @@ You use whatSnap at your own risk. If you can't afford to lose your WhatsApp acc
 - Send files to whatSnap from File Explorer or from the Windows Share menu.
 
 ## Installing
-Download whatSnap from the [releases page](https://github.com/aryanchoudharypro/whatSnap/releases). There are two kinds of release:
+Download the Development Build of whatSnap from the [releases page](https://github.com/aryanchoudharypro/whatSnap/releases). It has every change as soon as it is made.
 
-- Stable releases have a version number, such as 0.1.0.
-- The Development Build has every change as soon as it is made. It can have more problems.
-
-Each release has two files:
+The release has these files:
 
 - `whatSnap_setup.exe` installs whatSnap. The installer can add a desktop icon, and it can add whatSnap to the Windows Share menu.
 - `whatSnap.zip` is the portable version. Extract it to a folder, then run `whatSnap.exe`. Keep the `backend` folder next to `whatSnap.exe`.
+- `whatSnap_setup-arm64.exe` and `whatSnap-arm64.zip` are the same for Windows on ARM computers.
 
 ## Updating
 whatSnap checks for a new version when it starts. When there is one, it shows what changed and asks if you want to update. If you say yes, whatSnap downloads the update, closes, installs it, and starts again. You don't need to link your phone again.
 
-To check yourself, use `Account -> Check for Updates...`. To select stable releases or development builds, or to turn off the check at startup, use the General tab of the settings.
+To check yourself, use `Account -> Check for Updates...`. To turn off the check at startup, use the General tab of the settings. Since version 0.2.0, whatSnap always updates to the newest Development Build; there is no stable channel to choose.
 
 whatSnap installs an update only when its signature is correct. A portable copy updates the files in its own folder. An installed copy runs the new installer.
 
@@ -415,7 +413,6 @@ Settings has ten tabs: General, Account, Chats, Notifications, Personalization, 
 - `Announce when someone is recording a voice message`
 - `Show a button to message Meta AI in New Chat`
 - `Check for updates when whatSnap starts`
-- `Updates`: Stable releases or Development builds.
 - `Verbose backend logging, for troubleshooting connection issues`: the change takes effect the next time whatSnap starts.
 - `Keyboard Shortcuts...`
 - `Add whatSnap to the Windows Share Menu...`

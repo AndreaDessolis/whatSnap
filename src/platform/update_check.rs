@@ -16,7 +16,9 @@ fn install_kind() -> InstallKind {
 	if installed { InstallKind::Installer } else { InstallKind::Portable }
 }
 
-pub fn run(frame: &Frame, ui_tx: &UiCommandSender, channel: &str, automatic: bool) {
+/// Since 0.2.0 there is only the development channel: builds come out too often
+/// for a separate stable channel to be worth following, so it can't be chosen.
+pub fn run(frame: &Frame, ui_tx: &UiCommandSender, automatic: bool) {
 	let config =
 		UpdaterConfig::new(GITHUB_REPO, "whatSnap", "whatSnap", MINISIGN_PUBLIC_KEY, env!("CARGO_PKG_VERSION"))
 			.with_commit(env!("WHATSNAP_COMMIT_HASH"))
@@ -25,10 +27,9 @@ pub fn run(frame: &Frame, ui_tx: &UiCommandSender, channel: &str, automatic: boo
 	#[cfg(target_arch = "aarch64")]
 	let config = config.with_asset_suffix("-arm64");
 	let config = Arc::new(config);
-	let channel = if channel == "dev" { UpdateChannel::Dev } else { UpdateChannel::Stable };
 	let trigger = if automatic { CheckTrigger::Automatic } else { CheckTrigger::Manual };
 	let tx = ui_tx.clone();
-	ship_shape::ui::run_update_check_with_exit_handler(config, frame, channel, trigger, move || {
+	ship_shape::ui::run_update_check_with_exit_handler(config, frame, UpdateChannel::Dev, trigger, move || {
 		let _ = tx.send(UiCommand::ExitApp);
 	});
 }

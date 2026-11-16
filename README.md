@@ -4,7 +4,7 @@
 
 whatSnap is a lightweight, fast, and accessible WhatsApp client for Windows. It is designed to be completely usable with screen readers and the keyboard. It does not use a browser or WhatsApp Web in the background. It links to your phone as a WhatsApp companion device, the same way WhatsApp Web and WhatsApp for Windows do.
 
-whatSnap is in development. Stable releases are on the Releases page, and each change to `master` also builds a new Development Build.
+whatSnap is in development. Each change to `master` builds a new Development Build on the Releases page, and whatSnap updates itself to it.
 
 ## Disclaimer
 
@@ -63,8 +63,8 @@ whatSnap updates itself with [ship-shape](https://crates.io/crates/ship-shape). 
 
 GitHub Actions builds each push to `master` and each pull request into it. There are two kinds of release:
 
-- Development Build: each push to `master` replaces the `latest` release. Its notes list the new commits, one per line, as `- <hash> <subject>`. The update check on the dev channel reads these lines.
-- Stable releases: to publish one, set the version in `Cargo.toml` and commit. Then push a tag with the same version, for example `v0.1.0`, or make it on GitHub with "Draft a new release", choosing a new tag on `master`. The release workflow checks that the tag and `Cargo.toml` agree, builds and signs the files, and attaches them to the release. Write the changelog on the release page.
+- Development Build: each push to `master` replaces the `latest` release. Its notes list the new commits, one per line, as `- <hash> <subject>`. The update check reads these lines; since 0.2.0 it only follows the Development Build.
+- Stable releases: to publish one, set the version in `Cargo.toml` and commit. Then push a tag with the same version, for example `v0.1.0`, or make it on GitHub with "Draft a new release", choosing a new tag on `master`. The release workflow checks that the tag and `Cargo.toml` agree, builds and signs the files, and attaches them to the release. Write the changelog on the release page. Since 0.2.0 the app no longer offers a stable channel, so a version tag only matters to copies older than 0.2.0 that still follow it.
 
 Both workflows need the `MINISIGN_KEY` and `MINISIGN_PASSWORD` secrets.
 

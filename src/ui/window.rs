@@ -2101,7 +2101,6 @@ pub fn bind_input_handlers(
 	let autostart_check = parts.settings_dialog.autostart_check;
 	let start_maximized_check_open = parts.settings_dialog.start_maximized_check;
 	let check_updates_check_open = parts.settings_dialog.check_updates_check;
-	let update_channel_combo_open = parts.settings_dialog.update_channel_combo;
 	let meta_ai_enabled_check_open = parts.settings_dialog.meta_ai_enabled_check;
 	let verbose_logging_check_open = parts.settings_dialog.verbose_backend_logging_check;
 	let name_field_open = parts.settings_dialog.name_field;
@@ -2155,11 +2154,6 @@ pub fn bind_input_handlers(
 		verbose_logging_check_open.set_value(s.settings.verbose_backend_logging);
 		start_maximized_check_open.set_value(s.settings.start_maximized);
 		check_updates_check_open.set_value(s.settings.check_for_updates_on_startup);
-		crate::ui::dialogs::settings_dialog::set_combo_from_value(
-			&update_channel_combo_open,
-			crate::ui::dialogs::settings_dialog::UPDATE_CHANNEL_CHOICES,
-			&s.settings.update_channel,
-		);
 		noise_suppression_check_open.set_value(s.settings.voice_message_noise_suppression);
 		stereo_voice_check_open.set_value(s.settings.voice_message_stereo);
 		dual_stream_check_open.set_value(s.settings.dual_stream_screen_share);
@@ -2225,14 +2219,12 @@ pub fn bind_input_handlers(
 	});
 
 	let frame_updates = parts.frame;
-	let state_updates = state.clone();
 	let tx_updates = ui_tx.clone();
 	parts.frame.on_menu_selected(move |evt| {
 		if evt.get_id() != MENU_ID_CHECK_UPDATES {
 			return;
 		}
-		let channel = state_updates.borrow().settings.update_channel.clone();
-		crate::platform::update_check::run(&frame_updates, &tx_updates, &channel, false);
+		crate::platform::update_check::run(&frame_updates, &tx_updates, false);
 	});
 
 	let tx_accounts = ui_tx.clone();
@@ -2885,7 +2877,6 @@ pub fn bind_input_handlers(
 	let autostart_check_ok = parts.settings_dialog.autostart_check;
 	let start_maximized_check_ok = parts.settings_dialog.start_maximized_check;
 	let check_updates_check_ok = parts.settings_dialog.check_updates_check;
-	let update_channel_combo_ok = parts.settings_dialog.update_channel_combo;
 	let meta_ai_enabled_check_ok = parts.settings_dialog.meta_ai_enabled_check;
 	let verbose_logging_check_ok = parts.settings_dialog.verbose_backend_logging_check;
 	let name_field_ok = parts.settings_dialog.name_field;
@@ -2939,10 +2930,6 @@ pub fn bind_input_handlers(
 		s.settings.verbose_backend_logging = verbose_logging_check_ok.is_checked();
 		s.settings.start_maximized = start_maximized_check_ok.is_checked();
 		s.settings.check_for_updates_on_startup = check_updates_check_ok.is_checked();
-		s.settings.update_channel = crate::ui::dialogs::settings_dialog::combo_value(
-			&update_channel_combo_ok,
-			crate::ui::dialogs::settings_dialog::UPDATE_CHANNEL_CHOICES,
-		);
 		s.settings.voice_message_noise_suppression = noise_suppression_check_ok.is_checked();
 		s.settings.voice_message_stereo = stereo_voice_check_ok.is_checked();
 		s.settings.dual_stream_screen_share = dual_stream_check_ok.is_checked();

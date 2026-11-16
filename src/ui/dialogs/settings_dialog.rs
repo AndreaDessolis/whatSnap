@@ -21,7 +21,6 @@ pub const DEFAULT_TIMER_CHOICES: &[(&str, &str)] =
 	&[("Off", "0"), ("24 Hours", "86400"), ("7 Days", "604800"), ("90 Days", "7776000")];
 pub const UPLOAD_QUALITY_CHOICES: &[(&str, &str)] = &[("Standard Quality", "sd"), ("HD Quality", "hd")];
 pub const DOWNLOAD_QUALITY_CHOICES: &[(&str, &str)] = &[("Standard Quality", "sd"), ("HD Quality", "hd")];
-pub const UPDATE_CHANNEL_CHOICES: &[(&str, &str)] = &[("Stable releases", "stable"), ("Development builds", "dev")];
 pub const THEME_CHOICES: &[(&str, &str)] = &[("System Default", "system"), ("Light", "light"), ("Dark", "dark")];
 pub const ABOUT_DURATION_CHOICES: &[(&str, &str)] = &[
 	("Never", "-1"),
@@ -63,7 +62,6 @@ pub struct SettingsDialogParts {
 	pub autostart_check: CheckBox,
 	pub start_maximized_check: CheckBox,
 	pub check_updates_check: CheckBox,
-	pub update_channel_combo: ComboBox,
 	pub meta_ai_enabled_check: CheckBox,
 	pub verbose_backend_logging_check: CheckBox,
 	pub shortcuts_btn: Button,
@@ -263,7 +261,6 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 	general_sizer.add_spacer(6);
 	section_header(&general_panel, &general_sizer, "Updates & Troubleshooting");
 	let check_updates_check = setting_switch(&general_panel, &general_sizer, "Check for updates when whatSnap starts");
-	let update_channel_combo = visibility_combo(&general_panel, &general_sizer, "Updates", UPDATE_CHANNEL_CHOICES);
 	let verbose_backend_logging_check = setting_switch(
 		&general_panel,
 		&general_sizer,
@@ -745,7 +742,6 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		autostart_check,
 		start_maximized_check,
 		check_updates_check,
-		update_channel_combo,
 		meta_ai_enabled_check,
 		verbose_backend_logging_check,
 		shortcuts_btn,
@@ -954,7 +950,6 @@ impl SettingsDialogParts {
 		self.verbose_backend_logging_check.set_value(settings.verbose_backend_logging);
 		self.start_maximized_check.set_value(settings.start_maximized);
 		self.check_updates_check.set_value(settings.check_for_updates_on_startup);
-		set_combo_from_value(&self.update_channel_combo, UPDATE_CHANNEL_CHOICES, &settings.update_channel);
 		self.voice_message_noise_suppression_check.set_value(settings.voice_message_noise_suppression);
 		self.voice_message_stereo_check.set_value(settings.voice_message_stereo);
 		self.dual_stream_screen_share_check.set_value(settings.dual_stream_screen_share);
@@ -987,7 +982,6 @@ impl SettingsDialogParts {
 		settings.verbose_backend_logging = self.verbose_backend_logging_check.is_checked();
 		settings.start_maximized = self.start_maximized_check.is_checked();
 		settings.check_for_updates_on_startup = self.check_updates_check.is_checked();
-		settings.update_channel = combo_value(&self.update_channel_combo, UPDATE_CHANNEL_CHOICES);
 		settings.voice_message_noise_suppression = self.voice_message_noise_suppression_check.is_checked();
 		settings.voice_message_stereo = self.voice_message_stereo_check.is_checked();
 		settings.dual_stream_screen_share = self.dual_stream_screen_share_check.is_checked();

@@ -2,8 +2,9 @@ name: Release whatSnap
 # Pushing a version tag, such as v0.1.0 (or 0.1.0), builds a stable release and attaches
 # its files: push one with git, or make it with "Draft a new release" on
 # GitHub. (A hand run can't make the tag itself: GitHub refuses the workflow's
-# token a new tag on commits that hold workflow files.) The update check's
-# stable channel offers the newest of these.
+# token a new tag on commits that hold workflow files.) Only copies older than
+# 0.2.0 follow these through their stable channel; 0.2.0 and later follow the
+# Development Build alone.
 on:
   push:
     tags:

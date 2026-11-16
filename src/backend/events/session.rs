@@ -60,15 +60,15 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 					ship_shape::ui::bring_to_front_after_update(&parts.frame);
 					parts.conversations_parts.search_field.set_focus();
 				}
-				let (check_updates, channel, ui_tx) = {
+				let (check_updates, ui_tx) = {
 					let s = state.borrow();
-					(s.settings.check_for_updates_on_startup, s.settings.update_channel.clone(), s.ui_tx.clone())
+					(s.settings.check_for_updates_on_startup, s.ui_tx.clone())
 				};
 				if check_updates && app_start {
 					if background {
 						state.borrow_mut().pending_update_check = true;
 					} else {
-						crate::platform::update_check::run(&parts.frame, &ui_tx, &channel, true);
+						crate::platform::update_check::run(&parts.frame, &ui_tx, true);
 					}
 				}
 
