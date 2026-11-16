@@ -23,7 +23,11 @@ func hdParentID(msg *waE2E.Message) string {
 		switch m.GetMessageContextInfo().GetMessageAssociation().GetAssociationType() {
 		case waE2E.MessageAssociation_HD_IMAGE_DUAL_UPLOAD,
 			waE2E.MessageAssociation_HD_VIDEO_DUAL_UPLOAD,
-			waE2E.MessageAssociation_STREAMED_HD_VIDEO_DUAL_UPLOAD:
+			waE2E.MessageAssociation_STREAMED_HD_VIDEO_DUAL_UPLOAD,
+			waE2E.MessageAssociation_HEVC_VIDEO_DUAL_UPLOAD,
+			waE2E.MessageAssociation_AV1_VIDEO_DUAL_UPLOAD,
+			waE2E.MessageAssociation_ORIGINAL_VIDEO_DUAL_UPLOAD,
+			waE2E.MessageAssociation_ORIGINAL_IMAGE_DUAL_UPLOAD:
 			return m.GetMessageContextInfo().GetMessageAssociation().GetParentMessageKey().GetID()
 		}
 		next := m.GetAssociatedChildMessage().GetMessage()
