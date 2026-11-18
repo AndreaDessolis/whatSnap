@@ -301,6 +301,8 @@ pub enum UiCommand {
 	ToggleScreenShare,
 	ToggleCallDeviceSettings,
 	SystemAudioFailed(String),
+	/// The call's microphone went silent (true) or picks up sound again.
+	MicHealth(bool),
 	SetCallInputDevice(Option<String>),
 	SetCallOutputDevice(Option<String>),
 	SetCallCameraDevice(Option<String>),

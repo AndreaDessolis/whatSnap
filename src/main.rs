@@ -1293,6 +1293,7 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::ScreenShareBlack(black) => ui_commands::calls::screen_share_black(state, parts, black),
 		UiCommand::PeerVideo(event) => ui_commands::calls::peer_video(state, parts, event),
 		UiCommand::SystemAudioFailed(reason) => ui_commands::calls::system_audio_failed(state, parts, reason),
+		UiCommand::MicHealth(silent) => ui_commands::calls::mic_health(state, parts, silent),
 		UiCommand::ShowMemberChanges => ui_commands::member_extras::request_member_changes(state),
 		UiCommand::FilterGroupMembers(query) => ui_commands::contacts_groups::filter_group_members(state, parts, query),
 		UiCommand::DownloadMediaMessage(message_id) => {

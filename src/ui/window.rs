@@ -1786,7 +1786,11 @@ pub fn bind_input_handlers(
 	let call_status_label = parts.call_parts.status_label;
 	let call_caller_info = parts.call_parts.caller_info;
 	let call_frame_timer = parts.call_parts.frame;
+	let tx_mic_health = ui_tx.clone();
 	call_duration_timer.on_tick(move |_| {
+		if let Some(silent) = crate::calls::audio::take_mic_health_change() {
+			let _ = tx_mic_health.send(UiCommand::MicHealth(silent));
+		}
 		let s = state_timer.borrow();
 		if s.active_call_id.is_some() && s.active_call_audio.is_some() {
 			let elapsed =

@@ -381,6 +381,8 @@ struct CaptureDsp {
 	wide_frame: Vec<f32>,
 	muted_scratch: Vec<f32>,
 	dtx: bool,
+	/// Device frames in a row that were digital silence while unmuted.
+	silent_frames: u32,
 }
 
 /// Settings > Input & Output "Turn off all sound processing in calls": the mic
@@ -398,6 +400,34 @@ pub(crate) fn set_call_raw_audio(on: bool) {
 
 fn call_raw_audio() -> bool {
 	CALL_RAW_AUDIO.load(Ordering::Relaxed)
+}
+
+/// Mic health, like WhatsApp's mic health warning: the capture thread notices
+/// a microphone that delivers nothing but digital silence while we're not
+/// muted (muted in Windows, a privacy switch, a broken device), and when sound
+/// comes back. The call window's timer takes the change (take_mic_health_change).
+static MIC_SILENT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static MIC_HEALTH_CHANGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Peak below which a device sample counts as silence (about -100 dBFS): no
+/// real microphone is this quiet, even in a silent room.
+const MIC_SILENCE_PEAK: f32 = 1e-5;
+const MIC_SILENT_AFTER_SECS: u32 = 5;
+
+/// Some(true) once the mic has gone silent, Some(false) once it's back, None
+/// when nothing changed since the last call.
+pub(crate) fn take_mic_health_change() -> Option<bool> {
+	MIC_HEALTH_CHANGED.swap(false, Ordering::Relaxed).then(|| MIC_SILENT.load(Ordering::Relaxed))
+}
+
+fn set_mic_silent(silent: bool) {
+	if MIC_SILENT.swap(silent, Ordering::Relaxed) != silent {
+		MIC_HEALTH_CHANGED.store(true, Ordering::Relaxed);
+		log_line(if silent {
+			"mic health: the microphone has delivered only silence for 5 s"
+		} else {
+			"mic health: the microphone picks up sound again"
+		});
+	}
 }
 
 /// How much of our audio the peer says never arrived, in percent, as the
@@ -418,6 +448,8 @@ fn new_call_opus_encoder() -> Option<crate::audio::libopus::Encoder> {
 	CALL_PACKET_LOSS_PERCENT.store(0, Ordering::Relaxed);
 	CALL_SEND_RATE.store(NETWORK_SAMPLE_RATE, Ordering::Relaxed);
 	CALL_SEND_DTX.store(false, Ordering::Relaxed);
+	MIC_SILENT.store(false, Ordering::Relaxed);
+	MIC_HEALTH_CHANGED.store(false, Ordering::Relaxed);
 	call_opus_encoder(NETWORK_SAMPLE_RATE)
 }
 
@@ -589,6 +621,26 @@ impl CaptureDsp {
 			wide_frame: Vec::with_capacity(FRAME_SAMPLES * 3),
 			muted_scratch: Vec::new(),
 			dtx: false,
+			silent_frames: 0,
+		}
+	}
+
+	/// Counts how long the device has given only digital silence. Muted time
+	/// says nothing either way.
+	fn watch_mic_health(&mut self, data: &[f32], muted: bool) {
+		if muted {
+			self.silent_frames = 0;
+			return;
+		}
+		let frames = (data.len() / self.device_channels.max(1) as usize) as u32;
+		if data.iter().any(|s| s.abs() > MIC_SILENCE_PEAK) {
+			self.silent_frames = 0;
+			set_mic_silent(false);
+			return;
+		}
+		self.silent_frames = self.silent_frames.saturating_add(frames);
+		if self.silent_frames >= self.device_rate * MIC_SILENT_AFTER_SECS {
+			set_mic_silent(true);
 		}
 	}
 
@@ -627,6 +679,7 @@ impl CaptureDsp {
 		// mic -> echo canceller -> noise suppressor -> auto gain -> pause gate
 		// (all in CallVoice) -> + system audio -> limiter.
 		self.follow_send_rate();
+		self.watch_mic_health(data, muted);
 		self.downsampler.process(data, &mut self.resampled);
 		if let Some(high_band) = self.high_band.as_mut() {
 			high_band.push_device(data);

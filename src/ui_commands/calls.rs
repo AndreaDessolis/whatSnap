@@ -1011,6 +1011,23 @@ pub(crate) fn system_audio_failed(state: &Rc<RefCell<AppState>>, parts: &Rc<Wind
 	announce_call(parts, &msg, Priority::High);
 }
 
+/// WhatsApp's mic health warning: the microphone gives only silence while
+/// the call isn't muted, or picks up sound again after that.
+pub(crate) fn mic_health(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, silent: bool) {
+	let in_call = state.try_borrow().map(|s| s.active_call_audio.is_some()).unwrap_or(false);
+	if !in_call {
+		return;
+	}
+	let msg = if silent {
+		crate::i18n::tr(
+			"Your microphone isn't picking up any sound. Check that it's connected and not muted in Windows.",
+		)
+	} else {
+		crate::i18n::tr("Your microphone is picking up sound again.")
+	};
+	announce_call(parts, msg, Priority::High);
+}
+
 /// The capture thread couldn't read the screen at all, so the share never
 /// started - the screen counterpart of `camera_failed`.
 pub(crate) fn screen_share_failed(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, reason: String) {
