@@ -72,6 +72,10 @@ fn activation(foreground: bool) -> &'static str {
 	}
 }
 
+/// whatSnap plays its own sounds, so a toast must not add Windows' "Notification"
+/// sound on top. Without this element Windows plays it for every toast.
+const SILENT: &str = r#"<audio silent="true"/>"#;
+
 fn toast_xml(title: &str, body: &str, jid: &str, account: Option<&str>, is_locked: bool, can_reply: bool) -> String {
 	let open = escape_xml(&app_link::open_link(jid, account));
 	let actions = if is_locked {
@@ -110,11 +114,12 @@ fn toast_xml(title: &str, body: &str, jid: &str, account: Option<&str>, is_locke
 			r#"<text>{title}</text><text>{body}</text>"#,
 			r#"</binding></visual>"#,
 			"{actions}",
-			r#"</toast>"#,
+			r#"{audio}</toast>"#,
 		),
 		open = open,
 		foreground = activation(true),
 		actions = actions,
+		audio = SILENT,
 		title = escape_xml(title),
 		body = escape_xml(body),
 	)
@@ -130,10 +135,11 @@ fn plain_toast_xml(title: &str, body: &str) -> String {
 			r#"<visual><binding template="ToastGeneric">"#,
 			r#"<text>{title}</text><text>{body}</text>"#,
 			r#"</binding></visual>"#,
-			r#"</toast>"#,
+			r#"{audio}</toast>"#,
 		),
 		launch = launch,
 		foreground = activation(true),
+		audio = SILENT,
 		title = escape_xml(title),
 		body = escape_xml(body),
 	)
@@ -215,6 +221,8 @@ mod tests {
 		assert!(xml.contains("<text>A &amp; &lt;B&gt;</text>"));
 		assert!(xml.contains("<text>say &quot;hi&quot;</text>"));
 		assert!(xml.contains("arguments=\"whatsnap://markread?jid=1%40g.us\""));
+		assert!(xml.ends_with(r#"</actions><audio silent="true"/></toast>"#));
+		assert!(plain_toast_xml("a", "b").ends_with(r#"<audio silent="true"/></toast>"#));
 
 		let locked_xml = toast_xml("WhatsApp", "1 new message", "1@g.us", None, true, false);
 		assert!(!locked_xml.contains("arguments=\"whatsnap://markread"));
