@@ -478,11 +478,7 @@ fn call_opus_encoder(rate: u32) -> Option<crate::audio::libopus::Encoder> {
 		crate::audio::libopus::Application::Voip,
 	)
 	.ok()?;
-	let bitrate = match rate {
-		48_000.. => OPUS_FB_BITRATE,
-		24_000.. => OPUS_SWB_BITRATE,
-		_ => OPUS_BITRATE,
-	};
+	let bitrate = call_bitrate(rate, CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed));
 	encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(bitrate)).ok()?;
 	encoder.set_complexity(OPUS_COMPLEXITY).ok()?;
 	if wide {
@@ -492,6 +488,24 @@ fn call_opus_encoder(rate: u32) -> Option<crate::audio::libopus::Encoder> {
 	let _ = encoder.set_packet_loss_perc(CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed));
 	let _ = encoder.set_dtx(CALL_SEND_DTX.load(Ordering::Relaxed));
 	Some(encoder)
+}
+
+/// The call's audio bitrate, stepped down while the peer reports heavy loss
+/// of our audio, the way WhatsApp's adaptive audio quality (UAQC) drops from
+/// its high-quality state (about 25 kbit/s) toward its low data rate (rc
+/// low_data_usage_bitrate 14000) when the network struggles: a congested link
+/// loses less when sent less, and the encoder's FEC gets a bigger share.
+fn call_bitrate(rate: u32, loss_percent: i32) -> i32 {
+	let full = match rate {
+		48_000.. => OPUS_FB_BITRATE,
+		24_000.. => OPUS_SWB_BITRATE,
+		_ => OPUS_BITRATE,
+	};
+	match loss_percent {
+		20.. => full * 3 / 5,
+		10.. => full * 4 / 5,
+		_ => full,
+	}
 }
 
 // The limiter after the mix: 2 ms lookahead, a little under full scale.
@@ -726,6 +740,12 @@ impl CaptureDsp {
 			if planned_loss != self.applied_loss_percent {
 				if let Some(encoder) = self.opus.as_mut() {
 					let _ = encoder.set_packet_loss_perc(planned_loss);
+					let before = call_bitrate(self.send_rate, self.applied_loss_percent);
+					let now = call_bitrate(self.send_rate, planned_loss);
+					if now != before {
+						let _ = encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(now));
+						log_line(&format!("call audio: {now} bit/s for {planned_loss}% loss"));
+					}
 				}
 				self.applied_loss_percent = planned_loss;
 			}
@@ -1623,6 +1643,14 @@ mod tests {
 		);
 		assert!(dsp.playout.accelerated > 0, "the backlog wasn't shortened by accelerate");
 		assert!(!dsp.playout.refilling, "caught up so far that it ran dry");
+	}
+
+	#[test]
+	fn bitrate_steps_down_with_heavy_loss() {
+		assert_eq!(call_bitrate(16_000, 0), OPUS_BITRATE);
+		assert_eq!(call_bitrate(16_000, 12), OPUS_BITRATE * 4 / 5);
+		assert_eq!(call_bitrate(16_000, 30), OPUS_BITRATE * 3 / 5);
+		assert_eq!(call_bitrate(48_000, 0), OPUS_FB_BITRATE);
 	}
 
 	#[test]
