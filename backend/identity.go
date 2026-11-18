@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -90,6 +91,23 @@ func isDigits(text string, length int) bool {
 		}
 	}
 	return true
+}
+
+// webSocketHeaders adds the request headers a WebView2 page sends on the
+// chat websocket upgrade and Go leaves out.
+func webSocketHeaders() http.Header {
+	language := "en-US"
+	if languages, err := windows.GetUserPreferredUILanguages(windows.MUI_LANGUAGE_NAME); err == nil && len(languages) > 0 {
+		language = languages[0]
+	}
+	acceptLanguage := language
+	if base, _, found := strings.Cut(language, "-"); found {
+		acceptLanguage += "," + base + ";q=0.9"
+	}
+	return http.Header{
+		"Accept-Language": {acceptLanguage},
+		"Accept-Encoding": {"gzip, deflate, br, zstd"},
+	}
 }
 
 func webViewUserAgent() string {

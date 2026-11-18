@@ -46,6 +46,7 @@ func (acc *Account) buildClient(deviceStore *store.Device) *whatsmeow.Client {
 	acc.hookLIDStore(deviceStore)
 	c := whatsmeow.NewClient(deviceStore, clientLog)
 	c.UserAgent = webViewUserAgent()
+	c.WebSocketHeaders = webSocketHeaders()
 	c.EnableAutoReconnect = true
 	c.AutoReconnectHook = acc.autoReconnectHook(c)
 	c.AutoTrustIdentity = true
