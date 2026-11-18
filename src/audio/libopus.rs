@@ -143,8 +143,9 @@ impl Encoder {
 		self.set(OPUS_SET_MAX_BANDWIDTH_REQUEST, bandwidth)
 	}
 
-	/// Discontinuous transmission: in silence the encoder emits a one or two
-	/// byte packet every 400 ms and nothing between.
+	/// Discontinuous transmission: in silence most frames come out as a packet
+	/// of at most two bytes that need not be sent, with a normal comfort-noise
+	/// packet about every 400 ms.
 	pub(crate) fn set_dtx(&mut self, on: bool) -> Result<(), Error> {
 		self.set(OPUS_SET_DTX_REQUEST, on as i32)
 	}

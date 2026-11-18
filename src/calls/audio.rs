@@ -380,6 +380,7 @@ struct CaptureDsp {
 	high_band: Option<crate::calls::swb_uplink::HighBand>,
 	wide_frame: Vec<f32>,
 	muted_scratch: Vec<f32>,
+	dtx: bool,
 }
 
 /// How much of our audio the peer says never arrived, in percent, as the
@@ -399,8 +400,14 @@ fn new_call_opus_encoder() -> Option<crate::audio::libopus::Encoder> {
 	// peer's reports measure, see `set_call_packet_loss_percent`.
 	CALL_PACKET_LOSS_PERCENT.store(0, Ordering::Relaxed);
 	CALL_SEND_RATE.store(NETWORK_SAMPLE_RATE, Ordering::Relaxed);
+	CALL_SEND_DTX.store(false, Ordering::Relaxed);
 	call_opus_encoder(NETWORK_SAMPLE_RATE)
 }
+
+/// Whether the call's encoder runs with DTX, as the backend last said (the
+/// server's rc.dtx through meowcaller's Call.DTX). The backend leaves the
+/// silent frames out of the call.
+static CALL_SEND_DTX: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// The call's audio rate as the backend last said (meowcaller's
 /// Call.AudioRate): 16000, or 24000 or 48000 once both sides advertised
@@ -434,6 +441,7 @@ fn call_opus_encoder(rate: u32) -> Option<crate::audio::libopus::Encoder> {
 	}
 	let _ = encoder.set_inband_fec(true);
 	let _ = encoder.set_packet_loss_perc(CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed));
+	let _ = encoder.set_dtx(CALL_SEND_DTX.load(Ordering::Relaxed));
 	Some(encoder)
 }
 
@@ -563,12 +571,20 @@ impl CaptureDsp {
 			high_band: None,
 			wide_frame: Vec::with_capacity(FRAME_SAMPLES * 3),
 			muted_scratch: Vec::new(),
+			dtx: false,
 		}
 	}
 
 	/// Follows the call's audio rate: a new encoder for it, and the high band
 	/// on above 16 kHz.
 	fn follow_send_rate(&mut self) {
+		let dtx = CALL_SEND_DTX.load(Ordering::Relaxed);
+		if dtx != self.dtx {
+			self.dtx = dtx;
+			if let Some(encoder) = self.opus.as_mut() {
+				let _ = encoder.set_dtx(dtx);
+			}
+		}
 		let rate = CALL_SEND_RATE.load(Ordering::Relaxed);
 		if rate == self.send_rate {
 			return;
@@ -704,11 +720,13 @@ pub(crate) enum Incoming {
 	Opus { sequence: u16, timestamp: u32, packet: Vec<u8> },
 	/// The call's audio rate changed (16000, 24000 or 48000).
 	AudioRate(u32),
+	/// Whether to encode with DTX ([4][on u8]).
+	AudioDTX(bool),
 }
 
 /// One datagram from the backend's audio bridge (backend/audio_udp.go):
 /// `[1][f32 LE samples...]`, `[2][ssrc u32][seq u16][timestamp u32][Opus packet]`,
-/// or `[3][audio rate u32]` (little endian).
+/// `[3][audio rate u32]` or `[4][DTX on u8]` (little endian).
 fn parse_incoming(datagram: &[u8]) -> Option<Incoming> {
 	match datagram.split_first()? {
 		(1, pcm) => Some(Incoming::Pcm(pcm.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect())),
@@ -718,6 +736,7 @@ fn parse_incoming(datagram: &[u8]) -> Option<Incoming> {
 			packet: rest[10..].to_vec(),
 		}),
 		(3, rest) if rest.len() >= 4 => Some(Incoming::AudioRate(u32::from_le_bytes(rest[..4].try_into().ok()?))),
+		(4, [on, ..]) => Some(Incoming::AudioDTX(*on != 0)),
 		_ => None,
 	}
 }
@@ -817,7 +836,7 @@ impl RenderDsp {
 					}
 				}
 				// Taken by the reader thread; never queued.
-				Incoming::AudioRate(_) => {}
+				Incoming::AudioRate(_) | Incoming::AudioDTX(_) => {}
 			}
 		}
 		while queue.len() > self.max_buffered_src {
@@ -1252,6 +1271,11 @@ pub fn start_audio_streams(
 							log_line(&format!("call audio: the call runs at {rate} Hz"));
 							CALL_SEND_RATE.store(rate, Ordering::Relaxed);
 						}
+						continue;
+					}
+					if let Incoming::AudioDTX(on) = frame {
+						log_line(&format!("call audio: DTX {}", if on { "on" } else { "off" }));
+						CALL_SEND_DTX.store(on, Ordering::Relaxed);
 						continue;
 					}
 					if frame_tx.try_send(frame).is_err() {

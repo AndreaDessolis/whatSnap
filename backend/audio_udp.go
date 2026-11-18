@@ -43,12 +43,16 @@ type UDPBridge struct {
 	dropped int
 	// pendingRate is an audio rate that couldn't reach the app yet.
 	pendingRate atomic.Int32
+	// pendingDTX is a DTX setting that couldn't reach the app yet: 0 none,
+	// 1 off, 2 on.
+	pendingDTX atomic.Int32
 }
 
 var (
 	_ meowcaller.OpusFrameSource   = (*UDPBridge)(nil)
 	_ meowcaller.OpusPacketSink    = (*UDPBridge)(nil)
 	_ meowcaller.AudioRateListener = (*UDPBridge)(nil)
+	_ meowcaller.AudioDTXListener  = (*UDPBridge)(nil)
 )
 
 // What the app is sent, one datagram each (little endian): audio decoded
@@ -59,6 +63,8 @@ const (
 	datagramOpus = 2 // [2][ssrc u32][seq u16][timestamp u32][packet]
 	// [3][rate u32]: the call's audio rate (16000, 24000 or 48000).
 	datagramAudioRate = 3
+	// [4][on u8]: whether the app's Opus encoder runs with DTX.
+	datagramAudioDTX = 4
 )
 
 func splitMicDatagram(datagram []byte) (pcm, opusFrame []byte) {
@@ -203,6 +209,30 @@ func (b *UDPBridge) SetAudioRate(rate int) {
 		return
 	}
 	log.Printf("UDPBridge: call audio rate %d Hz", rate)
+}
+
+// SetAudioDTX tells the app whether to encode with DTX (meowcaller's
+// AudioDTXListener): the server's rc.dtx. Frames it encodes as silence are then
+// left out of the call.
+func (b *UDPBridge) SetAudioDTX(on bool) {
+	pending := int32(1)
+	if on {
+		pending = 2
+	}
+	b.peerAddrMu.Lock()
+	paddr := b.peerAddr
+	b.peerAddrMu.Unlock()
+	if paddr == nil {
+		b.pendingDTX.Store(pending)
+		return
+	}
+	buf := [2]byte{datagramAudioDTX, byte(pending - 1)}
+	if _, err := b.conn.WriteToUDP(buf[:], paddr); err != nil {
+		log.Printf("UDPBridge: DTX setting not sent: %v", err)
+		b.pendingDTX.Store(pending)
+		return
+	}
+	log.Printf("UDPBridge: call audio DTX %v", on)
 }
 
 // WriteOpusPacket hands the app one of the peer's Opus packets undecoded.
