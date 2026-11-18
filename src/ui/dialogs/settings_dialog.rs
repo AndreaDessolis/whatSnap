@@ -146,6 +146,7 @@ pub struct SettingsDialogParts {
 	pub call_output_device_combo: ComboBox,
 	pub voice_message_noise_suppression_check: CheckBox,
 	pub call_start_muted_check: CheckBox,
+	pub call_raw_audio_check: CheckBox,
 	pub show_frequent_calls_check: CheckBox,
 	pub dual_stream_screen_share_check: CheckBox,
 
@@ -587,6 +588,16 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&audio_sizer,
 		"When enabled, calls begin with your microphone muted. You can unmute at any time during the call.",
 	);
+	let call_raw_audio_check = setting_switch(
+		&audio_panel,
+		&audio_sizer,
+		"Turn off all sound processing in calls",
+	);
+	setting_note(
+		&audio_panel,
+		&audio_sizer,
+		"Takes effect right away, also during a call. Your microphone is sent exactly as it is (no echo cancelling, noise removal, automatic volume or limiter, and the microphone level is left alone), and the other person's sound is played without speech enhancement or bandwidth extension.",
+	);
 	let show_frequent_calls_check =
 		setting_switch(&audio_panel, &audio_sizer, "Show frequent contacts in the Calls tab");
 	setting_note(
@@ -763,6 +774,7 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		call_output_device_combo,
 		voice_message_noise_suppression_check,
 		call_start_muted_check,
+		call_raw_audio_check,
 		show_frequent_calls_check,
 		dual_stream_screen_share_check,
 		lock_panel,
@@ -980,6 +992,7 @@ impl SettingsDialogParts {
 		self.call_notifications_check.set_value(settings.call_notifications);
 		self.call_ringtone_check.set_value(settings.call_ringtone);
 		self.call_start_muted_check.set_value(settings.call_start_muted);
+		self.call_raw_audio_check.set_value(settings.call_raw_audio);
 		self.show_frequent_calls_check.set_value(settings.show_frequent_calls);
 		self.enter_is_send_check.set_value(settings.enter_is_send);
 		self.type_to_compose_check.set_value(settings.type_to_compose);
@@ -1016,6 +1029,7 @@ impl SettingsDialogParts {
 		settings.call_notifications = self.call_notifications_check.is_checked();
 		settings.call_ringtone = self.call_ringtone_check.is_checked();
 		settings.call_start_muted = self.call_start_muted_check.is_checked();
+		settings.call_raw_audio = self.call_raw_audio_check.is_checked();
 		settings.show_frequent_calls = self.show_frequent_calls_check.is_checked();
 		settings.enter_is_send = self.enter_is_send_check.is_checked();
 		settings.type_to_compose = self.type_to_compose_check.is_checked();

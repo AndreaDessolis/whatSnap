@@ -530,6 +530,7 @@ fn main() {
 		let accounts = Rc::new(RefCell::new(accounts.with_links(links)));
 
 		let loaded_settings = crate::settings::Settings::load();
+		crate::calls::audio::set_call_raw_audio(loaded_settings.call_raw_audio);
 		let saved_audio_speed = loaded_settings.audio_speed();
 		let state = Rc::new(RefCell::new(new_app_state(
 			loaded_settings,

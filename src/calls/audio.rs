@@ -383,6 +383,23 @@ struct CaptureDsp {
 	dtx: bool,
 }
 
+/// Settings > Input & Output "Turn off all sound processing in calls": the mic
+/// goes out as it comes in (no echo canceller, noise removal, auto gain, pause
+/// gate, limiter or mic level changes) and the peer's Opus is decoded plainly
+/// (no Deep PLC, NoLACE or bandwidth extension). Read every round, so it takes
+/// effect mid-call.
+static CALL_RAW_AUDIO: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub(crate) fn set_call_raw_audio(on: bool) {
+	if CALL_RAW_AUDIO.swap(on, Ordering::Relaxed) != on {
+		log_line(&format!("call audio: all processing {}", if on { "off (raw)" } else { "on" }));
+	}
+}
+
+fn call_raw_audio() -> bool {
+	CALL_RAW_AUDIO.load(Ordering::Relaxed)
+}
+
 /// How much of our audio the peer says never arrived, in percent, as the
 /// backend last reported it.
 static CALL_PACKET_LOSS_PERCENT: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(0);
@@ -616,8 +633,13 @@ impl CaptureDsp {
 		}
 		let ready = self.echo_reference.lock().unwrap().take(self.resampled.len(), &mut self.played);
 		self.cleaned.clear();
-		self.slices_since_mic_check +=
-			self.voice.process(&self.resampled[..ready], &self.played[..ready], muted, &mut self.cleaned);
+		let raw = call_raw_audio();
+		if raw {
+			self.cleaned.extend_from_slice(&self.resampled[..ready]);
+		} else {
+			self.slices_since_mic_check +=
+				self.voice.process(&self.resampled[..ready], &self.played[..ready], muted, &mut self.cleaned);
+		}
 		if let Some(high_band) = self.high_band.as_mut() {
 			high_band.chain_took(&self.resampled[..ready]);
 			if muted {
@@ -632,7 +654,14 @@ impl CaptureDsp {
 		let mut system = self.system.lock().unwrap();
 		for &sample in &self.cleaned {
 			let mixed = system.mix(sample);
-			let [limited] = self.limiter.process([if muted { 0.0 } else { mixed }]);
+			let sample = if muted {
+				0.0
+			} else if raw {
+				mixed.clamp(-1.0, 1.0)
+			} else {
+				mixed
+			};
+			let [limited] = if raw { [sample] } else { self.limiter.process([sample]) };
 			self.sample_accum.push(limited);
 		}
 		drop(system);
@@ -831,6 +860,7 @@ impl RenderDsp {
 						}
 					}
 					if let Some(jitter) = opus.as_mut() {
+						jitter.set_enhanced(!call_raw_audio());
 						jitter.push(sequence, timestamp, packet);
 						jitter.drain_ready(queue);
 					}

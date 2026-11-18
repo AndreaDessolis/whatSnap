@@ -46,6 +46,8 @@ const RECENT_SEQUENCES: usize = 64;
 
 pub(crate) struct OpusJitter {
 	decoder: Decoder,
+	/// Deep PLC, NoLACE and the bandwidth extension are on.
+	enhanced: bool,
 	/// Output samples per RTP sample: 3 at 48 kHz.
 	scale: usize,
 	/// Waiting packets by extended (unwrapped) RTP timestamp.
@@ -72,6 +74,20 @@ pub(crate) struct OpusJitter {
 }
 
 impl OpusJitter {
+	/// Turns the decoder's own processing (Deep PLC, LACE/NoLACE speech
+	/// enhancement, bandwidth extension) on or off from the next packet. Off
+	/// leaves libopus's plain decoding and its basic concealment.
+	pub(crate) fn set_enhanced(&mut self, on: bool) {
+		if on == self.enhanced {
+			return;
+		}
+		self.enhanced = on;
+		let _ = self.decoder.set_complexity(if on { 10 } else { 0 });
+		if self.scale == 3 {
+			let _ = self.decoder.set_bandwidth_extension(on);
+		}
+	}
+
 	/// `rate`: what to decode to, 16000 or 48000 (48 kHz adds the bandwidth
 	/// extension).
 	pub(crate) fn new(rate: u32) -> crate::error::Result<Self> {
@@ -83,6 +99,7 @@ impl OpusJitter {
 		}
 		let scale = (rate / RTP_RATE).max(1) as usize;
 		Ok(Self {
+			enhanced: true,
 			decoder,
 			scale,
 			packets: BTreeMap::new(),

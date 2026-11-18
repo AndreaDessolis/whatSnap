@@ -1738,6 +1738,17 @@ pub fn bind_input_handlers(
 	parts.call_parts.keep_out_btn.on_click(move |_| {
 		let _ = tx_keep_out.send(UiCommand::AdmitCallPerson(false));
 	});
+	// Takes effect at once, mid-call too, and is saved at once: OK and
+	// Cancel both leave it as toggled.
+	let state_raw_audio = state.clone();
+	parts.settings_dialog.call_raw_audio_check.on_toggled(move |event| {
+		let on = event.is_checked();
+		crate::calls::audio::set_call_raw_audio(on);
+		if let Ok(mut s) = state_raw_audio.try_borrow_mut() {
+			s.settings.call_raw_audio = on;
+			s.settings.save();
+		}
+	});
 	let tx_approval = ui_tx.clone();
 	parts.call_parts.approval_check.on_toggled(move |event| {
 		let _ = tx_approval.send(UiCommand::SetCallApproval(event.is_checked()));
@@ -2910,6 +2921,7 @@ pub fn bind_input_handlers(
 		let old_theme = s.settings.theme;
 		let old_effective_id = crate::i18n::is_indonesian();
 		settings_parts_ok.read_chat_settings(&mut s.settings);
+		crate::calls::audio::set_call_raw_audio(s.settings.call_raw_audio);
 		let language_changed = crate::i18n::is_indonesian() != old_effective_id;
 		crate::ui::spell_check::configure(s.settings.spell_check, &s.settings.spell_language);
 		if s.settings.theme != old_theme {
