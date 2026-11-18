@@ -18,6 +18,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 					s.call_connected_duration = std::time::Duration::ZERO;
 					s.call_connected_segment_start = Some(std::time::Instant::now());
 					s.call_is_reconnecting = false;
+					s.call_keypad = data.get("keypad").and_then(|k| k.as_bool()).unwrap_or(false);
 					s.call_video_port =
 						data.get("video_port").and_then(|p| p.as_u64()).map(|p| p as u16).filter(|&p| p != 0);
 					s.call_video.screen_port =

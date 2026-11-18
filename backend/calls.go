@@ -229,6 +229,8 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 			"video_port":    videoPort,
 			"screen_port":   screenPort,
 			"video_in_port": videoInPort,
+			// A business on the Cloud API: WhatsApp shows a keypad for its menu.
+			"keypad": call.BusinessAPICall(),
 		})
 	})
 	call.OnEnd(func(reason string) {

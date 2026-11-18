@@ -23,6 +23,8 @@ type CallToggleData struct {
 	On     bool   `json:"on"`
 	Emoji  string `json:"emoji"`
 	JID    string `json:"jid"`
+	// Tone is one keypad press for "dtmf": 0-9, * or #.
+	Tone string `json:"tone"`
 }
 
 func (acc *Account) activeCall(callID string) *meowcaller.Call {
@@ -175,6 +177,10 @@ func (acc *Account) handleCallToggle(conn net.Conn, raw json.RawMessage, what st
 			err = call.SetHandRaised(data.On)
 		case "reaction":
 			err = call.SendReaction(data.Emoji)
+		case "dtmf":
+			if tone := []rune(data.Tone); len(tone) == 1 {
+				err = call.SendDTMF(tone[0])
+			}
 		case "approval":
 			err = call.SetApprovalRequired(context.Background(), data.On)
 		case "mute_person":

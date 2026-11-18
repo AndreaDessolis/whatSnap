@@ -1843,9 +1843,28 @@ pub fn bind_input_handlers(
 
 	let tx_camera_key = ui_tx.clone();
 	let state_call_key = state.clone();
+	let keypad_announcer = parts.call_parts.announcer;
 	parts.call_parts.frame.on_key_down(move |event| {
 		if let WindowEventData::Keyboard(ref key_event) = event {
 			let key_code = key_event.get_key_code();
+			if !key_event.control_down() && !key_event.alt_down() {
+				if let Some(tone) = keypad_tone(key_code, key_event.shift_down()) {
+					let s = state_call_key.borrow();
+					let call_id = s.active_call_id.clone().filter(|_| s.call_keypad && s.active_call_audio.is_some());
+					if let Some(call_id) = call_id {
+						let payload = serde_json::json!({"action": "call_dtmf", "data": {"call_id": call_id, "tone": tone.to_string()}});
+						let _ = s.ws_tx.send(payload.to_string());
+						drop(s);
+						live_region::announce_with_priority(
+							keypad_announcer,
+							&tone.to_string(),
+							live_region::Priority::High,
+						);
+						event.skip(false);
+						return;
+					}
+				}
+			}
 			if key_event.control_down() && key_event.shift_down() {
 				let command = if keys::is_letter(key_code, 'V') {
 					Some(UiCommand::ToggleCamera)
@@ -7141,4 +7160,26 @@ fn confirm_logout(parent: &impl WxWidget, state: &Rc<std::cell::RefCell<crate::A
 	}
 	let _ = state.borrow().ws_tx.send(serde_json::json!({"action": "logout"}).to_string());
 	true
+}
+
+/// The keypad tone a key press in the call window stands for: 0-9 on the
+/// top row or the number pad, * (Shift+8 or number pad *) and # (Shift+3).
+fn keypad_tone(key_code: Option<i32>, shift: bool) -> Option<char> {
+	const NUMPAD0: i32 = 324;
+	const NUMPAD9: i32 = 333;
+	const NUMPAD_MULTIPLY: i32 = 387;
+	match key_code? {
+		code @ 48..=57 => {
+			let digit = (code - 48) as u8;
+			match (shift, digit) {
+				(false, _) => Some((b'0' + digit) as char),
+				(true, 8) => Some('*'),
+				(true, 3) => Some('#'),
+				_ => None,
+			}
+		}
+		code @ NUMPAD0..=NUMPAD9 if !shift => Some((b'0' + (code - NUMPAD0) as u8) as char),
+		NUMPAD_MULTIPLY => Some('*'),
+		_ => None,
+	}
 }

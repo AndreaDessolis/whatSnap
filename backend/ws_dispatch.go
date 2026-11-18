@@ -446,6 +446,8 @@ func (acc *Account) dispatchCommand(conn net.Conn, cmd Command) {
 		acc.handleCallToggle(conn, cmd.Data, "hand")
 	case "call_reaction":
 		acc.handleCallToggle(conn, cmd.Data, "reaction")
+	case "call_dtmf":
+		acc.handleCallToggle(conn, cmd.Data, "dtmf")
 	case "admit_call_participant":
 		acc.handleCallToggle(conn, cmd.Data, "admit")
 	case "mute_call_participant":

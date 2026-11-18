@@ -327,6 +327,8 @@ struct AppState {
 	tray_hotkey: Option<wx_utils::global_hotkeys::GlobalHotkeys>,
 	incoming_call_caller: Option<String>,
 	call_start_muted: bool,
+	/// The connected call is with a business whose menu takes keypad tones.
+	call_keypad: bool,
 	call_connected_segment_start: Option<std::time::Instant>,
 	call_connected_duration: std::time::Duration,
 	call_is_reconnecting: bool,
@@ -967,6 +969,7 @@ pub(crate) fn new_app_state(
 		tray_hotkey: None,
 		incoming_call_caller: None,
 		call_start_muted: false,
+		call_keypad: false,
 		call_connected_segment_start: None,
 		call_connected_duration: std::time::Duration::ZERO,
 		call_is_reconnecting: false,
