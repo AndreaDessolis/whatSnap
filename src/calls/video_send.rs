@@ -13,15 +13,14 @@ use windows::{
 		Media::MediaFoundation::{
 			CODECAPI_AVEncCommonMeanBitRate, CODECAPI_AVEncCommonRateControlMode, CODECAPI_AVEncMPVGOPSize,
 			CODECAPI_AVEncVideoForceKeyFrame, ICodecAPI, IMFMediaType, IMFSample, IMFSourceReader, IMFTransform,
-			MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID,
 			MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK, MF_E_TRANSFORM_NEED_MORE_INPUT, MF_MT_AVG_BITRATE,
 			MF_MT_FRAME_RATE, MF_MT_FRAME_SIZE, MF_MT_INTERLACE_MODE, MF_MT_MAJOR_TYPE, MF_MT_MPEG2_PROFILE,
 			MF_MT_SUBTYPE, MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
 			MF_SOURCE_READERF_ENDOFSTREAM, MFCreateAttributes, MFCreateMediaType, MFCreateMemoryBuffer, MFCreateSample,
-			MFCreateSourceReaderFromMediaSource, MFEnumDeviceSources, MFMediaType_Video,
-			MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, MFT_MESSAGE_NOTIFY_END_OF_STREAM, MFT_MESSAGE_NOTIFY_END_STREAMING,
-			MFT_MESSAGE_NOTIFY_START_OF_STREAM, MFT_OUTPUT_DATA_BUFFER, MFVideoFormat_H264, MFVideoFormat_NV12,
-			MFVideoInterlace_Progressive, eAVEncCommonRateControlMode_CBR, eAVEncH264VProfile_Base,
+			MFCreateSourceReaderFromMediaSource, MFMediaType_Video, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING,
+			MFT_MESSAGE_NOTIFY_END_OF_STREAM, MFT_MESSAGE_NOTIFY_END_STREAMING, MFT_MESSAGE_NOTIFY_START_OF_STREAM,
+			MFT_OUTPUT_DATA_BUFFER, MFVideoFormat_H264, MFVideoFormat_NV12, MFVideoInterlace_Progressive,
+			eAVEncCommonRateControlMode_CBR, eAVEncH264VProfile_Base,
 		},
 		System::{
 			Com::{CLSCTX_ALL, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, CoUninitialize},
@@ -315,38 +314,14 @@ unsafe fn activate_camera_source(
 	symbolic_link: &str,
 ) -> crate::error::Result<windows::Win32::Media::MediaFoundation::IMFMediaSource> {
 	unsafe {
-		let mut attributes: Option<windows::Win32::Media::MediaFoundation::IMFAttributes> = None;
-		MFCreateAttributes(&mut attributes, 1)?;
-		let attributes = attributes.ok_or_else(|| crate::error::err!("MFCreateAttributes returned no attributes"))?;
-		attributes.SetGUID(&MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID)?;
-
-		let mut activates: *mut Option<windows::Win32::Media::MediaFoundation::IMFActivate> = std::ptr::null_mut();
-		let mut count: u32 = 0;
-		MFEnumDeviceSources(&attributes, &mut activates, &mut count)?;
-		if activates.is_null() {
+		let activates = video_devices::enum_video_capture_activates()?;
+		if activates.is_empty() {
 			crate::error::bail!("no cameras available");
 		}
-		let slice = std::slice::from_raw_parts(activates, count as usize);
-		let mut found = None;
-		for entry in slice {
-			let Some(activate) = entry else { continue };
-			let mut ptr = windows::core::PWSTR::null();
-			let mut len: u32 = 0;
-			if activate
-				.GetAllocatedString(&MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK, &mut ptr, &mut len)
-				.is_err()
-				|| ptr.is_null()
-			{
-				continue;
-			}
-			let link = ptr.to_string().unwrap_or_default();
-			windows::Win32::System::Com::CoTaskMemFree(Some(ptr.0 as *const core::ffi::c_void));
-			if link == symbolic_link {
-				found = Some(activate.clone());
-				break;
-			}
-		}
-		windows::Win32::System::Com::CoTaskMemFree(Some(activates as *const core::ffi::c_void));
+		let found = activates.into_iter().find(|activate| {
+			video_devices::read_allocated_string(activate, &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK)
+				.is_some_and(|link| link == symbolic_link)
+		});
 
 		let Some(activate) = found else {
 			crate::error::bail!("camera is no longer available");

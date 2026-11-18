@@ -18,6 +18,56 @@ pub(super) fn trim_window(messages: Vec<whatsnap::Msg>, keep_start: bool) -> (Ve
 	(kept, rows_before.saturating_sub(rows_after))
 }
 
+/// How far past `MAX_LOADED_MESSAGES` live messages may run before the oldest
+/// are dropped, so the trim (a list rebuild) happens once per this many
+/// arrivals rather than on every one.
+const LIVE_TRIM_SLACK: usize = 200;
+
+/// Keeps an open chat that sits at its latest messages from growing without
+/// end as live messages arrive: past the limit, the oldest loaded messages
+/// are dropped, just as loading newer pages does, and become loadable again
+/// from the top. Skipped while the cursor is on a row that would go, so the
+/// reading position is never yanked; it trims once the cursor moves on.
+pub(super) fn trim_live_window(s: &mut AppState, parts: &WindowParts) {
+	if whatsnap::real_message_count(&s.messages) <= crate::MAX_LOADED_MESSAGES + LIVE_TRIM_SLACK {
+		return;
+	}
+	let is_group = s.selected_chat.as_deref().is_some_and(|j| j.ends_with("@g.us"));
+	let list = &parts.conversations_parts.messages_list;
+	let (kept, dropped) = trim_window(s.messages.clone(), false);
+	if dropped == 0 {
+		return;
+	}
+	let new_display_items = whatsnap::group_messages_into_display_items(&kept);
+	let selected_id = list.get_selection().and_then(|i| s.display_items.get(i as usize)).map(|d| d.id().to_string());
+	if let Some(id) = selected_id
+		&& !new_display_items.iter().any(|d| d.id() == id)
+	{
+		return;
+	}
+	s.messages = kept;
+	s.older_unloaded += dropped;
+	s.no_more_messages = false;
+	// Receipts for messages that never showed up only matter for a moment;
+	// in a busy chat left open they'd otherwise pile up too.
+	if s.pending_receipts.len() > crate::MAX_LOADED_MESSAGES {
+		s.pending_receipts.clear();
+	}
+	let rows: Vec<String> = new_display_items.iter().map(|d| d.format_display(is_group)).collect();
+	let keys: Vec<String> =
+		new_display_items.iter().zip(&rows).map(|(item, text)| message_row_key(item, text)).collect();
+	let row_refs: Vec<&str> = rows.iter().map(String::as_str).collect();
+	let key_refs: Vec<&str> = keys.iter().map(String::as_str).collect();
+	list.set_numbering(s.older_unloaded, s.newer_unloaded);
+	list.freeze();
+	list.set_keyed_items(&key_refs, &row_refs);
+	list.thaw();
+	s.prev_msg_count = new_display_items.len();
+	s.display_items = new_display_items;
+	refresh_selection_list(s, parts);
+	crate::ui_commands::calls::mark_joinable_rows(s, parts);
+}
+
 pub(super) fn apply_newer_messages(page: MessagesPage, state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
 	let mut s = state.borrow_mut();
 	s.newer_loading = false;

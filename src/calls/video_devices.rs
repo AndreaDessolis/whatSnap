@@ -14,7 +14,7 @@ pub struct CameraDevice {
 	pub symbolic_link: String,
 }
 
-fn read_allocated_string(activate: &IMFActivate, key: &windows::core::GUID) -> Option<String> {
+pub(crate) fn read_allocated_string(activate: &IMFActivate, key: &windows::core::GUID) -> Option<String> {
 	unsafe {
 		let mut ptr = PWSTR::null();
 		let mut len: u32 = 0;
@@ -28,43 +28,50 @@ fn read_allocated_string(activate: &IMFActivate, key: &windows::core::GUID) -> O
 	}
 }
 
-pub fn list_cameras() -> Vec<CameraDevice> {
+/// Enumerates the video capture devices and takes ownership of every
+/// `IMFActivate` the call returns. `MFEnumDeviceSources` hands back one
+/// reference per entry plus the array itself; each entry is moved out of the
+/// array (so dropping the returned `Vec` releases it) before the array is
+/// freed, on every path.
+pub(crate) fn enum_video_capture_activates() -> crate::error::Result<Vec<IMFActivate>> {
 	foundation::ensure_started();
 	unsafe {
 		let mut attributes: Option<windows::Win32::Media::MediaFoundation::IMFAttributes> = None;
-		if MFCreateAttributes(&mut attributes, 1).is_err() {
-			return Vec::new();
-		}
-		let Some(attributes) = attributes else { return Vec::new() };
-		if attributes
-			.SetGUID(&MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID)
-			.is_err()
-		{
-			return Vec::new();
-		}
+		MFCreateAttributes(&mut attributes, 1)?;
+		let attributes = attributes.ok_or_else(|| crate::error::err!("MFCreateAttributes returned no attributes"))?;
+		attributes.SetGUID(&MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID)?;
 
 		let mut activates: *mut Option<IMFActivate> = std::ptr::null_mut();
 		let mut count: u32 = 0;
-		if MFEnumDeviceSources(&attributes, &mut activates, &mut count).is_err() || activates.is_null() {
-			return Vec::new();
+		MFEnumDeviceSources(&attributes, &mut activates, &mut count)?;
+		if activates.is_null() {
+			return Ok(Vec::new());
 		}
-
-		let slice = std::slice::from_raw_parts(activates, count as usize);
-		let mut devices = Vec::with_capacity(count as usize);
-		for entry in slice {
-			let Some(activate) = entry else { continue };
-			let Some(name) = read_allocated_string(activate, &MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME) else { continue };
-			let Some(symbolic_link) =
-				read_allocated_string(activate, &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK)
-			else {
-				continue;
-			};
-			devices.push(CameraDevice { name, symbolic_link });
+		let mut owned = Vec::with_capacity(count as usize);
+		for i in 0..count as usize {
+			// Move the reference out; the array slot is never read again.
+			if let Some(activate) = std::ptr::read(activates.add(i)) {
+				owned.push(activate);
+			}
 		}
-
 		windows::Win32::System::Com::CoTaskMemFree(Some(activates as *const core::ffi::c_void));
-		devices
+		Ok(owned)
 	}
+}
+
+pub fn list_cameras() -> Vec<CameraDevice> {
+	let Ok(activates) = enum_video_capture_activates() else { return Vec::new() };
+	let mut devices = Vec::with_capacity(activates.len());
+	for activate in &activates {
+		let Some(name) = read_allocated_string(activate, &MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME) else { continue };
+		let Some(symbolic_link) =
+			read_allocated_string(activate, &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK)
+		else {
+			continue;
+		};
+		devices.push(CameraDevice { name, symbolic_link });
+	}
+	devices
 }
 
 pub fn camera_names() -> Vec<String> {

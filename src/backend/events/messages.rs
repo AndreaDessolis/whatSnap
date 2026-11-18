@@ -471,6 +471,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 								);
 							}
 						}
+						trim_live_window(&mut s, parts);
 					}
 				} else {
 					let is_ignored =

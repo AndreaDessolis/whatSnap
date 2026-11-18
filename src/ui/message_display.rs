@@ -587,18 +587,7 @@ pub(crate) fn apply_chat_filter(s: &mut AppState, parts: &crate::ui::window::Win
 				|| t.name.to_lowercase().contains(&lower_query)
 				|| (!t.phone.is_empty() && t.phone.contains(&lower_query))
 		};
-		let target_label = |t: &CallTarget| {
-			if t.phone.is_empty() || t.name == t.phone || t.name.contains(&t.phone) {
-				t.name.clone()
-			} else {
-				let shown = if t.phone.bytes().all(|b| b.is_ascii_digit()) {
-					crate::ui::contact_picker::format_phone_digits(&t.phone)
-				} else {
-					t.phone.clone()
-				};
-				if t.name.contains(&shown) { t.name.clone() } else { format!("{}, {}", t.name, shown) }
-			}
-		};
+		let target_label = |t: &CallTarget| t.label.clone();
 		let mut push_section = |heading: &str, rows: Vec<(String, String, String)>| {
 			if rows.is_empty() {
 				return;
@@ -717,6 +706,17 @@ pub(crate) fn apply_chat_filter(s: &mut AppState, parts: &crate::ui::window::Win
 		for label in &labels[s.displayed_chat_labels.len()..] {
 			list.append(label);
 		}
+	} else if let Some((at, removed, added)) = changed_span(&s.displayed_chat_labels, &labels) {
+		// Only a stretch in the middle changed, like a new call at the top of
+		// Recent calls with the long contact list below it: swap just those
+		// rows. Every row the list takes in or lets go is an event the screen
+		// reader has to work through, which is what made it stall.
+		for i in (at..at + removed).rev() {
+			list.delete(i as u32);
+		}
+		if added > 0 {
+			list.insert_items(&labels[at..at + added].iter().map(String::as_str).collect::<Vec<_>>(), at as u32);
+		}
 	} else {
 		list.set_items(&labels.iter().map(String::as_str).collect::<Vec<_>>());
 	}
@@ -758,6 +758,18 @@ pub(crate) fn apply_chat_filter(s: &mut AppState, parts: &crate::ui::window::Win
 	}
 
 	s.displayed_chat_labels = labels;
+}
+
+/// Where `new` differs from `old` once the rows both start and end with are
+/// set aside: the first differing row, how many rows of `old` go from there
+/// and how many of `new` come in. `None` when that's most of the list anyway,
+/// so refilling it whole is no worse.
+fn changed_span(old: &[String], new: &[String]) -> Option<(usize, usize, usize)> {
+	let prefix = old.iter().zip(new).take_while(|(a, b)| a == b).count();
+	let max_suffix = old.len().min(new.len()) - prefix;
+	let suffix = old.iter().rev().zip(new.iter().rev()).take(max_suffix).take_while(|(a, b)| a == b).count();
+	let (removed, added) = (old.len() - prefix - suffix, new.len() - prefix - suffix);
+	(prefix + suffix > 0 && removed + added <= new.len().max(old.len()) / 2).then_some((prefix, removed, added))
 }
 
 fn list_selected_index(parts: &crate::ui::window::WindowParts) -> Option<usize> {
@@ -1068,6 +1080,20 @@ pub(crate) fn refresh_voice_action_button(s: &AppState, parts: &crate::ui::conve
 	}
 }
 
+/// A Calls tab contact row: the name, with the phone number after it unless
+/// the name already is or has it.
+pub(crate) fn call_target_label(name: &str, phone: &str) -> String {
+	if phone.is_empty() || name == phone || name.contains(phone) {
+		return name.to_string();
+	}
+	let shown = if phone.bytes().all(|b| b.is_ascii_digit()) {
+		crate::ui::contact_picker::format_phone_digits(phone)
+	} else {
+		phone.to_string()
+	};
+	if name.contains(&shown) { name.to_string() } else { format!("{name}, {shown}") }
+}
+
 pub(crate) fn format_call_log_label(name: &str, text: &str, from_me: bool, timestamp: i64) -> String {
 	let call_desc = if crate::i18n::is_indonesian() {
 		if let Some(rest) = text.strip_prefix("Incoming ") {
@@ -1176,6 +1202,28 @@ pub(crate) fn format_call_log_label(name: &str, text: &str, from_me: bool, times
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	fn rows(text: &str) -> Vec<String> {
+		text.chars().map(String::from).collect()
+	}
+
+	#[test]
+	fn changed_span_swaps_only_the_rows_that_differ() {
+		let contacts = "abcdefghijklmnop";
+		// A new call at the top of Recent calls.
+		let old = rows(&format!("R12{contacts}"));
+		let new = rows(&format!("R312{contacts}"));
+		assert_eq!(changed_span(&old, &new), Some((1, 0, 1)));
+		// One call changed in the middle.
+		let new = rows(&format!("R1x{contacts}"));
+		assert_eq!(changed_span(&old, &new), Some((2, 1, 1)));
+		// Repeated rows can't be counted twice by the prefix and the suffix.
+		assert_eq!(changed_span(&rows("aaaaaaaa"), &rows("aaaaaaaaa")), Some((8, 0, 1)));
+		assert_eq!(changed_span(&rows("aaaaaaaaa"), &rows("aaaaaaaa")), Some((8, 1, 0)));
+		// A whole different list, like another tab, is refilled.
+		assert_eq!(changed_span(&rows("abcdefgh"), &rows("stuvwxyz")), None);
+		assert_eq!(changed_span(&[], &rows("abc")), None);
+	}
 
 	#[test]
 	fn test_dropped_row_offset() {

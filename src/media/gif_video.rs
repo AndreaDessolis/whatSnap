@@ -22,23 +22,43 @@ const MIN_DELAY_MS: u32 = 20;
 const DEFAULT_DELAY_MS: u32 = 100;
 const NOMINAL_FPS: u32 = 25;
 
+/// GIFs whose canvas is bigger than this aren't converted (they go as a
+/// photo): the decoder keeps a full-size canvas, plus a copy per frame.
+const MAX_SOURCE_PIXELS: u64 = 4096 * 4096;
+
+/// Converts a GIF to an MP4 one frame at a time - decode, resize, encode -
+/// so only the current frame is ever held, never all of them (600 frames at
+/// 640x640 would be close to a gigabyte). Returns the first frame as a PNG.
 pub(crate) fn gif_to_mp4(gif_path: &str, mp4_path: &str) -> crate::error::Result<Vec<u8>> {
 	let data = std::fs::read(gif_path)?;
+	if data.len() >= 10 {
+		let w = u16::from_le_bytes([data[6], data[7]]) as u64;
+		let h = u16::from_le_bytes([data[8], data[9]]) as u64;
+		if w * h > MAX_SOURCE_PIXELS {
+			crate::error::bail!("GIF is too large to convert ({w}x{h})");
+		}
+	}
 	let decoder = GifDecoder::new(&data).ok_or_else(|| crate::error::err!("not a GIF"))?;
 	let source_size = (decoder.width, decoder.height);
 	let (width, height) = encoded_size(decoder.width, decoder.height);
-	let frames: Vec<(Vec<u8>, u32)> = decoder
-		.take(MAX_FRAMES)
-		.map(|frame| {
-			let ms = if frame.delay_ms < MIN_DELAY_MS { DEFAULT_DELAY_MS } else { frame.delay_ms };
-			(resize(frame.rgba, source_size, (width, height)), ms)
-		})
-		.collect();
-	if frames.is_empty() {
-		crate::error::bail!("GIF has no frames");
+	let mut encoder: Option<Encoder> = None;
+	let mut first_png = None;
+	for frame in decoder.take(MAX_FRAMES) {
+		let ms = if frame.delay_ms < MIN_DELAY_MS { DEFAULT_DELAY_MS } else { frame.delay_ms };
+		let rgba = resize(frame.rgba, source_size, (width, height));
+		if first_png.is_none() {
+			first_png = Some(crate::media::png::encode_rgba(width, height, &rgba));
+		}
+		let encoder = match encoder.as_mut() {
+			Some(encoder) => encoder,
+			None => encoder.insert(Encoder::new(width, height, mp4_path)?),
+		};
+		encoder.write(&rgba, ms)?;
 	}
-	let first_png = crate::media::png::encode_rgba(width, height, &frames[0].0);
-	encode(&frames, width, height, mp4_path)?;
+	let (Some(encoder), Some(first_png)) = (encoder, first_png) else {
+		crate::error::bail!("GIF has no frames");
+	};
+	encoder.finish()?;
 	Ok(first_png)
 }
 
@@ -103,43 +123,54 @@ fn resize(rgba: Vec<u8>, (sw, sh): (u32, u32), (dw, dh): (u32, u32)) -> Vec<u8> 
 	out
 }
 
-fn encode(frames: &[(Vec<u8>, u32)], width: u32, height: u32, mp4_path: &str) -> crate::error::Result<()> {
-	unsafe {
-		let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+struct Encoder {
+	writer: windows::Win32::Media::MediaFoundation::IMFSinkWriter,
+	stream: u32,
+	frame_bytes: u32,
+	time_100ns: i64,
+}
+
+impl Encoder {
+	fn new(width: u32, height: u32, mp4_path: &str) -> crate::error::Result<Encoder> {
+		unsafe {
+			let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+		}
+		foundation::ensure_started();
+		unsafe {
+			let writer =
+				MFCreateSinkWriterFromURL(&HSTRING::from(mp4_path), None::<&IMFByteStream>, None::<&IMFAttributes>)?;
+
+			let out = MFCreateMediaType()?;
+			out.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video)?;
+			out.SetGUID(&MF_MT_SUBTYPE, &MFVideoFormat_H264)?;
+			out.SetUINT32(&MF_MT_AVG_BITRATE, (width * height * 4).clamp(200_000, 2_000_000))?;
+			out.SetUINT32(&MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive.0 as u32)?;
+			out.SetUINT64(&MF_MT_FRAME_SIZE, pack_u64(width, height))?;
+			out.SetUINT64(&MF_MT_FRAME_RATE, pack_u64(NOMINAL_FPS, 1))?;
+			out.SetUINT64(&MF_MT_PIXEL_ASPECT_RATIO, pack_u64(1, 1))?;
+			let stream = writer.AddStream(&out)?;
+
+			let input = MFCreateMediaType()?;
+			input.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video)?;
+			input.SetGUID(&MF_MT_SUBTYPE, &MFVideoFormat_RGB32)?;
+			input.SetUINT32(&MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive.0 as u32)?;
+			input.SetUINT64(&MF_MT_FRAME_SIZE, pack_u64(width, height))?;
+			input.SetUINT64(&MF_MT_FRAME_RATE, pack_u64(NOMINAL_FPS, 1))?;
+			input.SetUINT64(&MF_MT_PIXEL_ASPECT_RATIO, pack_u64(1, 1))?;
+			input.SetUINT32(&MF_MT_DEFAULT_STRIDE, width * 4)?;
+			writer.SetInputMediaType(stream, &input, None::<&IMFAttributes>)?;
+
+			writer.BeginWriting()?;
+			Ok(Encoder { writer, stream, frame_bytes: width * height * 4, time_100ns: 0 })
+		}
 	}
-	foundation::ensure_started();
-	unsafe {
-		let writer =
-			MFCreateSinkWriterFromURL(&HSTRING::from(mp4_path), None::<&IMFByteStream>, None::<&IMFAttributes>)?;
 
-		let out = MFCreateMediaType()?;
-		out.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video)?;
-		out.SetGUID(&MF_MT_SUBTYPE, &MFVideoFormat_H264)?;
-		out.SetUINT32(&MF_MT_AVG_BITRATE, (width * height * 4).clamp(200_000, 2_000_000))?;
-		out.SetUINT32(&MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive.0 as u32)?;
-		out.SetUINT64(&MF_MT_FRAME_SIZE, pack_u64(width, height))?;
-		out.SetUINT64(&MF_MT_FRAME_RATE, pack_u64(NOMINAL_FPS, 1))?;
-		out.SetUINT64(&MF_MT_PIXEL_ASPECT_RATIO, pack_u64(1, 1))?;
-		let stream = writer.AddStream(&out)?;
-
-		let input = MFCreateMediaType()?;
-		input.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video)?;
-		input.SetGUID(&MF_MT_SUBTYPE, &MFVideoFormat_RGB32)?;
-		input.SetUINT32(&MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive.0 as u32)?;
-		input.SetUINT64(&MF_MT_FRAME_SIZE, pack_u64(width, height))?;
-		input.SetUINT64(&MF_MT_FRAME_RATE, pack_u64(NOMINAL_FPS, 1))?;
-		input.SetUINT64(&MF_MT_PIXEL_ASPECT_RATIO, pack_u64(1, 1))?;
-		input.SetUINT32(&MF_MT_DEFAULT_STRIDE, width * 4)?;
-		writer.SetInputMediaType(stream, &input, None::<&IMFAttributes>)?;
-
-		writer.BeginWriting()?;
-		let frame_bytes = width * height * 4;
-		let mut time_100ns: i64 = 0;
-		for (img, ms) in frames {
-			let buffer = MFCreateMemoryBuffer(frame_bytes)?;
+	fn write(&mut self, img: &[u8], ms: u32) -> crate::error::Result<()> {
+		unsafe {
+			let buffer = MFCreateMemoryBuffer(self.frame_bytes)?;
 			let mut ptr: *mut u8 = std::ptr::null_mut();
 			buffer.Lock(&mut ptr, None, None)?;
-			let dst = std::slice::from_raw_parts_mut(ptr, frame_bytes as usize);
+			let dst = std::slice::from_raw_parts_mut(ptr, self.frame_bytes as usize);
 			for (d, s) in dst.as_chunks_mut::<4>().0.iter_mut().zip(img.as_chunks::<4>().0.iter()) {
 				let a = s[3] as u16;
 				d[0] = (s[2] as u16 * a / 255) as u8;
@@ -148,17 +179,21 @@ fn encode(frames: &[(Vec<u8>, u32)], width: u32, height: u32, mp4_path: &str) ->
 				d[3] = 255;
 			}
 			buffer.Unlock()?;
-			buffer.SetCurrentLength(frame_bytes)?;
+			buffer.SetCurrentLength(self.frame_bytes)?;
 
 			let sample = MFCreateSample()?;
 			sample.AddBuffer(&buffer)?;
-			let duration = *ms as i64 * 10_000;
-			sample.SetSampleTime(time_100ns)?;
+			let duration = ms as i64 * 10_000;
+			sample.SetSampleTime(self.time_100ns)?;
 			sample.SetSampleDuration(duration)?;
-			writer.WriteSample(stream, &sample)?;
-			time_100ns += duration;
+			self.writer.WriteSample(self.stream, &sample)?;
+			self.time_100ns += duration;
 		}
-		writer.Finalize()?;
+		Ok(())
 	}
-	Ok(())
+
+	fn finish(self) -> crate::error::Result<()> {
+		unsafe { self.writer.Finalize()? };
+		Ok(())
+	}
 }

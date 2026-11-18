@@ -10,6 +10,8 @@ use wxdragon::bitmap::Bitmap;
 const MAX_BITMAPS: usize = 64;
 const RETRY_AFTER: Duration = Duration::from_secs(60);
 const MAX_PATHS: usize = 2048;
+/// Pictures waiting to be decoded at most; older requests are dropped.
+const MAX_QUEUED_DECODES: usize = 32;
 
 pub(crate) enum Thumb<'a> {
 	Picture(&'a Bitmap),
@@ -106,7 +108,33 @@ fn decoder() -> &'static mpsc::Sender<DecodeRequest> {
 		crate::util::spawn_named("thumbnail decoder", move || {
 			use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize};
 			let initialized = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }.is_ok();
-			for (id, path, w, h) in rx {
+			let mut queue: Vec<DecodeRequest> = Vec::new();
+			loop {
+				if queue.is_empty() {
+					match rx.recv() {
+						Ok(request) => queue.push(request),
+						Err(_) => break,
+					}
+				}
+				queue.extend(rx.try_iter());
+				// Scrolling quickly asks for every picture passed on the way;
+				// only the latest ones can still be on screen. The rest are
+				// let go (and asked for again if they're painted again).
+				if queue.len() > MAX_QUEUED_DECODES {
+					let stale: Vec<DecodeRequest> = queue.drain(..queue.len() - MAX_QUEUED_DECODES).collect();
+					wxdragon::call_after(Box::new(move || {
+						CACHE.with(|cache| {
+							let mut c = cache.borrow_mut();
+							for (id, path, w, h) in stale {
+								if c.decoding.get(&id) == Some(&(path, (w, h))) {
+									c.decoding.remove(&id);
+								}
+							}
+						});
+					}));
+				}
+				// Newest first: what was asked for last is what's showing now.
+				let Some((id, path, w, h)) = queue.pop() else { continue };
 				let pixels =
 					crate::media::image_decode::decode_rgba_in_box(&path, w.max(1) as u32, h.max(1) as u32).ok();
 				wxdragon::call_after(Box::new(move || {

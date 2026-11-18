@@ -324,6 +324,15 @@ pub(crate) fn send_attachment(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowPa
 	}
 }
 
+/// Held while an attachment worker decodes or converts media, so several
+/// big files sent together are prepared one after another instead of all
+/// holding their decoded data at once.
+static MEDIA_PREP: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn media_prep_slot() -> std::sync::MutexGuard<'static, ()> {
+	MEDIA_PREP.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn send_files(
 	ws_tx: &std::sync::mpsc::Sender<String>,
@@ -356,8 +365,10 @@ pub(crate) fn send_files(
 		if file_type == "audio" {
 			let path = path.clone();
 			crate::util::spawn_named("attachment worker", move || {
+				let slot = media_prep_slot();
 				payload["data"]["duration"] = serde_json::json!(crate::audio::audio_file_seconds(&path));
 				payload["data"]["waveform"] = serde_json::json!(crate::audio::audio_file_waveform(&path));
+				drop(slot);
 				let _ = ws_tx.send(payload.to_string());
 			});
 		} else if file_type == "image" && path.to_lowercase().ends_with(".gif") {
@@ -365,7 +376,10 @@ pub(crate) fn send_files(
 			crate::util::spawn_named("attachment worker", move || {
 				let mp4 = std::env::temp_dir().join(format!("whantv_gif_{}.mp4", crate::util::random_hex()));
 				let mp4 = mp4.to_string_lossy().to_string();
-				match crate::media::gif_video::gif_to_mp4(&path, &mp4) {
+				let slot = media_prep_slot();
+				let converted = crate::media::gif_video::gif_to_mp4(&path, &mp4);
+				drop(slot);
+				match converted {
 					Ok(first_png) => {
 						payload["data"]["type"] = serde_json::json!("video");
 						payload["data"]["path"] = serde_json::json!(mp4);

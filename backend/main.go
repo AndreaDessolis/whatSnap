@@ -6,7 +6,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"runtime/debug"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -88,10 +91,44 @@ func scavengeIdleMemory() {
 	go func() {
 		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
+		ticks := 0
 		for range ticker.C {
 			debug.FreeOSMemory()
+			// A memory line at 2 and 6 minutes (start-up settled) and every
+			// half hour after, so the log shows what the backend's memory
+			// is made of and whether it grows.
+			if ticks == 2 || ticks%15 == 0 {
+				logMemory()
+			}
+			ticks++
 		}
 	}()
+}
+
+// logMemory writes where the backend's memory goes to the log, and with
+// WHATSNAP_HEAP_PROFILE set also a heap profile beside the log
+// (backend-heap.pprof, for "go tool pprof"), replaced each time.
+func logMemory() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	mb := func(b uint64) float64 { return float64(b) / (1 << 20) }
+	log.Printf("[MEMORY] heap in use %.1f MB (live objects %.1f MB, %d objects), stacks %.1f MB, runtime %.1f MB, from Windows %.1f MB, returned %.1f MB, goroutines %d, GCs %d",
+		mb(m.HeapInuse), mb(m.HeapAlloc), m.HeapObjects, mb(m.StackInuse),
+		mb(m.MSpanInuse+m.MCacheInuse+m.BuckHashSys+m.GCSys+m.OtherSys), mb(m.Sys), mb(m.HeapReleased),
+		runtime.NumGoroutine(), m.NumGC)
+	if os.Getenv("WHATSNAP_HEAP_PROFILE") == "" {
+		return
+	}
+	path := filepath.Join(filepath.Dir(logFilePath()), "backend-heap.pprof")
+	f, err := os.Create(path)
+	if err != nil {
+		log.Printf("[MEMORY] couldn't write heap profile: %v", err)
+		return
+	}
+	defer f.Close()
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		log.Printf("[MEMORY] couldn't write heap profile: %v", err)
+	}
 }
 
 func main() {

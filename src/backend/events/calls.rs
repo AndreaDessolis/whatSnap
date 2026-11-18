@@ -892,6 +892,12 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 						duration,
 					});
 				}
+				// Opening the tab already showed the last list; most times it
+				// comes back the same, and rebuilding the rows for nothing
+				// stalls the screen reader.
+				if s.call_logs == entries {
+					return true;
+				}
 				s.call_logs = entries;
 				if s.active_tab == 6 {
 					apply_chat_filter(&mut s, parts);
@@ -907,19 +913,22 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 							rows.iter()
 								.filter_map(|r| {
 									let jid = r.get("jid").and_then(|v| v.as_str())?.to_string();
-									Some(CallTarget {
-										name: r.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-										phone: r.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-										jid,
-									})
+									let name = r.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+									let phone = r.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+									let label = crate::ui::message_display::call_target_label(&name, &phone);
+									Some(CallTarget { jid, name, phone, label })
 								})
 								.collect()
 						})
 						.unwrap_or_default()
 				};
+				let (frequent, contacts) = (parse("frequent"), parse("contacts"));
 				let mut s = state.borrow_mut();
-				s.call_frequent = parse("frequent");
-				s.call_contacts = parse("contacts");
+				if s.call_frequent == frequent && s.call_contacts == contacts {
+					return true;
+				}
+				s.call_frequent = frequent;
+				s.call_contacts = contacts;
 				if s.active_tab == 6 {
 					apply_chat_filter(&mut s, parts);
 				}

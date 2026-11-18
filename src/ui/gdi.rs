@@ -155,7 +155,9 @@ pub(crate) fn segmented_ring_rgba(
 	rgba
 }
 
-pub(crate) fn circle_crop(width: u32, height: u32, rgba: &[u8], size: i32) -> Option<Bitmap> {
+/// A picture cut to a circle `size` across, as RGBA pixels (made into a
+/// bitmap on the UI thread; this part runs off it).
+pub(crate) fn circle_crop_rgba(width: u32, height: u32, rgba: &[u8], size: i32) -> Option<Vec<u8>> {
 	if width == 0 || height == 0 || size <= 0 {
 		return None;
 	}
@@ -188,7 +190,7 @@ pub(crate) fn circle_crop(width: u32, height: u32, rgba: &[u8], size: i32) -> Op
 			out[i + 3] = (round_rect_coverage(ox, oy, size, size, size as f32 / 2.0) * 255.0) as u8;
 		}
 	}
-	Bitmap::from_rgba(size, size, &out)
+	Some(out)
 }
 
 pub(crate) fn wide(text: &str) -> Vec<u16> {

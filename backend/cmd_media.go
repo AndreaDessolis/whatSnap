@@ -461,6 +461,30 @@ func copyFileStreaming(src, dst string) error {
 	return out.Close()
 }
 
+// pendingAutoOpenTTL bounds how long a media retry waits for the phone's
+// answer to still open, prepare or play the file. A retry that never returns
+// would otherwise keep its entry (and the connection) for the whole session.
+const pendingAutoOpenTTL = 15 * time.Minute
+
+// storePendingAutoOpen remembers what to do once a media retry answers, and
+// drops entries whose retry never came back.
+func (acc *Account) storePendingAutoOpen(messageID string, conn net.Conn, action string) {
+	now := time.Now()
+	acc.pendingAutoOpens.Range(func(key, value interface{}) bool {
+		if data, ok := value.(map[string]interface{}); ok {
+			if at, ok := data["at"].(time.Time); ok && now.Sub(at) > pendingAutoOpenTTL {
+				acc.pendingAutoOpens.Delete(key)
+			}
+		}
+		return true
+	})
+	acc.pendingAutoOpens.Store(messageID, map[string]interface{}{
+		"conn":   conn,
+		"action": action,
+		"at":     now,
+	})
+}
+
 func (acc *Account) handleOpenMedia(conn net.Conn, raw json.RawMessage) {
 	var data MessageRefData
 	if err := json.Unmarshal(raw, &data); err != nil {
@@ -470,10 +494,7 @@ func (acc *Account) handleOpenMedia(conn net.Conn, raw json.RawMessage) {
 		path, mediaType, mimetype, filename, err := acc.ensureMediaCached(data.MessageID)
 		if err != nil {
 			if strings.Contains(err.Error(), "URL expired") {
-				acc.pendingAutoOpens.Store(data.MessageID, map[string]interface{}{
-					"conn":   conn,
-					"action": "open_media",
-				})
+				acc.storePendingAutoOpen(data.MessageID, conn, "open_media")
 				return
 			}
 			acc.sendEvent(conn, "error", map[string]string{"message": friendlyMediaError(err)})
@@ -496,7 +517,7 @@ func (acc *Account) handlePrepareMedia(conn net.Conn, raw json.RawMessage) {
 		path, mediaType, mimetype, filename, err := acc.ensureMediaCached(data.MessageID)
 		if err != nil {
 			if strings.Contains(err.Error(), "URL expired") && !strings.Contains(err.Error(), "retry request failed") {
-				acc.pendingAutoOpens.Store(data.MessageID, map[string]interface{}{"conn": conn, "action": "prepare_media"})
+				acc.storePendingAutoOpen(data.MessageID, conn, "prepare_media")
 				acc.sendEvent(conn, "media_pending", map[string]string{"message_id": data.MessageID})
 				return
 			}
@@ -1577,10 +1598,7 @@ func (acc *Account) handlePlayVoiceMessage(conn net.Conn, raw json.RawMessage) {
 		path, _, _, _, err := acc.ensureMediaCached(data.ID)
 		if err != nil {
 			if strings.Contains(err.Error(), "URL expired") {
-				acc.pendingAutoOpens.Store(data.ID, map[string]interface{}{
-					"conn":   conn,
-					"action": "play_audio",
-				})
+				acc.storePendingAutoOpen(data.ID, conn, "play_audio")
 				return
 			}
 			fmt.Println("Error downloading audio:", err)

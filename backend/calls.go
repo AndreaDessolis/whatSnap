@@ -172,6 +172,10 @@ func peerVideoEvent(raw int) string {
 // (each registration overwrites the last), so this must be the only place
 // that registers them for a given call.
 func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
+	// Closed when the call ends, so per-call pollers stop even if the call's
+	// phase never reaches Ended (they'd otherwise keep it alive for good).
+	ended := make(chan struct{})
+	var endOnce sync.Once
 	call.OnReady(func() {
 		log.Println("Call ready (connected):", call.ID())
 		acc.updateLiveCall(call.ID(), func(c *liveCall) { c.connected = time.Now() })
@@ -264,6 +268,7 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 		}
 		acc.activeVideoBridgesMutex.Unlock()
 		acc.forgetScreenShare(call.ID())
+		endOnce.Do(func() { close(ended) })
 
 		acc.activeAudioBridgesMutex.Lock()
 		if bridge, ok := acc.activeAudioBridges[call.ID()]; ok {
@@ -355,7 +360,14 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 		var lastVideoLoss uint32
 		var lastRelayBitrate, lastPeerDownlink uint64
 		ticks := 0
-		for range time.Tick(2 * time.Second) {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ended:
+				return
+			case <-ticker.C:
+			}
 			if call.State() == meowcaller.CallPhaseEnded {
 				return
 			}

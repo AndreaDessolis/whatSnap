@@ -1173,6 +1173,11 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::BackendEvent { account, payload } => {
 			ui_commands::accounts::backend_event(account, payload, state, parts)
 		}
+		UiCommand::BackendChats { account, seq } => {
+			if let Some(payload) = backend::links::take_chats(&account, seq) {
+				ui_commands::accounts::backend_event(account, payload, state, parts)
+			}
+		}
 		UiCommand::OpenAccounts(focus) => ui_commands::accounts::open_accounts(state, parts, focus),
 		UiCommand::LeaveLogin => ui_commands::accounts::leave_login(state, parts),
 		UiCommand::AccountStopped(id) => ui_commands::accounts::account_stopped(state, parts, &id),

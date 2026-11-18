@@ -46,6 +46,25 @@ static CLOSING: Mutex<Option<HashMap<String, mpsc::Sender<()>>>> = Mutex::new(No
 
 static UI: OnceLock<(UiCommandSender, Arc<AtomicBool>)> = OnceLock::new();
 
+/// The newest chat-list snapshot ("chats") of each account not yet shown,
+/// with its number. Each snapshot is the whole list, so while the UI is busy
+/// only the newest is kept: the queue gets a `BackendChats` ticket, and an
+/// older ticket whose snapshot was replaced is skipped when it's reached.
+type ChatSnapshots = HashMap<Arc<str>, (u64, String)>;
+static LATEST_CHATS: Mutex<Option<ChatSnapshots>> = Mutex::new(None);
+static CHATS_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Hands over the chat-list snapshot `seq` of `account`, unless a newer one
+/// replaced it (that one's ticket is further down the queue).
+pub fn take_chats(account: &Arc<str>, seq: u64) -> Option<String> {
+	let mut latest = LATEST_CHATS.lock().unwrap_or_else(|e| e.into_inner());
+	let map = latest.as_mut()?;
+	if map.get(account).is_some_and(|(newest, _)| *newest == seq) {
+		return map.remove(account).map(|(_, payload)| payload);
+	}
+	None
+}
+
 /// What the UI keeps for each account: where to send its commands.
 #[derive(Clone)]
 pub struct Link {
@@ -154,9 +173,18 @@ fn pipe_loop(ui_tx: UiCommandSender, alive: Arc<AtomicBool>, out_rx: Arc<Mutex<m
 	let live = || alive.load(Ordering::SeqCst) && !backend.stopped.load(Ordering::SeqCst);
 	let deliver = |account: &str, payload: String| {
 		let account = open_list().iter().find(|a| &***a == account).cloned();
-		if let Some(account) = account {
-			let _ = ui_tx.send(UiCommand::BackendEvent { account, payload });
+		let Some(account) = account else { return };
+		if event_type(&payload) == Some("chats") {
+			let seq = CHATS_SEQ.fetch_add(1, Ordering::SeqCst);
+			LATEST_CHATS
+				.lock()
+				.unwrap_or_else(|e| e.into_inner())
+				.get_or_insert_with(HashMap::new)
+				.insert(account.clone(), (seq, payload));
+			let _ = ui_tx.send(UiCommand::BackendChats { account, seq });
+			return;
 		}
+		let _ = ui_tx.send(UiCommand::BackendEvent { account, payload });
 	};
 	let mut connected_before = false;
 	while live() {

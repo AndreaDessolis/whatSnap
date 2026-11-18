@@ -59,6 +59,12 @@ pub enum UiCommand {
 		account: std::sync::Arc<str>,
 		payload: String,
 	},
+	/// A chat-list snapshot from the backend, kept aside in
+	/// `backend::links` so only the newest waits while the UI is busy.
+	BackendChats {
+		account: std::sync::Arc<str>,
+		seq: u64,
+	},
 	/// Account, Accounts... (with the account to put the focus on).
 	OpenAccounts(Option<String>),
 	/// The login window was closed while another account is linked.
@@ -544,7 +550,7 @@ pub(crate) struct MessageSearch {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallLogEntry {
 	pub(crate) id: String,
 	pub(crate) jid: String,
@@ -559,11 +565,14 @@ pub(crate) struct CallLogEntry {
 	pub(crate) duration: i64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallTarget {
 	pub(crate) jid: String,
 	pub(crate) name: String,
 	pub(crate) phone: String,
+	/// The row's text, made once when the list arrives: formatting a phone
+	/// number isn't free, and the Calls tab lists every contact.
+	pub(crate) label: String,
 }
 
 #[derive(Clone)]

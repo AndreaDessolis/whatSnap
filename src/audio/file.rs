@@ -24,31 +24,35 @@ use windows::{
 	core::{GUID, HSTRING},
 };
 
-use crate::{audio::decode_opus, media::foundation};
+use crate::{
+	audio::opus_file::{self, OpusFileSource},
+	media::foundation,
+};
 
 const CHUNKS_AHEAD: usize = 8;
 
 pub(crate) fn open(path: &str, start: Duration) -> Option<Box<dyn Source + Send>> {
-	if let Some(opus) = read_ogg_opus(path) {
-		return Some(Box::new(decode_opus(&opus)?.skip_duration(start)));
+	if is_ogg_opus(path) {
+		return Some(Box::new(OpusFileSource::open(path)?.skip_duration(start)));
 	}
 	MfSource::open(path, start).map(|s| Box::new(s) as Box<dyn Source + Send>)
 }
 
 pub(crate) fn duration(path: &str) -> Option<Duration> {
-	if let Some(opus) = read_ogg_opus(path) {
-		return decode_opus(&opus)?.total_duration();
+	if is_ogg_opus(path) {
+		return opus_file::duration(path);
 	}
 	let _com = ComGuard::new();
 	foundation::ensure_started();
 	unsafe { open_reader(path).ok().and_then(|reader| reader_duration(&reader)) }
 }
 
-fn read_ogg_opus(path: &str) -> Option<Vec<u8>> {
+fn is_ogg_opus(path: &str) -> bool {
 	use std::io::Read;
 	let mut head = [0u8; 36];
-	std::fs::File::open(path).ok()?.read_exact(&mut head).ok()?;
-	(&head[0..4] == b"OggS" && &head[28..36] == b"OpusHead").then(|| std::fs::read(path).ok())?
+	std::fs::File::open(path).and_then(|mut f| f.read_exact(&mut head)).is_ok()
+		&& &head[0..4] == b"OggS"
+		&& &head[28..36] == b"OpusHead"
 }
 
 struct ComGuard(bool);

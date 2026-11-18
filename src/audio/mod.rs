@@ -9,6 +9,7 @@ pub mod file;
 pub mod libopus;
 pub mod limiter;
 pub mod ogg;
+pub mod opus_file;
 pub mod ringback;
 pub mod sound_file;
 pub mod system_audio;

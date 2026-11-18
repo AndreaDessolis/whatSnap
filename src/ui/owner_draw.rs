@@ -11,11 +11,11 @@ use windows::Win32::{
 	UI::{
 		Controls::{DRAWITEMSTRUCT, ODS_DISABLED, ODS_FOCUS, ODS_SELECTED, ODT_BUTTON, ODT_LISTBOX},
 		Input::KeyboardAndMouse::GetFocus,
-		Shell::{DefSubclassProc, SetWindowSubclass},
+		Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
 		WindowsAndMessaging::{
 			BS_OWNERDRAW, GWL_STYLE, GetParent, GetWindowLongPtrW, GetWindowTextLengthW, GetWindowTextW, LB_GETTEXT,
-			LB_GETTEXTLEN, LB_SETITEMHEIGHT, SendMessageW, SetWindowLongPtrW, WM_DRAWITEM, WM_GETFONT, WM_SETFONT,
-			WM_SETTEXT,
+			LB_GETTEXTLEN, LB_SETITEMHEIGHT, SendMessageW, SetWindowLongPtrW, WM_DRAWITEM, WM_GETFONT, WM_NCDESTROY,
+			WM_SETFONT, WM_SETTEXT,
 		},
 	},
 };
@@ -636,6 +636,24 @@ fn make_fonts(hwnd: HWND, base: HFONT) -> Fonts {
 	fonts
 }
 
+/// Forgets everything kept for a destroyed control: its look, its cached
+/// fonts (whose GDI objects go with them) and its row sources. Window handles
+/// get reused, so a stale entry would also dress up an unrelated window.
+fn forget_control(hwnd: HWND) {
+	let key = hwnd.0 as isize;
+	// Taken out first and dropped after the borrow ends: a source closure's
+	// captures may themselves reach for the registry when dropped.
+	let removed = REGISTRY.with(|r| {
+		let mut r = r.try_borrow_mut().ok()?;
+		r.controls.remove(&key);
+		if r.header == Some(hwnd) {
+			r.header = None;
+		}
+		Some((r.fonts.remove(&key), r.media_sources.remove(&key), r.people_sources.remove(&key)))
+	});
+	drop(removed);
+}
+
 unsafe extern "system" fn control_proc(
 	hwnd: HWND,
 	msg: u32,
@@ -644,6 +662,13 @@ unsafe extern "system" fn control_proc(
 	_id: usize,
 	_data: usize,
 ) -> LRESULT {
+	if msg == WM_NCDESTROY {
+		forget_control(hwnd);
+		unsafe {
+			let _ = RemoveWindowSubclass(hwnd, Some(control_proc), CONTROL_SUBCLASS);
+			return DefSubclassProc(hwnd, msg, wparam, lparam);
+		}
+	}
 	let kind = REGISTRY.with(|r| r.try_borrow().ok().and_then(|r| r.controls.get(&(hwnd.0 as isize)).map(|c| c.kind)));
 	match (msg, kind) {
 		(LB_SETITEMHEIGHT, Some(kind @ (Kind::Media | Kind::People))) => {
@@ -686,6 +711,17 @@ unsafe extern "system" fn parent_proc(
 	_id: usize,
 	_data: usize,
 ) -> LRESULT {
+	if msg == WM_NCDESTROY {
+		REGISTRY.with(|r| {
+			if let Ok(mut r) = r.try_borrow_mut() {
+				r.parents.retain(|&p| p != hwnd.0 as isize);
+			}
+		});
+		unsafe {
+			let _ = RemoveWindowSubclass(hwnd, Some(parent_proc), PARENT_SUBCLASS);
+			return DefSubclassProc(hwnd, msg, wparam, lparam);
+		}
+	}
 	if msg == WM_DRAWITEM && lparam.0 != 0 {
 		let item = unsafe { &*(lparam.0 as *const DRAWITEMSTRUCT) };
 		let control = REGISTRY.with(|r| {
