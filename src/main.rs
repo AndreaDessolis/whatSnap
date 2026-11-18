@@ -321,6 +321,8 @@ struct AppState {
 	/// also holds the hangup sound and ringtones, which stay set once finished.
 	call_ringback_on: bool,
 	call_reconnect_sink: Option<Player>,
+	/// The one-off poor connection alert, kept until it has played.
+	call_alert_sink: Option<Player>,
 	call_hotkeys: Option<wx_utils::global_hotkeys::GlobalHotkeys>,
 	tray_hotkey: Option<wx_utils::global_hotkeys::GlobalHotkeys>,
 	incoming_call_caller: Option<String>,
@@ -960,6 +962,7 @@ pub(crate) fn new_app_state(
 		call_ringing_sink: None,
 		call_ringback_on: false,
 		call_reconnect_sink: None,
+		call_alert_sink: None,
 		call_hotkeys: None,
 		tray_hotkey: None,
 		incoming_call_caller: None,

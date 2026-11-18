@@ -242,6 +242,37 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 			}
 		}
+		"call_network_health" => {
+			if let Some(data) = val.get("data") {
+				let call_id = data.get("call_id").and_then(|c| c.as_str()).unwrap_or("");
+				let mut s = state.borrow_mut();
+				if s.active_call_id.as_deref() != Some(call_id) || s.call_is_reconnecting {
+					return true;
+				}
+				let quality = data.get("quality").and_then(|q| q.as_str()).unwrap_or("good");
+				let peer_side = data.get("peer_side").and_then(|p| p.as_bool()).unwrap_or(false);
+				let message = match (quality, peer_side) {
+					("good", _) => crate::i18n::tr("Connection is good again.").to_string(),
+					(_, true) => {
+						let name = if s.call_peer_name.is_empty() {
+							crate::i18n::tr("The other person").to_string()
+						} else {
+							s.call_peer_name.clone()
+						};
+						crate::i18n::tr_fmt("Poor connection: {}'s internet is unstable.", &[&name])
+					}
+					("very_poor", false) => {
+						crate::i18n::tr("Very poor connection. Check your internet connection.").to_string()
+					}
+					_ => crate::i18n::tr("Poor connection. Your internet is unstable.").to_string(),
+				};
+				if data.get("sound").and_then(|v| v.as_bool()).unwrap_or(false) {
+					crate::audio::play_call_poor_connection_tone(&mut s);
+				}
+				drop(s);
+				announce_call(parts, &message, Priority::Medium);
+			}
+		}
 		"call_reconnecting" => {
 			if let Some(data) = val.get("data") {
 				let call_id = data.get("call_id").and_then(|c| c.as_str()).unwrap_or("");

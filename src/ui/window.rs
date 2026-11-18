@@ -1738,16 +1738,11 @@ pub fn bind_input_handlers(
 	parts.call_parts.keep_out_btn.on_click(move |_| {
 		let _ = tx_keep_out.send(UiCommand::AdmitCallPerson(false));
 	});
-	// Takes effect at once, mid-call too, and is saved at once: OK and
-	// Cancel both leave it as toggled.
-	let state_raw_audio = state.clone();
+	// Takes effect at once, mid-call too, so it can be heard before OK.
+	// Saved only by OK; Cancel or Escape puts the saved value back (below,
+	// where the dialog returns).
 	parts.settings_dialog.call_raw_audio_check.on_toggled(move |event| {
-		let on = event.is_checked();
-		crate::calls::audio::set_call_raw_audio(on);
-		if let Ok(mut s) = state_raw_audio.try_borrow_mut() {
-			s.settings.call_raw_audio = on;
-			s.settings.save();
-		}
+		crate::calls::audio::set_call_raw_audio(event.is_checked());
 	});
 	let tx_approval = ui_tx.clone();
 	parts.call_parts.approval_check.on_toggled(move |event| {
@@ -2092,6 +2087,7 @@ pub fn bind_input_handlers(
 	let output_device_combo_open = parts.settings_dialog.output_device_combo;
 	let call_output_device_combo_open = parts.settings_dialog.call_output_device_combo;
 	let noise_suppression_check_open = parts.settings_dialog.voice_message_noise_suppression_check;
+	let stereo_voice_check_open = parts.settings_dialog.voice_message_stereo_check;
 	let dual_stream_check_open = parts.settings_dialog.dual_stream_screen_share_check;
 	let state_settings_open = state.clone();
 	let pending_shortcuts_open = pending_shortcuts.clone();
@@ -2142,6 +2138,7 @@ pub fn bind_input_handlers(
 			&s.settings.update_channel,
 		);
 		noise_suppression_check_open.set_value(s.settings.voice_message_noise_suppression);
+		stereo_voice_check_open.set_value(s.settings.voice_message_stereo);
 		dual_stream_check_open.set_value(s.settings.dual_stream_screen_share);
 
 		name_field_open.set_value(&s.own_push_name);
@@ -2188,6 +2185,12 @@ pub fn bind_input_handlers(
 		drop(s);
 		autostart_check.set_value(crate::platform::autostart::is_enabled());
 		crate::ui::show_modal_again(&settings_dialog);
+		// OK has saved the calls processing switch by now; anything else
+		// (Cancel, Escape, closing) undoes a toggle that wasn't saved.
+		let saved_raw_audio = state_settings_open.try_borrow().map(|s| s.settings.call_raw_audio);
+		if let Ok(raw) = saved_raw_audio {
+			crate::calls::audio::set_call_raw_audio(raw);
+		}
 	});
 
 	let frame_logout = parts.frame;
@@ -2868,6 +2871,7 @@ pub fn bind_input_handlers(
 	let output_device_combo_ok = parts.settings_dialog.output_device_combo;
 	let call_output_device_combo_ok = parts.settings_dialog.call_output_device_combo;
 	let noise_suppression_check_ok = parts.settings_dialog.voice_message_noise_suppression_check;
+	let stereo_voice_check_ok = parts.settings_dialog.voice_message_stereo_check;
 	let dual_stream_check_ok = parts.settings_dialog.dual_stream_screen_share_check;
 	let state_settings_save = state.clone();
 	let frame_shortcuts_save = parts.frame;
@@ -2917,6 +2921,7 @@ pub fn bind_input_handlers(
 			crate::ui::dialogs::settings_dialog::UPDATE_CHANNEL_CHOICES,
 		);
 		s.settings.voice_message_noise_suppression = noise_suppression_check_ok.is_checked();
+		s.settings.voice_message_stereo = stereo_voice_check_ok.is_checked();
 		s.settings.dual_stream_screen_share = dual_stream_check_ok.is_checked();
 		let old_theme = s.settings.theme;
 		let old_effective_id = crate::i18n::is_indonesian();

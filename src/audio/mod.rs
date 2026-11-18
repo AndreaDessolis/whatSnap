@@ -370,6 +370,20 @@ pub(crate) fn start_call_reconnect_tone(state: &mut AppState) {
 	state.call_reconnect_sink = Some(sink);
 }
 
+/// The short alert for a call whose connection turned poor (once per call,
+/// as WhatsApp's net_health_max_sound_alert_audio).
+pub(crate) fn play_call_poor_connection_tone(state: &mut AppState) {
+	ensure_call_audio_stream(state);
+	let Some(ref stream_handle) = state.call_audio_out.stream else {
+		eprintln!("[AUDIO] No audio stream available");
+		return;
+	};
+	let sink = Player::connect_new(stream_handle.mixer());
+	sink.append(crate::audio::ringback::poor_connection_tone());
+	sink.play();
+	state.call_alert_sink = Some(sink);
+}
+
 pub(crate) fn stop_call_reconnect_tone(state: &mut AppState) {
 	if let Some(sink) = state.call_reconnect_sink.take() {
 		sink.pause();
@@ -627,7 +641,9 @@ fn waveform_bars(levels: &[f32]) -> Option<Vec<u8>> {
 	Some(bars)
 }
 
-pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str) -> crate::error::Result<()> {
+/// `stereo` keeps a stereo recording stereo (Settings, "Send voice messages in
+/// stereo"); otherwise it goes out mono like WhatsApp's own voice notes.
+pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str, stereo: bool) -> crate::error::Result<()> {
 	use std::{
 		fs::File,
 		io::{BufWriter, Write},
@@ -647,11 +663,16 @@ pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str) -> crate::
 	if spec.sample_rate != 48000 {
 		return Err(crate::error::err!("Sample rate must be 48000"));
 	}
-	// Recordings are stereo, but voice notes go out mono like WhatsApp's own:
-	// iPhones refuse to play stereo voice notes.
+	// Recordings are stereo, but voice notes go out mono like WhatsApp's own
+	// unless asked: iPhones refuse to play stereo voice notes.
 	let ch = spec.channels.max(1) as usize;
+	let out_channels = if stereo && ch >= 2 { 2 } else { 1 };
 
-	let mut encoder = Encoder::new(48000, Channels::Mono, Application::Voip)?;
+	let mut encoder = Encoder::new(
+		48000,
+		if out_channels == 2 { Channels::Stereo } else { Channels::Mono },
+		Application::Voip,
+	)?;
 	let pre_skip = encoder.get_lookahead()?.max(0) as usize;
 
 	let mut writer = OggWriter::new(BufWriter::new(File::create(ogg_path)?), 12345);
@@ -659,7 +680,7 @@ pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str) -> crate::
 	let mut head = Vec::with_capacity(19);
 	head.extend_from_slice(b"OpusHead");
 	head.push(1);
-	head.push(1);
+	head.push(out_channels as u8);
 	head.extend_from_slice(&(pre_skip as u16).to_le_bytes());
 	head.extend_from_slice(&48000_u32.to_le_bytes());
 	head.extend_from_slice(&0_u16.to_le_bytes());
@@ -677,7 +698,7 @@ pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str) -> crate::
 	let segments = |len: usize| len / 255 + 1;
 	let mut samples = reader;
 	let mut frame = vec![0i16; FRAME * ch];
-	let mut mono = [0i16; FRAME];
+	let mut mono = vec![0i16; FRAME * out_channels];
 	let mut out = [0u8; 1275];
 	let mut held: Option<(Vec<u8>, u64)> = None;
 	let (mut page_packets, mut page_segments) = (0, 0);
@@ -705,10 +726,16 @@ pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str) -> crate::
 			break;
 		}
 		frame[filled..].fill(0);
-		for (m, f) in mono.iter_mut().zip(frame.chunks_exact(ch)) {
-			*m = (f.iter().map(|&s| s as i32).sum::<i32>() / ch as i32) as i16;
+		if out_channels == 2 {
+			for (m, f) in mono.chunks_exact_mut(2).zip(frame.chunks_exact(ch)) {
+				m.copy_from_slice(&f[..2]);
+			}
+		} else {
+			for (m, f) in mono.iter_mut().zip(frame.chunks_exact(ch)) {
+				*m = (f.iter().map(|&s| s as i32).sum::<i32>() / ch as i32) as i16;
+			}
 		}
-		let len = encoder.encode(&mono, &mut out)?;
+		let len = encoder.encode_interleaved(&mono, out_channels, &mut out)?;
 		encoded += FRAME as u64;
 		if let Some((packet, granule)) = held.take() {
 			page_packets += 1;
@@ -785,6 +812,27 @@ mod voice_note_tests {
 	use super::{convert_wav_to_opus_ogg, decode_opus};
 
 	#[test]
+	fn stereo_voice_note_keeps_both_channels_when_asked() {
+		let dir = std::env::temp_dir();
+		let wav = dir.join(format!("whantv_voice_stereo_test_{}.wav", std::process::id()));
+		let ogg = wav.with_extension("ogg");
+		let spec = crate::audio::wav::WavSpec { channels: 2, sample_rate: 48_000 };
+		let mut w = crate::audio::wav::WavWriter::create(wav.to_str().unwrap(), spec).unwrap();
+		for i in 0..96_000u32 {
+			w.write_sample((0.4 * (i as f32 * 0.03).sin() * 32767.0) as i16).unwrap();
+			w.write_sample((0.4 * (i as f32 * 0.05).sin() * 32767.0) as i16).unwrap();
+		}
+		w.finalize().unwrap();
+		convert_wav_to_opus_ogg(wav.to_str().unwrap(), ogg.to_str().unwrap(), true).unwrap();
+		let data = std::fs::read(&ogg).unwrap();
+		let _ = std::fs::remove_file(&wav);
+		let _ = std::fs::remove_file(&ogg);
+		assert_eq!(&data[28..36], b"OpusHead");
+		assert_eq!(data[37], 2, "stereo was asked for");
+		assert!(decode_opus(&data).is_some_and(|mut d| d.next().is_some()), "doesn't decode");
+	}
+
+	#[test]
 	fn voice_note_is_laid_out_like_whatsapps() {
 		for total in [350_000u64, 96_000] {
 			let dir = std::env::temp_dir();
@@ -798,7 +846,7 @@ mod voice_note_tests {
 				w.write_sample(v / 2).unwrap();
 			}
 			w.finalize().unwrap();
-			convert_wav_to_opus_ogg(wav.to_str().unwrap(), ogg.to_str().unwrap()).unwrap();
+			convert_wav_to_opus_ogg(wav.to_str().unwrap(), ogg.to_str().unwrap(), false).unwrap();
 			let data = std::fs::read(&ogg).unwrap();
 			let decoded = decode_opus(&data).unwrap().count() as u64;
 			let _ = std::fs::remove_file(&wav);

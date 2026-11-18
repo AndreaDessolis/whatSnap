@@ -244,6 +244,29 @@ pub(crate) fn reconnect_tone() -> SamplesBuffer {
 	SamplesBuffer::new(NonZero::new(1).unwrap(), NonZero::new(SAMPLE_RATE).unwrap(), samples)
 }
 
+/// Two short falling beeps for a call whose connection turned poor. Our own
+/// sound: WhatsApp's alert is played by its engine and isn't in WA Web.
+pub(crate) fn poor_connection_tone() -> SamplesBuffer {
+	const BEEPS: [(f32, usize); 2] = [(660.0, 140), (440.0, 180)];
+	const GAP_MS: usize = 90;
+	let rate = SAMPLE_RATE as f32;
+	let fade = (FADE_SECS * rate) as usize;
+	let mut samples = Vec::new();
+	for (i, (freq, ms)) in BEEPS.into_iter().enumerate() {
+		if i > 0 {
+			samples.extend(std::iter::repeat_n(0.0, GAP_MS * SAMPLE_RATE as usize / 1000));
+		}
+		let n = ms * SAMPLE_RATE as usize / 1000;
+		for k in 0..n {
+			let t = k as f32 / rate;
+			let edge = k.min(n - 1 - k);
+			let gain = if edge < fade { edge as f32 / fade as f32 } else { 1.0 };
+			samples.push((std::f32::consts::TAU * freq * t).sin() * gain * LEVEL);
+		}
+	}
+	SamplesBuffer::new(NonZero::new(1).unwrap(), NonZero::new(SAMPLE_RATE).unwrap(), samples)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

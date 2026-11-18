@@ -388,6 +388,7 @@ pub(crate) fn send_voice_message(state: &Rc<RefCell<AppState>>, parts: &Rc<Windo
 	if let Some(ref jid) = jid_opt {
 		crate::ui_commands::messaging::mark_paused(&mut state.borrow_mut(), jid);
 	}
+	let stereo = state.try_borrow().map(|s| s.settings.voice_message_stereo).unwrap_or(false);
 
 	if !segments.is_empty()
 		&& let (Some(start_inst), Some(jid)) = (rec_start, jid_opt)
@@ -422,7 +423,7 @@ pub(crate) fn send_voice_message(state: &Rc<RefCell<AppState>>, parts: &Rc<Windo
 
 			let waveform = compute_voice_waveform(&wav_path);
 			let ogg_path = wav_path.replace(".wav", ".ogg");
-			let (final_path, mimetype) = match convert_wav_to_opus_ogg(&wav_path, &ogg_path) {
+			let (final_path, mimetype) = match convert_wav_to_opus_ogg(&wav_path, &ogg_path, stereo) {
 				Ok(_) => {
 					let _ = std::fs::remove_file(&wav_path);
 					(ogg_path, "audio/ogg; codecs=opus")

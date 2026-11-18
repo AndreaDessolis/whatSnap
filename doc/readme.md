@@ -347,7 +347,7 @@ The call window has these buttons:
 - `React...`
 - `End call`
 
-In the call window, `Ctrl+Shift+V` turns the camera on or off, `Ctrl+Shift+S` starts or stops sharing your screen, `Ctrl+Shift+M` mutes or unmutes your microphone, and `Ctrl+Shift+D` opens or closes the device settings. In Settings, Input & Output, `Mute microphone by default when placing or joining calls` starts every call muted, `Turn off all sound processing in calls` sends your microphone exactly as it is and plays the other person without enhancement (it takes effect right away, also during a call), and `Show frequent contacts in the Calls tab` hides or shows that list. In the main window, `Ctrl+M` mutes or unmutes your microphone, and `Ctrl+W` ends the call.
+In the call window, `Ctrl+Shift+V` turns the camera on or off, `Ctrl+Shift+S` starts or stops sharing your screen, `Ctrl+Shift+M` mutes or unmutes your microphone, and `Ctrl+Shift+D` opens or closes the device settings. In Settings, Input & Output, `Mute microphone by default when placing or joining calls` starts every call muted, `Turn off all sound processing in calls` sends your microphone exactly as it is and plays the other person without enhancement (it takes effect right away, also during a call, and Cancel or Escape undoes it), and `Show frequent contacts in the Calls tab` hides or shows that list. In the main window, `Ctrl+M` mutes or unmutes your microphone, and `Ctrl+W` ends the call.
 
 In a group call, the People list shows who is in the call. Use `Mute` to ask the selected person to mute. When you can remove people from the call, a `Remove` button also shows. In a call from a call link that you made, `Approve new participants` makes people wait until you let them in. Use `Let in` and `Don't let in` for each one. You can also select your microphone, speaker, and camera in the call window.
 
@@ -490,6 +490,7 @@ The choices for the "Who can" settings are Everyone, My Contacts, My Contacts Ex
 ### Input & Output Tab
 - `Microphone (calls and voice notes)`
 - `Clean up voice messages`: remove background noise and make the volume even, as WhatsApp Web does.
+- `Send voice messages in stereo`: keep a stereo microphone's recording stereo. Off by default, because iPhones might not play stereo voice messages.
 - `Speaker for alerts and voice messages`: used for notification sounds, message tones, and voice messages.
 - `Speaker for calls`
 - `Experimental: keep the camera on while sharing the screen`: the change takes effect in the next call.

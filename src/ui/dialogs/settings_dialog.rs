@@ -145,6 +145,7 @@ pub struct SettingsDialogParts {
 	pub output_device_combo: ComboBox,
 	pub call_output_device_combo: ComboBox,
 	pub voice_message_noise_suppression_check: CheckBox,
+	pub voice_message_stereo_check: CheckBox,
 	pub call_start_muted_check: CheckBox,
 	pub call_raw_audio_check: CheckBox,
 	pub show_frequent_calls_check: CheckBox,
@@ -560,6 +561,12 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&audio_sizer,
 		"Like WhatsApp Web: removes background noise and brings quiet speech up to a steady, loud level. Off sends the raw mic signal.",
 	);
+	let voice_message_stereo_check = setting_switch(&audio_panel, &audio_sizer, "Send voice messages in stereo");
+	setting_note(
+		&audio_panel,
+		&audio_sizer,
+		"Warning: voice messages sent in stereo might not play on iPhones. WhatsApp's own apps always send them in mono. Only useful with a stereo microphone.",
+	);
 
 	audio_sizer.add_spacer(10);
 	section_header(&audio_panel, &audio_sizer, "Speakers");
@@ -596,7 +603,7 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 	setting_note(
 		&audio_panel,
 		&audio_sizer,
-		"Takes effect right away, also during a call. Your microphone is sent exactly as it is (no echo cancelling, noise removal, automatic volume or limiter, and the microphone level is left alone), and the other person's sound is played without speech enhancement or bandwidth extension.",
+		"Takes effect right away, also during a call, so you can hear the difference; OK keeps it and Cancel undoes it. Your microphone is sent exactly as it is (no echo cancelling, noise removal, automatic volume or limiter, and the microphone level is left alone), and the other person's sound is played without speech enhancement or bandwidth extension.",
 	);
 	let show_frequent_calls_check =
 		setting_switch(&audio_panel, &audio_sizer, "Show frequent contacts in the Calls tab");
@@ -773,6 +780,7 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		output_device_combo,
 		call_output_device_combo,
 		voice_message_noise_suppression_check,
+		voice_message_stereo_check,
 		call_start_muted_check,
 		call_raw_audio_check,
 		show_frequent_calls_check,
@@ -940,6 +948,7 @@ impl SettingsDialogParts {
 		self.check_updates_check.set_value(settings.check_for_updates_on_startup);
 		set_combo_from_value(&self.update_channel_combo, UPDATE_CHANNEL_CHOICES, &settings.update_channel);
 		self.voice_message_noise_suppression_check.set_value(settings.voice_message_noise_suppression);
+		self.voice_message_stereo_check.set_value(settings.voice_message_stereo);
 		self.dual_stream_screen_share_check.set_value(settings.dual_stream_screen_share);
 		self.show_chat_settings(settings);
 		set_device_combo(
@@ -972,6 +981,7 @@ impl SettingsDialogParts {
 		settings.check_for_updates_on_startup = self.check_updates_check.is_checked();
 		settings.update_channel = combo_value(&self.update_channel_combo, UPDATE_CHANNEL_CHOICES);
 		settings.voice_message_noise_suppression = self.voice_message_noise_suppression_check.is_checked();
+		settings.voice_message_stereo = self.voice_message_stereo_check.is_checked();
 		settings.dual_stream_screen_share = self.dual_stream_screen_share_check.is_checked();
 		settings.input_device_name = device_combo_value(&self.input_device_combo);
 		settings.output_device_name = device_combo_value(&self.output_device_combo);

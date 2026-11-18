@@ -26,6 +26,9 @@ pub struct Settings {
 	pub call_output_device_name: Option<String>,
 	pub camera_device_name: Option<String>,
 	pub voice_message_noise_suppression: bool,
+	/// Voice messages keep a stereo recording stereo. Off by default: iPhones
+	/// don't play stereo voice notes (see audio::convert_wav_to_opus_ogg).
+	pub voice_message_stereo: bool,
 	pub archived_alert_levels: std::collections::HashMap<String, whatsnap::ArchivedAlert>,
 	pub verbose_backend_logging: bool,
 	pub start_maximized: bool,
@@ -137,6 +140,7 @@ impl Default for Settings {
 			call_output_device_name: None,
 			camera_device_name: None,
 			voice_message_noise_suppression: false,
+			voice_message_stereo: false,
 			archived_alert_levels: std::collections::HashMap::new(),
 			verbose_backend_logging: false,
 			start_maximized: false,

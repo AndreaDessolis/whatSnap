@@ -326,6 +326,16 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 			"silent_for": int(health.SilentFor.Seconds()),
 		})
 	})
+	// WhatsApp's "Poor connection" banner: the call's network turned poor
+	// (ours, or the other person's) or recovered.
+	call.OnNetworkHealth(func(health meowcaller.NetworkHealth) {
+		acc.broadcastEvent("call_network_health", map[string]interface{}{
+			"call_id":   call.ID(),
+			"quality":   health.Quality.String(),
+			"peer_side": health.PeerSide,
+			"sound":     health.SoundAlert,
+		})
+	})
 	// The call's media stopped and meowcaller is redialing its relays, or
 	// it came back. One that never comes back ends as "connection_lost".
 	call.OnReconnecting(func(reconnecting bool) {

@@ -156,8 +156,10 @@ impl Encoder {
 		Ok(value)
 	}
 
-	pub(crate) fn encode(&mut self, pcm: &[i16], out: &mut [u8]) -> Result<usize, Error> {
-		check(unsafe { opus_encode(self.0, pcm.as_ptr(), pcm.len() as c_int, out.as_mut_ptr(), out.len() as i32) })
+	/// Encodes one frame of interleaved samples for `channels` channels.
+	pub(crate) fn encode_interleaved(&mut self, pcm: &[i16], channels: usize, out: &mut [u8]) -> Result<usize, Error> {
+		let frame = (pcm.len() / channels.max(1)) as c_int;
+		check(unsafe { opus_encode(self.0, pcm.as_ptr(), frame, out.as_mut_ptr(), out.len() as i32) })
 	}
 
 	pub(crate) fn encode_float(&mut self, pcm: &[f32], out: &mut [u8]) -> Result<usize, Error> {
