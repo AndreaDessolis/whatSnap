@@ -221,8 +221,11 @@ impl Playout {
 			self.until_accelerate -= 1;
 			return;
 		}
+		// Only the audio looked at has to be here: how much to cut is the
+		// caller's call (calls/audio.rs keeps a cushion the network needed).
+		// Requiring the refill level on top kept at least 160 ms waiting.
 		let window = 2 * MAX_PITCH * self.scale;
-		if self.expansion.is_some() || self.queue.len() < window + self.refill_level {
+		if self.expansion.is_some() || self.queue.len() < window {
 			return;
 		}
 		let ahead: Vec<f32> = self.queue.iter().take(window).copied().collect();

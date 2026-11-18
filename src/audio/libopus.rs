@@ -55,6 +55,10 @@ const OPUS_GET_LOOKAHEAD_REQUEST: c_int = 4027;
 const OPUS_SET_OSCE_BWE_REQUEST: c_int = 4054;
 #[cfg(test)]
 const OPUS_SET_SIGNAL_REQUEST: c_int = 4024;
+const OPUS_SET_MAX_BANDWIDTH_REQUEST: c_int = 4004;
+const OPUS_SET_DTX_REQUEST: c_int = 4016;
+const OPUS_BANDWIDTH_SUPERWIDEBAND: i32 = 1104;
+const OPUS_BANDWIDTH_FULLBAND: i32 = 1105;
 #[cfg(test)]
 const OPUS_SIGNAL_VOICE: i32 = 3001;
 
@@ -130,6 +134,19 @@ impl Encoder {
 	#[cfg(test)]
 	pub(crate) fn set_signal_voice(&mut self) -> Result<(), Error> {
 		self.set(OPUS_SET_SIGNAL_REQUEST, OPUS_SIGNAL_VOICE)
+	}
+
+	/// Caps the audio bandwidth: super-wideband (12 kHz) below a 48 kHz
+	/// call rate, fullband (20 kHz) at it.
+	pub(crate) fn set_max_bandwidth_for_rate(&mut self, rate: u32) -> Result<(), Error> {
+		let bandwidth = if rate >= 48000 { OPUS_BANDWIDTH_FULLBAND } else { OPUS_BANDWIDTH_SUPERWIDEBAND };
+		self.set(OPUS_SET_MAX_BANDWIDTH_REQUEST, bandwidth)
+	}
+
+	/// Discontinuous transmission: in silence the encoder emits a one or two
+	/// byte packet every 400 ms and nothing between.
+	pub(crate) fn set_dtx(&mut self, on: bool) -> Result<(), Error> {
+		self.set(OPUS_SET_DTX_REQUEST, on as i32)
 	}
 
 	pub(crate) fn get_lookahead(&mut self) -> Result<i32, Error> {

@@ -289,8 +289,14 @@ pub(crate) struct Downsampler {
 
 impl Downsampler {
 	pub(crate) fn new(sample_rate: u32, channels: u16) -> Self {
+		Self::with_output(sample_rate, channels, NETWORK_SAMPLE_RATE, DS_CUTOFF_HZ)
+	}
+
+	/// The same filter for another output rate and cutoff (the 48 kHz
+	/// high band of a super-wideband call, calls/swb_uplink.rs).
+	pub(crate) fn with_output(sample_rate: u32, channels: u16, out_rate: u32, cutoff_hz: f64) -> Self {
 		let rate = sample_rate as f64;
-		let cutoff = (DS_CUTOFF_HZ / rate).min(0.45);
+		let cutoff = (cutoff_hz / rate).min(0.45);
 		// A Blackman window's transition band is about 5.5 / length.
 		let half = ((5.5 * rate / DS_TRANSITION_HZ) / 2.0).ceil().max(4.0) as usize;
 		let table = (0..=half * DS_PHASES)
@@ -310,7 +316,7 @@ impl Downsampler {
 			// Start with a window of silence so the first output can be made.
 			history: vec![0.0; half],
 			pos: half as f64,
-			step: rate / NETWORK_SAMPLE_RATE as f64,
+			step: rate / out_rate as f64,
 		}
 	}
 
@@ -366,6 +372,14 @@ struct CaptureDsp {
 	/// Mic checks since the last echo diagnostics line.
 	checks_since_echo_report: u32,
 	logged_echo_delay: Option<u32>,
+	device_rate: u32,
+	device_channels: u16,
+	/// The call's audio rate `opus` was made for.
+	send_rate: u32,
+	/// Our voice above 8 kHz, while the call runs super-wideband.
+	high_band: Option<crate::calls::swb_uplink::HighBand>,
+	wide_frame: Vec<f32>,
+	muted_scratch: Vec<f32>,
 }
 
 /// How much of our audio the peer says never arrived, in percent, as the
@@ -381,19 +395,45 @@ pub(crate) fn set_call_packet_loss_percent(percent: i32) {
 }
 
 fn new_call_opus_encoder() -> Option<crate::audio::libopus::Encoder> {
+	// WhatsApp's own encoder starts at 0% expected loss and follows what the
+	// peer's reports measure, see `set_call_packet_loss_percent`.
+	CALL_PACKET_LOSS_PERCENT.store(0, Ordering::Relaxed);
+	CALL_SEND_RATE.store(NETWORK_SAMPLE_RATE, Ordering::Relaxed);
+	call_opus_encoder(NETWORK_SAMPLE_RATE)
+}
+
+/// The call's audio rate as the backend last said (meowcaller's
+/// Call.AudioRate): 16000, or 24000 or 48000 once both sides advertised
+/// super-wideband Opus.
+static CALL_SEND_RATE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(NETWORK_SAMPLE_RATE);
+
+/// Bitrates for super-wideband and fullband voice. WhatsApp's own targets are
+/// for 16 kHz (25 kbit/s at its best); the wider bands need more to be worth it.
+const OPUS_SWB_BITRATE: i32 = 32_000;
+const OPUS_FB_BITRATE: i32 = 40_000;
+
+/// An encoder for a call at `rate`. Above 16 kHz it takes 48 kHz input
+/// (calls/swb_uplink.rs) and is capped to the band the call agreed on.
+fn call_opus_encoder(rate: u32) -> Option<crate::audio::libopus::Encoder> {
+	let wide = rate > NETWORK_SAMPLE_RATE;
 	let mut encoder = crate::audio::libopus::Encoder::new(
-		NETWORK_SAMPLE_RATE,
+		if wide { 48_000 } else { NETWORK_SAMPLE_RATE },
 		crate::audio::libopus::Channels::Mono,
 		crate::audio::libopus::Application::Voip,
 	)
 	.ok()?;
-	encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(OPUS_BITRATE)).ok()?;
+	let bitrate = match rate {
+		48_000.. => OPUS_FB_BITRATE,
+		24_000.. => OPUS_SWB_BITRATE,
+		_ => OPUS_BITRATE,
+	};
+	encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(bitrate)).ok()?;
 	encoder.set_complexity(OPUS_COMPLEXITY).ok()?;
+	if wide {
+		let _ = encoder.set_max_bandwidth_for_rate(rate);
+	}
 	let _ = encoder.set_inband_fec(true);
-	// WhatsApp's own encoder starts at 0% expected loss and follows what the
-	// peer's reports measure, see `set_call_packet_loss_percent`.
-	let _ = encoder.set_packet_loss_perc(0);
-	CALL_PACKET_LOSS_PERCENT.store(0, Ordering::Relaxed);
+	let _ = encoder.set_packet_loss_perc(CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed));
 	Some(encoder)
 }
 
@@ -469,7 +509,14 @@ impl Drop for MicLevelController {
 	}
 }
 
-fn pack_call_frame(frame: &[f32], opus: Option<&mut crate::audio::libopus::Encoder>, out: &mut Vec<u8>) {
+/// The 16 kHz frame, then the same 60 ms as one Opus packet: encoded from
+/// `wide` (48 kHz) on a super-wideband call, else from the frame itself.
+fn pack_call_frame(
+	frame: &[f32],
+	wide: Option<&[f32]>,
+	opus: Option<&mut crate::audio::libopus::Encoder>,
+	out: &mut Vec<u8>,
+) {
 	out.clear();
 	for sample in frame {
 		out.extend_from_slice(&sample.to_le_bytes());
@@ -477,7 +524,7 @@ fn pack_call_frame(frame: &[f32], opus: Option<&mut crate::audio::libopus::Encod
 	let Some(encoder) = opus else { return };
 	let pcm_len = out.len();
 	out.resize(pcm_len + OPUS_MAX_PACKET, 0);
-	let encoded = encoder.encode_float(frame, &mut out[pcm_len..]).unwrap_or(0);
+	let encoded = encoder.encode_float(wide.unwrap_or(frame), &mut out[pcm_len..]).unwrap_or(0);
 	out.truncate(pcm_len + encoded);
 }
 
@@ -510,7 +557,30 @@ impl CaptureDsp {
 			slices_since_mic_check: 0,
 			checks_since_echo_report: 0,
 			logged_echo_delay: None,
+			device_rate: sample_rate,
+			device_channels: channels,
+			send_rate: NETWORK_SAMPLE_RATE,
+			high_band: None,
+			wide_frame: Vec::with_capacity(FRAME_SAMPLES * 3),
+			muted_scratch: Vec::new(),
 		}
+	}
+
+	/// Follows the call's audio rate: a new encoder for it, and the high band
+	/// on above 16 kHz.
+	fn follow_send_rate(&mut self) {
+		let rate = CALL_SEND_RATE.load(Ordering::Relaxed);
+		if rate == self.send_rate {
+			return;
+		}
+		self.send_rate = rate;
+		if let Some(encoder) = call_opus_encoder(rate) {
+			self.opus = Some(encoder);
+			self.applied_loss_percent = CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed);
+		}
+		self.high_band = (rate > NETWORK_SAMPLE_RATE)
+			.then(|| crate::calls::swb_uplink::HighBand::new(self.device_rate, self.device_channels));
+		log_line(&format!("call audio: sending at {rate} Hz"));
 	}
 
 	fn process(
@@ -523,11 +593,25 @@ impl CaptureDsp {
 	) {
 		// mic -> echo canceller -> noise suppressor -> auto gain -> pause gate
 		// (all in CallVoice) -> + system audio -> limiter.
+		self.follow_send_rate();
 		self.downsampler.process(data, &mut self.resampled);
+		if let Some(high_band) = self.high_band.as_mut() {
+			high_band.push_device(data);
+		}
 		let ready = self.echo_reference.lock().unwrap().take(self.resampled.len(), &mut self.played);
 		self.cleaned.clear();
 		self.slices_since_mic_check +=
 			self.voice.process(&self.resampled[..ready], &self.played[..ready], muted, &mut self.cleaned);
+		if let Some(high_band) = self.high_band.as_mut() {
+			high_band.chain_took(&self.resampled[..ready]);
+			if muted {
+				self.muted_scratch.clear();
+				self.muted_scratch.resize(self.cleaned.len(), 0.0);
+				high_band.push_cleaned(&self.muted_scratch);
+			} else {
+				high_band.push_cleaned(&self.cleaned);
+			}
+		}
 		self.resampled.drain(..ready);
 		let mut system = self.system.lock().unwrap();
 		for &sample in &self.cleaned {
@@ -547,7 +631,14 @@ impl CaptureDsp {
 				}
 				self.applied_loss_percent = planned_loss;
 			}
-			pack_call_frame(&self.frame, self.opus.as_mut(), &mut self.send_buf);
+			let wide = match self.high_band.as_mut() {
+				Some(high_band) => {
+					high_band.wide_frame(&self.frame, &mut self.wide_frame);
+					Some(self.wide_frame.as_slice())
+				}
+				None => None,
+			};
+			pack_call_frame(&self.frame, wide, self.opus.as_mut(), &mut self.send_buf);
 			let _ = socket_out.send_to(&self.send_buf, target_addr);
 		}
 		if self.slices_since_mic_check >= MIC_CHECK_SLICES {
@@ -591,6 +682,16 @@ const PLAYOUT_REFILL_SAMPLES: usize = PLAYOUT_FRAME * 2;
 const PLAYOUT_TARGET_SAMPLES: usize = PLAYOUT_REFILL_SAMPLES + PLAYOUT_FRAME;
 /// Above this (smoothed) the waiting audio is shortened by accelerate.
 const PLAYOUT_CATCH_UP_ABOVE: f64 = (PLAYOUT_TARGET_SAMPLES + PLAYOUT_FRAME) as f64;
+/// Delay the network never needed is cut too: the least audio that was
+/// waiting, just before new audio arrived, over each 3 s of playback is
+/// cushion that wasn't used, and everything above PLAYOUT_SLACK of it is
+/// shortened by accelerate. A jittery network keeps that low point near zero
+/// (so its cushion stays); a steady one no longer carries whatever delay a
+/// late burst or the start of the call left in the queue (up to 240 ms used
+/// to stay for the rest of the call). NetEQ does the same with its target
+/// level from measured arrival jitter.
+const PLAYOUT_SLACK: usize = PLAYOUT_RATE as usize * 30 / 1000;
+const PLAYOUT_LOW_POINT_WINDOW: u64 = PLAYOUT_RATE as u64 * 3;
 
 /// The call's sound, from the network to the output device: the playout
 /// (calls/playout.rs: WhatsApp's NetEQ-style expand, merge and accelerate) at
@@ -601,11 +702,13 @@ const PLAYOUT_CATCH_UP_ABOVE: f64 = (PLAYOUT_TARGET_SAMPLES + PLAYOUT_FRAME) as 
 pub(crate) enum Incoming {
 	Pcm(Vec<f32>),
 	Opus { sequence: u16, timestamp: u32, packet: Vec<u8> },
+	/// The call's audio rate changed (16000, 24000 or 48000).
+	AudioRate(u32),
 }
 
 /// One datagram from the backend's audio bridge (backend/audio_udp.go):
-/// `[1][f32 LE samples...]`, or `[2][ssrc u32][seq u16][timestamp u32][Opus packet]`
-/// (little endian).
+/// `[1][f32 LE samples...]`, `[2][ssrc u32][seq u16][timestamp u32][Opus packet]`,
+/// or `[3][audio rate u32]` (little endian).
 fn parse_incoming(datagram: &[u8]) -> Option<Incoming> {
 	match datagram.split_first()? {
 		(1, pcm) => Some(Incoming::Pcm(pcm.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect())),
@@ -614,6 +717,7 @@ fn parse_incoming(datagram: &[u8]) -> Option<Incoming> {
 			timestamp: u32::from_le_bytes(rest[6..10].try_into().ok()?),
 			packet: rest[10..].to_vec(),
 		}),
+		(3, rest) if rest.len() >= 4 => Some(Incoming::AudioRate(u32::from_le_bytes(rest[..4].try_into().ok()?))),
 		_ => None,
 	}
 }
@@ -634,6 +738,12 @@ struct RenderDsp {
 	upcoming: f32,
 	smoothed_level: f64,
 	max_buffered_src: usize,
+	/// The least audio waiting before an arrival in this window, the
+	/// playout samples pulled in it, and audio still to cut (see PLAYOUT_SLACK).
+	low_point: usize,
+	window_pulled: u64,
+	trim_left: u64,
+	accelerated_mark: u64,
 	played: Arc<AtomicU64>,
 	starved: Arc<AtomicU64>,
 	accum_len: Arc<AtomicUsize>,
@@ -659,6 +769,10 @@ impl RenderDsp {
 			upcoming: 0.0,
 			smoothed_level: 0.0,
 			max_buffered_src: PLAYOUT_FRAME * 8,
+			low_point: usize::MAX,
+			window_pulled: 0,
+			trim_left: 0,
+			accelerated_mark: 0,
 			played,
 			starved,
 			accum_len,
@@ -671,6 +785,9 @@ impl RenderDsp {
 		// buffer holds the whole backlog: when it overflows the OLDEST audio
 		// goes (the channel itself would drop the newest), and a backlog left
 		// by a burst of late packets is worked off by accelerate.
+		if !self.playout.refilling {
+			self.low_point = self.low_point.min(self.playout.queue.len());
+		}
 		let (queue, opus) = (&mut self.playout.queue, &mut self.playout.opus);
 		while let Ok(item) = frame_rx.try_recv() {
 			match item {
@@ -699,13 +816,16 @@ impl RenderDsp {
 						jitter.drain_ready(queue);
 					}
 				}
+				// Taken by the reader thread; never queued.
+				Incoming::AudioRate(_) => {}
 			}
 		}
 		while queue.len() > self.max_buffered_src {
 			queue.pop_front();
 		}
 		self.smoothed_level += (queue.len() as f64 - self.smoothed_level) * 0.02;
-		let backlog = self.smoothed_level > PLAYOUT_CATCH_UP_ABOVE;
+		let trimming = self.playout.accelerated - self.accelerated_mark < self.trim_left;
+		let backlog = self.smoothed_level > PLAYOUT_CATCH_UP_ABOVE || trimming;
 
 		let concealed_before = self.playout.concealed;
 		let mut pulled = 0u64;
@@ -723,6 +843,16 @@ impl RenderDsp {
 			}
 		}
 		let concealed = self.playout.concealed - concealed_before;
+		self.window_pulled += pulled;
+		if self.window_pulled >= PLAYOUT_LOW_POINT_WINDOW {
+			self.window_pulled = 0;
+			self.trim_left = 0;
+			if self.low_point != usize::MAX && self.low_point > PLAYOUT_SLACK && concealed == 0 {
+				self.trim_left = (self.low_point - PLAYOUT_SLACK) as u64;
+				self.accelerated_mark = self.playout.accelerated;
+			}
+			self.low_point = usize::MAX;
+		}
 		self.played.fetch_add(pulled - concealed, Ordering::Relaxed);
 		self.starved.fetch_add(concealed, Ordering::Relaxed);
 		self.accum_len.store(self.playout.queue.len(), Ordering::Relaxed);
@@ -1117,6 +1247,13 @@ pub fn start_audio_streams(
 						reader_error_count_thread.fetch_add(1, Ordering::Relaxed);
 						continue;
 					};
+					if let Incoming::AudioRate(rate) = frame {
+						if matches!(rate, 16_000 | 24_000 | 48_000) {
+							log_line(&format!("call audio: the call runs at {rate} Hz"));
+							CALL_SEND_RATE.store(rate, Ordering::Relaxed);
+						}
+						continue;
+					}
 					if frame_tx.try_send(frame).is_err() {
 						tx_drop_count_thread.fetch_add(1, Ordering::Relaxed);
 					}
@@ -1287,7 +1424,7 @@ mod tests {
 		let mut energy = 0.0f32;
 		for n in 0..10 {
 			let frame = tone_frame(n * FRAME_SAMPLES);
-			pack_call_frame(&frame, Some(&mut encoder), &mut datagram);
+			pack_call_frame(&frame, None, Some(&mut encoder), &mut datagram);
 
 			let (pcm, packet) = datagram.split_at(FRAME_SAMPLES * 4);
 			let sent: Vec<f32> =
@@ -1382,6 +1519,35 @@ mod tests {
 	}
 
 	#[test]
+	fn delay_the_network_never_needed_is_cut() {
+		let mut dsp = render_dsp();
+		let (tx, rx) = mpsc::sync_channel::<Incoming>(16);
+		let mut out = vec![0.0f32; 160];
+		// 150 ms more than needed waiting, then packets at exactly real time:
+		// the old catch-up threshold (240 ms) never touched this.
+		for _ in 0..3 {
+			tx.send(Incoming::Pcm(vec![0.0; FRAME_SAMPLES])).unwrap();
+		}
+		for round in 0..3000 {
+			if round % 6 == 0 {
+				tx.send(Incoming::Pcm(vec![0.0; FRAME_SAMPLES])).unwrap();
+			}
+			dsp.process(&mut out, &rx);
+		}
+		// Just before each arrival the queue now sits near the slack.
+		let mut lowest = usize::MAX;
+		for round in 0..60 {
+			if round % 6 == 0 {
+				lowest = lowest.min(dsp.playout.queue.len());
+				tx.send(Incoming::Pcm(vec![0.0; FRAME_SAMPLES])).unwrap();
+			}
+			dsp.process(&mut out, &rx);
+		}
+		assert!(lowest <= PLAYOUT_SLACK + PLAYOUT_FRAME / 6, "still {} ms waiting", lowest / 48);
+		assert!(!dsp.playout.refilling, "cut so far that it ran dry");
+	}
+
+	#[test]
 	fn datagrams_from_the_backend_are_told_apart() {
 		let mut pcm = vec![1u8];
 		pcm.extend(0.5f32.to_le_bytes());
@@ -1444,7 +1610,7 @@ mod tests {
 	#[test]
 	fn a_call_frame_without_an_encoder_is_pcm_alone() {
 		let mut datagram = vec![1, 2, 3];
-		pack_call_frame(&tone_frame(0), None, &mut datagram);
+		pack_call_frame(&tone_frame(0), None, None, &mut datagram);
 		assert_eq!(datagram.len(), FRAME_SAMPLES * 4);
 	}
 }

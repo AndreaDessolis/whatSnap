@@ -114,3 +114,32 @@ func TestUDPBridgeTagsDecodedAudioAndOpusPackets(t *testing.T) {
 		t.Fatalf("Opus datagram = %x", buf[:n])
 	}
 }
+
+// Mic frames that pile up (the mic's clock ahead of the engine's ticks) are
+// dropped down to maxMicBacklog, oldest first, so our voice doesn't lag.
+func TestUDPBridgeDropsStaleMicFrames(t *testing.T) {
+	bridge, port, err := NewUDPBridge()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bridge.Close()
+	app, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Close()
+	pcm := make([]byte, meowcaller.FrameSamples*4)
+	for i := 0; i < 6; i++ {
+		binary.LittleEndian.PutUint32(pcm, math.Float32bits(float32(i)))
+		if _, err := app.Write(pcm); err != nil {
+			t.Fatal(err)
+		}
+	}
+	time.Sleep(50 * time.Millisecond)
+	for _, want := range []float32{4, 5} {
+		frame, err := bridge.ReadFrame()
+		if err != nil || frame[0] != want {
+			t.Fatalf("frame %v, want %v (err %v)", frame[0], want, err)
+		}
+	}
+}
