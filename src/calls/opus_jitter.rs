@@ -10,14 +10,19 @@
 //! - a packet that is lost (later ones are already here) is rebuilt from the
 //!   in-band FEC the next packet carries, and what that can't cover is
 //!   concealed, less whatever was already made up while waiting for it;
-//! - a packet whose time has been fully made up already is dropped.
+//! - a packet whose time has been fully made up already is dropped;
+//! - a jump in timestamps with no gap in the sequence numbers is the peer
+//!   not sending (DTX while it is silent, or while it is busy with video),
+//!   not loss, so nothing is rebuilt or made up for it. WhatsApp's own jitter
+//!   buffer tells the two apart the same way: it has a DTX state of its own,
+//!   with comfort noise counted apart from concealment (`jb_plc_cng`).
 //!
 //! Decoded at 48 kHz with libopus's blind bandwidth extension, which makes up
 //! the band above 8 kHz that a 16 kHz call leaves out (WhatsApp's engine does
 //! the same for MLow calls with its "bwenet"), and LACE/NoLACE speech
 //! enhancement. Time is still counted on the RTP clock, 16 kHz.
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::audio::libopus::{Channels, Decoder};
 
@@ -35,6 +40,9 @@ const MAX_CONCEALMENT: usize = 1600;
 /// A jump in timestamps bigger than this is a discontinuity (the peer paused
 /// sending, or restarted), not loss: nothing is made up for it.
 const MAX_LOSS: u64 = 6400;
+/// How many of the latest packets' sequence numbers are remembered to tell
+/// reordering and silence from loss.
+const RECENT_SEQUENCES: usize = 64;
 
 pub(crate) struct OpusJitter {
 	decoder: Decoder,
@@ -42,6 +50,12 @@ pub(crate) struct OpusJitter {
 	scale: usize,
 	/// Waiting packets by extended (unwrapped) RTP timestamp.
 	packets: BTreeMap<u64, Vec<u8>>,
+	/// The latest packets' sequence numbers with their extended timestamps.
+	recent: VecDeque<(u16, u64)>,
+	/// Timestamps of waiting packets whose sequence number follows its
+	/// neighbour's: whatever the timestamps jump by before them, the peer
+	/// sent nothing in between.
+	unbroken: BTreeSet<u64>,
 	/// The timestamp of the next sample to decode, once a packet has come.
 	next: Option<u64>,
 	/// Unwrapping 32-bit RTP timestamps.
@@ -72,6 +86,8 @@ impl OpusJitter {
 			decoder,
 			scale,
 			packets: BTreeMap::new(),
+			recent: VecDeque::with_capacity(RECENT_SEQUENCES),
+			unbroken: BTreeSet::new(),
 			next: None,
 			last_raw: None,
 			wraps: 0,
@@ -99,8 +115,9 @@ impl OpusJitter {
 	}
 
 	/// A packet from the network.
-	pub(crate) fn push(&mut self, timestamp: u32, packet: Vec<u8>) {
+	pub(crate) fn push(&mut self, sequence: u16, timestamp: u32, packet: Vec<u8>) {
 		let at = self.extend(timestamp);
+		self.note_sequence(sequence, at);
 		if let Some(next) = self.next
 			&& at < next
 		{
@@ -108,6 +125,24 @@ impl OpusJitter {
 			return;
 		}
 		self.packets.insert(at, packet);
+	}
+
+	/// Remembers the packet's sequence number, and marks it (or the packet
+	/// that comes right after it, if that arrived first) as unbroken.
+	fn note_sequence(&mut self, sequence: u16, at: u64) {
+		let before = sequence.wrapping_sub(1);
+		let after = sequence.wrapping_add(1);
+		for &(other, other_at) in &self.recent {
+			if other == before {
+				self.unbroken.insert(at);
+			} else if other == after {
+				self.unbroken.insert(other_at);
+			}
+		}
+		if self.recent.len() == RECENT_SEQUENCES {
+			self.recent.pop_front();
+		}
+		self.recent.push_back((sequence, at));
 	}
 
 	/// Decodes every packet that is next in line into `out`.
@@ -124,6 +159,7 @@ impl OpusJitter {
 				},
 			};
 			let Some(packet) = self.packets.remove(&next) else { return };
+			self.unbroken.retain(|&at| at > next);
 			self.decode_packet(&packet, next, out);
 		}
 	}
@@ -176,8 +212,10 @@ impl OpusJitter {
 		match self.packets.keys().next().copied() {
 			Some(first) if first > next => {
 				let missing = first - next;
-				if missing > MAX_LOSS {
-					// A pause in sending, not loss: carry on from the new packet.
+				if missing > MAX_LOSS || self.unbroken.contains(&first) {
+					// A pause in sending, not loss (the sequence numbers run on
+					// unbroken, or the jump is too big to be one): carry on from
+					// the new packet.
 					self.next = Some(first);
 				} else {
 					// Lost. Whatever was made up while waiting already took
@@ -249,8 +287,8 @@ mod tests {
 	fn packets_in_order_decode_straight_through() {
 		let mut j = OpusJitter::new(16000).unwrap();
 		let mut out = VecDeque::new();
-		for (ts, p) in packets(10) {
-			j.push(ts, p);
+		for (n, (ts, p)) in packets(10).into_iter().enumerate() {
+			j.push(n as u16, ts, p);
 			j.drain_ready(&mut out);
 		}
 		assert_eq!(out.len(), 9600);
@@ -263,7 +301,7 @@ mod tests {
 		let mut out = VecDeque::new();
 		let p = packets(4);
 		for i in [0, 2, 1, 3] {
-			j.push(p[i].0, p[i].1.clone());
+			j.push(i as u16, p[i].0, p[i].1.clone());
 			j.drain_ready(&mut out);
 		}
 		assert_eq!(out.len(), 4 * 960);
@@ -279,7 +317,7 @@ mod tests {
 			if i == 6 {
 				continue; // lost
 			}
-			j.push(*ts, packet.clone());
+			j.push(i as u16, *ts, packet.clone());
 			j.drain_ready(&mut out);
 			if i == 7 {
 				// The playout reaches the hole with packet 7 already here.
@@ -299,8 +337,8 @@ mod tests {
 		let mut j = OpusJitter::new(16000).unwrap();
 		let mut out = VecDeque::new();
 		let p = packets(6);
-		for (ts, packet) in &p[..3] {
-			j.push(*ts, packet.clone());
+		for (n, (ts, packet)) in p[..3].iter().enumerate() {
+			j.push(n as u16, *ts, packet.clone());
 			j.drain_ready(&mut out);
 		}
 		out.clear();
@@ -310,7 +348,7 @@ mod tests {
 		}
 		assert_eq!(out.len(), 480);
 		assert!(rms(&out.iter().copied().collect::<Vec<_>>()) > 0.05, "concealment was silent");
-		j.push(p[3].0, p[3].1.clone());
+		j.push(3, p[3].0, p[3].1.clone());
 		j.drain_ready(&mut out);
 		assert_eq!(out.len(), 480 + 960, "the late packet wasn't played");
 		assert_eq!(j.dropped_late, 0);
@@ -321,13 +359,72 @@ mod tests {
 		let mut j = OpusJitter::new(16000).unwrap();
 		let mut out = VecDeque::new();
 		let p = packets(2);
-		j.push(p[0].0, p[0].1.clone());
+		j.push(0, p[0].0, p[0].1.clone());
 		j.drain_ready(&mut out);
 		// The next packet comes two seconds on (DTX).
-		j.push(p[0].0 + 32000, p[1].1.clone());
+		j.push(1, p[0].0 + 32000, p[1].1.clone());
 		out.clear();
 		j.produce(&mut out);
 		assert_eq!(out.len(), 960, "filled a pause");
+	}
+
+	/// Plays three packets, then lets the playout wait `wait_ms` for the next
+	/// one, which carries timestamp `gap` samples after the last packet's end
+	/// and sequence number `sequence`. Returns what the jitter made up for the
+	/// gap once that packet arrived, in output samples, and the total of samples
+	/// concealed or rebuilt.
+	fn made_up_after_gap(gap: u32, sequence: u16, wait_ms: usize) -> (usize, u64) {
+		let mut j = OpusJitter::new(16000).unwrap();
+		let mut out = VecDeque::new();
+		let p = packets(4);
+		for (n, (ts, packet)) in p[..3].iter().enumerate() {
+			j.push(n as u16, *ts, packet.clone());
+			j.drain_ready(&mut out);
+		}
+		out.clear();
+		for _ in 0..wait_ms / 10 {
+			j.produce(&mut out);
+		}
+		let waited = out.len();
+		j.push(sequence, p[2].0 + 960 + gap, p[3].1.clone());
+		j.produce(&mut out);
+		(out.len() - waited, j.recovered + j.concealed)
+	}
+
+	#[test]
+	fn silence_with_unbroken_sequence_numbers_is_not_loss() {
+		// DTX: the peer sends one packet 300 ms of silence later and counts on from the last
+		// sequence number. Whether the playout is already dry when it comes or has waited, only
+		// the packet itself is added.
+		for wait_ms in [0, 360] {
+			let (extra_samples, _) = made_up_after_gap(4800, 3, wait_ms);
+			assert_eq!(extra_samples, 960, "the packet after the pause came with more than itself ({wait_ms} ms wait)");
+		}
+	}
+
+	#[test]
+	fn the_same_jump_with_a_sequence_gap_is_still_loss() {
+		let (extra_samples, repaired) = made_up_after_gap(4800, 4, 0);
+		assert!(extra_samples > 960, "a lost stretch was not filled in");
+		assert!(repaired > 0);
+	}
+
+	#[test]
+	fn a_packet_that_arrives_before_its_predecessor_still_counts_as_unbroken() {
+		let mut j = OpusJitter::new(16000).unwrap();
+		let mut out = VecDeque::new();
+		let p = packets(5);
+		for (n, (ts, packet)) in p[..2].iter().enumerate() {
+			j.push(n as u16, *ts, packet.clone());
+			j.drain_ready(&mut out);
+		}
+		out.clear();
+		// Sequence 3 is here before 2; 2 follows 1 across a pause.
+		j.push(3, p[2].0 + 960 + 4800 + 960, p[3].1.clone());
+		j.push(2, p[2].0 + 960 + 4800, p[2].1.clone());
+		j.produce(&mut out);
+		assert_eq!(out.len(), 2 * 960, "made up sound for a pause");
+		assert_eq!(j.recovered + j.concealed, 0);
 	}
 
 	#[test]
@@ -335,8 +432,8 @@ mod tests {
 		let mut j = OpusJitter::new(16000).unwrap();
 		let mut out = VecDeque::new();
 		let p = packets(3);
-		for (ts, packet) in &p {
-			j.push(*ts, packet.clone());
+		for (n, (ts, packet)) in p.iter().enumerate() {
+			j.push(n as u16, *ts, packet.clone());
 			j.drain_ready(&mut out);
 		}
 		out.clear();
@@ -392,8 +489,8 @@ mod tests {
 		let mut extended = OpusJitter::new(48000).unwrap();
 		let mut out = VecDeque::new();
 		let started = std::time::Instant::now();
-		for (ts, p) in &packets {
-			extended.push(*ts, p.clone());
+		for (n, (ts, p)) in packets.iter().enumerate() {
+			extended.push(n as u16, *ts, p.clone());
 			extended.drain_ready(&mut out);
 		}
 		eprintln!(
@@ -426,7 +523,7 @@ mod tests {
 		let p = packets(4);
 		let start = u32::MAX - 1500;
 		for (n, (_, packet)) in p.iter().enumerate() {
-			j.push(start.wrapping_add((n * 960) as u32), packet.clone());
+			j.push(n as u16, start.wrapping_add((n * 960) as u32), packet.clone());
 			j.drain_ready(&mut out);
 		}
 		assert_eq!(out.len(), 4 * 960);

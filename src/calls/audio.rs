@@ -600,7 +600,7 @@ const PLAYOUT_CATCH_UP_ABOVE: f64 = (PLAYOUT_TARGET_SAMPLES + PLAYOUT_FRAME) as 
 /// itself (calls/opus_jitter.rs).
 pub(crate) enum Incoming {
 	Pcm(Vec<f32>),
-	Opus { timestamp: u32, packet: Vec<u8> },
+	Opus { sequence: u16, timestamp: u32, packet: Vec<u8> },
 }
 
 /// One datagram from the backend's audio bridge (backend/audio_udp.go):
@@ -610,6 +610,7 @@ fn parse_incoming(datagram: &[u8]) -> Option<Incoming> {
 	match datagram.split_first()? {
 		(1, pcm) => Some(Incoming::Pcm(pcm.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect())),
 		(2, rest) if rest.len() > 10 => Some(Incoming::Opus {
+			sequence: u16::from_le_bytes(rest[4..6].try_into().ok()?),
 			timestamp: u32::from_le_bytes(rest[6..10].try_into().ok()?),
 			packet: rest[10..].to_vec(),
 		}),
@@ -681,7 +682,7 @@ impl RenderDsp {
 					self.upsampler.process(&frame, &mut self.upsampled);
 					queue.extend(&self.upsampled);
 				}
-				Incoming::Opus { timestamp, packet } => {
+				Incoming::Opus { sequence, timestamp, packet } => {
 					if opus.is_none() {
 						match crate::calls::opus_jitter::OpusJitter::new(PLAYOUT_RATE) {
 							Ok(jitter) => {
@@ -694,7 +695,7 @@ impl RenderDsp {
 						}
 					}
 					if let Some(jitter) = opus.as_mut() {
-						jitter.push(timestamp, packet);
+						jitter.push(sequence, timestamp, packet);
 						jitter.drain_ready(queue);
 					}
 				}
@@ -1391,7 +1392,7 @@ mod tests {
 		opus.extend([0x58, 1, 2]);
 		assert!(matches!(
 			parse_incoming(&opus),
-			Some(Incoming::Opus { timestamp: 96000, packet }) if packet == [0x58, 1, 2]
+			Some(Incoming::Opus { sequence: 7, timestamp: 96000, packet }) if packet == [0x58, 1, 2]
 		));
 		assert!(parse_incoming(&[]).is_none());
 		assert!(parse_incoming(&[9, 1, 2]).is_none());
@@ -1412,7 +1413,7 @@ mod tests {
 			let mut packet = vec![0u8; OPUS_MAX_PACKET];
 			let len = encoder.encode_float(&tone_frame(n * FRAME_SAMPLES), &mut packet).unwrap();
 			packet.truncate(len);
-			let item = Incoming::Opus { timestamp: (n * FRAME_SAMPLES) as u32, packet };
+			let item = Incoming::Opus { sequence: n as u16, timestamp: (n * FRAME_SAMPLES) as u32, packet };
 			match n {
 				20 => {}                 // lost
 				30 => late = Some(item), // held back 40 ms
