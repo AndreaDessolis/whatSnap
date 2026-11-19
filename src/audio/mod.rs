@@ -669,11 +669,8 @@ pub(crate) fn convert_wav_to_opus_ogg(wav_path: &str, ogg_path: &str, stereo: bo
 	let ch = spec.channels.max(1) as usize;
 	let out_channels = if stereo && ch >= 2 { 2 } else { 1 };
 
-	let mut encoder = Encoder::new(
-		48000,
-		if out_channels == 2 { Channels::Stereo } else { Channels::Mono },
-		Application::Voip,
-	)?;
+	let mut encoder =
+		Encoder::new(48000, if out_channels == 2 { Channels::Stereo } else { Channels::Mono }, Application::Voip)?;
 	let pre_skip = encoder.get_lookahead()?.max(0) as usize;
 
 	let mut writer = OggWriter::new(BufWriter::new(File::create(ogg_path)?), 12345);

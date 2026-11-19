@@ -11,8 +11,7 @@
 
 use std::collections::VecDeque;
 
-use crate::audio::call_voice::Upsampler3;
-use crate::calls::audio::Downsampler;
+use crate::{audio::call_voice::Upsampler3, calls::audio::Downsampler};
 
 /// The chain's delay from mic to cleaned 16 kHz audio (22 ms), measured by
 /// cross-correlating a voiced test signal through CallVoice. A few ms off only
@@ -50,7 +49,9 @@ impl HighPass {
 	}
 
 	fn process(&mut self, x: f32) -> f32 {
-		let y = self.b[0] * x + self.b[1] * self.x[0] + self.b[2] * self.x[1] - self.a[0] * self.y[0] - self.a[1] * self.y[1];
+		let y = self.b[0] * x + self.b[1] * self.x[0] + self.b[2] * self.x[1]
+			- self.a[0] * self.y[0]
+			- self.a[1] * self.y[1];
 		self.x = [x, self.x[0]];
 		self.y = [y, self.y[0]];
 		y
@@ -118,7 +119,10 @@ impl HighBand {
 	pub(crate) fn push_cleaned(&mut self, cleaned: &[f32]) {
 		self.pending_clean.extend_from_slice(cleaned);
 		let mut used = 0;
-		while self.pending_clean.len() - used >= SLICE_16K && self.raw.len() >= SLICE_16K && self.band.len() >= SLICE_48K {
+		while self.pending_clean.len() - used >= SLICE_16K
+			&& self.raw.len() >= SLICE_16K
+			&& self.band.len() >= SLICE_48K
+		{
 			let clean = &self.pending_clean[used..used + SLICE_16K];
 			let clean_energy: f32 = clean.iter().map(|s| s * s).sum();
 			let raw_energy: f32 = self.raw.drain(..SLICE_16K).map(|s| s * s).sum();

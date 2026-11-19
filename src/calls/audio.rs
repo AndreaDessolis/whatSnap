@@ -952,7 +952,11 @@ const PLAYOUT_LOW_POINT_WINDOW: u64 = PLAYOUT_RATE as u64 * 3;
 /// itself (calls/opus_jitter.rs).
 pub(crate) enum Incoming {
 	Pcm(Vec<f32>),
-	Opus { sequence: u16, timestamp: u32, packet: Vec<u8> },
+	Opus {
+		sequence: u16,
+		timestamp: u32,
+		packet: Vec<u8>,
+	},
 	/// The call's audio rate changed (16000, 24000 or 48000).
 	AudioRate(u32),
 	/// Whether to encode with DTX ([4][on u8]).

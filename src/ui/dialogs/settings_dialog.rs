@@ -593,11 +593,7 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&audio_sizer,
 		"When enabled, calls begin with your microphone muted. You can unmute at any time during the call.",
 	);
-	let call_raw_audio_check = setting_switch(
-		&audio_panel,
-		&audio_sizer,
-		"Turn off all sound processing in calls",
-	);
+	let call_raw_audio_check = setting_switch(&audio_panel, &audio_sizer, "Turn off all sound processing in calls");
 	setting_note(
 		&audio_panel,
 		&audio_sizer,
