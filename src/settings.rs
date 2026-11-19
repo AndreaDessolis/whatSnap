@@ -87,6 +87,10 @@ pub struct Settings {
 	/// Settings > Input & Output > Calls: no sound processing in calls at
 	/// all, either way (see calls::audio::set_call_raw_audio).
 	pub call_raw_audio: bool,
+	/// Settings > Input & Output > Calls: send stereo in calls when there is
+	/// something stereo to send (experimental, see
+	/// calls::audio::set_call_stereo_send). Off by default.
+	pub call_stereo: bool,
 	/// Show frequent contacts section in the Calls tab.
 	pub show_frequent_calls: bool,
 	pub chat_notifications: std::collections::HashMap<String, whatsnap::ChatNotify>,
@@ -178,6 +182,7 @@ impl Default for Settings {
 			group_call_ringtone_sound: String::new(),
 			call_start_muted: false,
 			call_raw_audio: false,
+			call_stereo: false,
 			show_frequent_calls: true,
 			chat_notifications: std::collections::HashMap::new(),
 			chat_lock_hello: false,

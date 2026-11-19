@@ -57,6 +57,7 @@ const OPUS_SET_OSCE_BWE_REQUEST: c_int = 4054;
 const OPUS_SET_SIGNAL_REQUEST: c_int = 4024;
 const OPUS_SET_MAX_BANDWIDTH_REQUEST: c_int = 4004;
 const OPUS_SET_DTX_REQUEST: c_int = 4016;
+const OPUS_SET_FORCE_CHANNELS_REQUEST: c_int = 4022;
 const OPUS_BANDWIDTH_SUPERWIDEBAND: i32 = 1104;
 const OPUS_BANDWIDTH_FULLBAND: i32 = 1105;
 #[cfg(test)]
@@ -93,7 +94,7 @@ pub(crate) enum Bitrate {
 	Bits(i32),
 }
 
-pub(crate) struct Encoder(*mut OpusEncoder);
+pub(crate) struct Encoder(*mut OpusEncoder, usize);
 
 // The encoder is only ever used from one thread at a time (moved, not shared).
 unsafe impl Send for Encoder {}
@@ -106,7 +107,7 @@ impl Encoder {
 		if st.is_null() || error < 0 {
 			return Err(Error(error.min(-1)));
 		}
-		Ok(Self(st))
+		Ok(Self(st, channels as usize))
 	}
 
 	fn set(&mut self, request: c_int, value: i32) -> Result<(), Error> {
@@ -150,6 +151,11 @@ impl Encoder {
 		self.set(OPUS_SET_DTX_REQUEST, on as i32)
 	}
 
+	/// Makes a stereo encoder send mono (1) or stereo (2) packets.
+	pub(crate) fn set_force_channels(&mut self, channels: i32) -> Result<(), Error> {
+		self.set(OPUS_SET_FORCE_CHANNELS_REQUEST, channels)
+	}
+
 	pub(crate) fn get_lookahead(&mut self) -> Result<i32, Error> {
 		let mut value: i32 = 0;
 		check(unsafe { opus_encoder_ctl(self.0, OPUS_GET_LOOKAHEAD_REQUEST, &mut value as *mut i32) })?;
@@ -162,10 +168,10 @@ impl Encoder {
 		check(unsafe { opus_encode(self.0, pcm.as_ptr(), frame, out.as_mut_ptr(), out.len() as i32) })
 	}
 
+	/// Encodes one frame; a stereo encoder takes left and right interleaved.
 	pub(crate) fn encode_float(&mut self, pcm: &[f32], out: &mut [u8]) -> Result<usize, Error> {
-		check(unsafe {
-			opus_encode_float(self.0, pcm.as_ptr(), pcm.len() as c_int, out.as_mut_ptr(), out.len() as i32)
-		})
+		let frame = (pcm.len() / self.1.max(1)) as c_int;
+		check(unsafe { opus_encode_float(self.0, pcm.as_ptr(), frame, out.as_mut_ptr(), out.len() as i32) })
 	}
 }
 

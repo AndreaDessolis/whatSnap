@@ -111,6 +111,12 @@ fn likeness(a: &[f32], b: &[f32], step: usize) -> f32 {
 
 pub(crate) struct Playout {
 	pub(crate) queue: VecDeque<f32>,
+	/// The side ((left - right) / 2) of each sample in `queue`, for a peer
+	/// sending stereo; zeros otherwise. Whatever is done to `queue` is done
+	/// to it too.
+	pub(crate) side: VecDeque<f32>,
+	/// The side of the sample `next` returned last.
+	pub(crate) last_side: f32,
 	/// The peer's Opus packets, when it sends standard Opus: decoded into
 	/// `queue` as they come, and asked to conceal (libopus Deep PLC) when the
 	/// queue runs dry, in place of the waveform expansion below, which is for
@@ -138,6 +144,8 @@ impl Playout {
 		let scale = (rate / 16000).max(1) as usize;
 		Self {
 			queue: VecDeque::new(),
+			side: VecDeque::new(),
+			last_side: 0.0,
 			opus: None,
 			history: VecDeque::with_capacity(HISTORY * scale),
 			expansion: None,
@@ -162,8 +170,10 @@ impl Playout {
 			// The decoder fills in: decodes what's due, rebuilds a lost
 			// packet, or conceals while a late one is on its way.
 			opus.produce(&mut self.queue);
+			self.side.extend(opus.side.drain(..));
 			self.refilling = false;
 		}
+		self.line_up_side();
 		if self.refilling {
 			if self.queue.len() < self.refill_level {
 				return self.conceal();
@@ -179,6 +189,7 @@ impl Playout {
 			self.refilling = true;
 			return self.conceal();
 		};
+		let mut side = self.side.pop_front().unwrap_or(0.0);
 		if let Some(expansion) = self.expansion.as_mut() {
 			let merge = MERGE * self.scale;
 			if self.merging == 0 {
@@ -187,17 +198,28 @@ impl Playout {
 			let made_up = expansion.next(&mut self.rng);
 			let weight = 1.0 - self.merging as f32 / merge as f32;
 			sample = sample * weight + made_up * (1.0 - weight);
+			side *= weight;
 			self.merging -= 1;
 			if self.merging == 0 {
 				self.expansion = None;
 			}
 		}
+		self.last_side = side;
 		self.remember(sample);
 		sample
 	}
 
+	/// Audio put in `queue` without a side (decoded by the backend, or by
+	/// a test) gets a zero one, so the two stay in step.
+	fn line_up_side(&mut self) {
+		if self.side.len() != self.queue.len() {
+			self.side.resize(self.queue.len(), 0.0);
+		}
+	}
+
 	fn conceal(&mut self) -> f32 {
 		self.merging = 0;
+		self.last_side = 0.0;
 		if self.expansion.is_none() {
 			self.expansion = Some(Expansion::from_history(&self.history, self.scale));
 		}
@@ -242,8 +264,10 @@ impl Playout {
 		for i in 0..period {
 			let fade = i as f32 / period as f32;
 			self.queue[second + i] = ahead[start + i] * (1.0 - fade) + ahead[second + i] * fade;
+			self.side[second + i] = self.side[start + i] * (1.0 - fade) + self.side[second + i] * fade;
 		}
 		self.queue.drain(start..start + period);
+		self.side.drain(start..start + period);
 		self.accelerated += period as u64;
 		self.until_accelerate = ACCELERATE_EVERY * self.scale;
 	}
@@ -344,5 +368,28 @@ mod tests {
 			p.next(true);
 		}
 		assert_eq!(p.accelerated, 0, "cut a cycle out of noise");
+	}
+
+	#[test]
+	fn the_side_stays_in_step_through_accelerate() {
+		let mut p = Playout::new(960, 16000);
+		p.queue.extend((0..16000).map(voice));
+		// Right only: side = -mid, so left stays silent whatever is cut.
+		p.side.extend((0..16000).map(|i| -voice(i)));
+		for _ in 0..8000 {
+			let mid = p.next(true);
+			assert!((mid + p.last_side).abs() < 1e-6, "left not silent: mid {mid} side {}", p.last_side);
+		}
+		assert!(p.accelerated > 1000);
+	}
+
+	#[test]
+	fn audio_without_a_side_plays_as_mono() {
+		let mut p = Playout::new(960, 16000);
+		p.queue.extend((0..1920).map(voice));
+		for _ in 0..1920 {
+			p.next(false);
+			assert_eq!(p.last_side, 0.0);
+		}
 	}
 }

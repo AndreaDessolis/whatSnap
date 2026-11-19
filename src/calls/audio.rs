@@ -360,8 +360,12 @@ struct CaptureDsp {
 	played: Vec<f32>,
 	voice: CallVoice,
 	cleaned: Vec<f32>,
-	limiter: Limiter<1>,
+	/// Left and right together, so a stereo call keeps its image.
+	limiter: Limiter<2>,
 	sample_accum: Vec<f32>,
+	/// The side ((left - right) / 2) of each sample in `sample_accum`: zero
+	/// unless the call goes out in stereo.
+	side_accum: Vec<f32>,
 	system: Arc<Mutex<SystemMix>>,
 	frame: Vec<f32>,
 	send_buf: Vec<u8>,
@@ -383,7 +387,35 @@ struct CaptureDsp {
 	dtx: bool,
 	/// Device frames in a row that were digital silence while unmuted.
 	silent_frames: u32,
+	/// A stereo mic's side, at 16 kHz in step with `resampled`, while a raw
+	/// call may go out in stereo.
+	side_downsampler: Option<Downsampler>,
+	side_resampled: Vec<f32>,
+	voice_side: Vec<f32>,
+	/// `opus` is a stereo encoder, and whether it sends stereo now.
+	stereo_encoder: bool,
+	stereo_on: bool,
+	/// 16 kHz samples stereo stays on after its reason went away, so a gap in
+	/// the shared sound doesn't flip the encoder back and forth.
+	stereo_hold: usize,
+	stereo_frame: Vec<f32>,
 }
+
+/// Settings > Input & Output "Send stereo in calls (experimental)": on a
+/// 16 kHz call the encoder sends stereo while there is something stereo to
+/// send (shared screen sound, or a stereo mic with all processing off).
+/// WhatsApp's own apps decode it to mono; whatSnap plays it in stereo.
+static CALL_STEREO_SEND: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub(crate) fn set_call_stereo_send(on: bool) {
+	if CALL_STEREO_SEND.swap(on, Ordering::Relaxed) != on {
+		log_line(&format!("call audio: stereo sending {}", if on { "allowed" } else { "off" }));
+	}
+}
+
+/// Stereo bitrate: wideband stereo needs about a third more than mono voice.
+const OPUS_STEREO_BITRATE: i32 = 32_000;
+const STEREO_HOLD_SAMPLES: usize = NETWORK_SAMPLE_RATE as usize * 2;
 
 /// Settings > Input & Output "Turn off all sound processing in calls": the mic
 /// goes out as it comes in (no echo canceller, noise removal, auto gain, pause
@@ -450,7 +482,7 @@ fn new_call_opus_encoder() -> Option<crate::audio::libopus::Encoder> {
 	CALL_SEND_DTX.store(false, Ordering::Relaxed);
 	MIC_SILENT.store(false, Ordering::Relaxed);
 	MIC_HEALTH_CHANGED.store(false, Ordering::Relaxed);
-	call_opus_encoder(NETWORK_SAMPLE_RATE)
+	call_opus_encoder(NETWORK_SAMPLE_RATE, false)
 }
 
 /// Whether the call's encoder runs with DTX, as the backend last said (the
@@ -470,15 +502,20 @@ const OPUS_FB_BITRATE: i32 = 40_000;
 
 /// An encoder for a call at `rate`. Above 16 kHz it takes 48 kHz input
 /// (calls/swb_uplink.rs) and is capped to the band the call agreed on.
-fn call_opus_encoder(rate: u32) -> Option<crate::audio::libopus::Encoder> {
+/// `stereo` (16 kHz only) makes a stereo encoder that sends stereo packets.
+fn call_opus_encoder(rate: u32, stereo: bool) -> Option<crate::audio::libopus::Encoder> {
 	let wide = rate > NETWORK_SAMPLE_RATE;
+	let stereo = stereo && !wide;
 	let mut encoder = crate::audio::libopus::Encoder::new(
 		if wide { 48_000 } else { NETWORK_SAMPLE_RATE },
-		crate::audio::libopus::Channels::Mono,
+		if stereo { crate::audio::libopus::Channels::Stereo } else { crate::audio::libopus::Channels::Mono },
 		crate::audio::libopus::Application::Voip,
 	)
 	.ok()?;
-	let bitrate = call_bitrate(rate, CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed));
+	if stereo {
+		encoder.set_force_channels(2).ok()?;
+	}
+	let bitrate = call_bitrate(rate, CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed), stereo);
 	encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(bitrate)).ok()?;
 	encoder.set_complexity(OPUS_COMPLEXITY).ok()?;
 	if wide {
@@ -495,10 +532,11 @@ fn call_opus_encoder(rate: u32) -> Option<crate::audio::libopus::Encoder> {
 /// its high-quality state (about 25 kbit/s) toward its low data rate (rc
 /// low_data_usage_bitrate 14000) when the network struggles: a congested link
 /// loses less when sent less, and the encoder's FEC gets a bigger share.
-fn call_bitrate(rate: u32, loss_percent: i32) -> i32 {
+fn call_bitrate(rate: u32, loss_percent: i32, stereo: bool) -> i32 {
 	let full = match rate {
 		48_000.. => OPUS_FB_BITRATE,
 		24_000.. => OPUS_SWB_BITRATE,
+		_ if stereo => OPUS_STEREO_BITRATE,
 		_ => OPUS_BITRATE,
 	};
 	match loss_percent {
@@ -581,7 +619,8 @@ impl Drop for MicLevelController {
 }
 
 /// The 16 kHz frame, then the same 60 ms as one Opus packet: encoded from
-/// `wide` (48 kHz) on a super-wideband call, else from the frame itself.
+/// `wide` (48 kHz) on a super-wideband call, from `wide` as interleaved left
+/// and right for a stereo encoder, else from the frame itself.
 fn pack_call_frame(
 	frame: &[f32],
 	wide: Option<&[f32]>,
@@ -620,6 +659,7 @@ impl CaptureDsp {
 				CALL_LIMIT_RELEASE_SECS,
 			),
 			sample_accum: Vec::with_capacity(FRAME_SAMPLES * 2),
+			side_accum: Vec::with_capacity(FRAME_SAMPLES * 2),
 			system,
 			frame: Vec::with_capacity(FRAME_SAMPLES),
 			send_buf: Vec::with_capacity(FRAME_SAMPLES * 4 + OPUS_MAX_PACKET),
@@ -636,6 +676,13 @@ impl CaptureDsp {
 			muted_scratch: Vec::new(),
 			dtx: false,
 			silent_frames: 0,
+			side_downsampler: None,
+			side_resampled: Vec::new(),
+			voice_side: Vec::new(),
+			stereo_encoder: false,
+			stereo_on: false,
+			stereo_hold: 0,
+			stereo_frame: Vec::with_capacity(FRAME_SAMPLES * 2),
 		}
 	}
 
@@ -673,13 +720,57 @@ impl CaptureDsp {
 			return;
 		}
 		self.send_rate = rate;
-		if let Some(encoder) = call_opus_encoder(rate) {
+		if let Some(encoder) = call_opus_encoder(rate, false) {
 			self.opus = Some(encoder);
 			self.applied_loss_percent = CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed);
+			self.stereo_encoder = false;
+			self.stereo_on = false;
 		}
 		self.high_band = (rate > NETWORK_SAMPLE_RATE)
 			.then(|| crate::calls::swb_uplink::HighBand::new(self.device_rate, self.device_channels));
 		log_line(&format!("call audio: sending at {rate} Hz"));
+	}
+
+	/// Whether this round goes out in stereo, and the encoder to match: a
+	/// stereo one once there's something stereo to send, sending mono again
+	/// while there isn't; the mono one back when the setting goes off.
+	fn follow_stereo(&mut self, allowed: bool, has_stereo: bool, samples: usize) -> bool {
+		if has_stereo && allowed {
+			self.stereo_hold = STEREO_HOLD_SAMPLES;
+		} else {
+			self.stereo_hold = self.stereo_hold.saturating_sub(samples);
+		}
+		let want = allowed && self.stereo_hold > 0;
+		if !allowed {
+			if self.stereo_encoder
+				&& let Some(encoder) = call_opus_encoder(self.send_rate, false)
+			{
+				self.opus = Some(encoder);
+				self.stereo_encoder = false;
+				self.stereo_on = false;
+				log_line("call audio: back to the mono encoder");
+			}
+			return false;
+		}
+		if want && !self.stereo_encoder {
+			let Some(encoder) = call_opus_encoder(self.send_rate, true) else { return false };
+			self.opus = Some(encoder);
+			self.stereo_encoder = true;
+			self.stereo_on = true;
+			self.applied_loss_percent = CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed);
+			log_line("call audio: sending stereo");
+			return true;
+		}
+		if self.stereo_encoder && want != self.stereo_on {
+			self.stereo_on = want;
+			if let Some(encoder) = self.opus.as_mut() {
+				let _ = encoder.set_force_channels(if want { 2 } else { 1 });
+				let bitrate = call_bitrate(self.send_rate, self.applied_loss_percent, want);
+				let _ = encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(bitrate));
+			}
+			log_line(if want { "call audio: sending stereo" } else { "call audio: nothing stereo to send, mono" });
+		}
+		self.stereo_encoder && self.stereo_on
 	}
 
 	fn process(
@@ -691,16 +782,33 @@ impl CaptureDsp {
 		mic: Option<&mut MicLevelController>,
 	) {
 		// mic -> echo canceller -> noise suppressor -> auto gain -> pause gate
-		// (all in CallVoice) -> + system audio -> limiter.
+		// (all in CallVoice) -> + system audio (ducked while talking) -> limiter.
 		self.follow_send_rate();
 		self.watch_mic_health(data, muted);
+		let raw = call_raw_audio();
+		let stereo_allowed = CALL_STEREO_SEND.load(Ordering::Relaxed) && self.send_rate == NETWORK_SAMPLE_RATE;
+		let stereo_mic = stereo_allowed && raw && self.device_channels >= 2;
+		if stereo_mic {
+			let channels = self.device_channels as usize;
+			let side_downsampler = self.side_downsampler.get_or_insert_with(|| Downsampler::new(self.device_rate, 1));
+			// In step with `resampled`: a downsampler started mid-call lines
+			// up with what is already waiting there.
+			self.side_resampled.resize(self.resampled.len(), 0.0);
+			self.voice_side.clear();
+			self.voice_side.extend(data.chunks_exact(channels).map(|frame| (frame[0] - frame[1]) * 0.5));
+			side_downsampler.process(&self.voice_side, &mut self.side_resampled);
+		} else if self.side_downsampler.take().is_some() {
+			self.side_resampled.clear();
+		}
 		self.downsampler.process(data, &mut self.resampled);
+		if self.side_downsampler.is_some() {
+			self.side_resampled.resize(self.resampled.len(), 0.0);
+		}
 		if let Some(high_band) = self.high_band.as_mut() {
 			high_band.push_device(data);
 		}
 		let ready = self.echo_reference.lock().unwrap().take(self.resampled.len(), &mut self.played);
 		self.cleaned.clear();
-		let raw = call_raw_audio();
 		if raw {
 			self.cleaned.extend_from_slice(&self.resampled[..ready]);
 		} else {
@@ -718,30 +826,54 @@ impl CaptureDsp {
 			}
 		}
 		self.resampled.drain(..ready);
+		// In raw mode `cleaned` is `resampled[..ready]`, so the mic's side
+		// lines up with it sample for sample.
+		self.voice_side.clear();
+		if self.side_downsampler.is_some() {
+			let taken = ready.min(self.side_resampled.len());
+			self.voice_side.extend(self.side_resampled.drain(..taken));
+		}
+		let sharing = self.system.lock().unwrap().sharing();
+		let stereo = self.follow_stereo(stereo_allowed, stereo_mic || sharing, self.cleaned.len());
 		let mut system = self.system.lock().unwrap();
-		for &sample in &self.cleaned {
-			let mixed = system.mix(sample);
-			let sample = if muted {
-				0.0
-			} else if raw {
-				mixed.clamp(-1.0, 1.0)
+		for (i, &voice) in self.cleaned.iter().enumerate() {
+			// WhatsApp's mixer turns the shared sound down while you talk;
+			// "no processing" leaves it as it is.
+			let [system_left, system_right] = system.next(voice, !raw);
+			let mut mid = voice + (system_left + system_right) * 0.5;
+			let mut side = if stereo {
+				self.voice_side.get(i).copied().unwrap_or(0.0) + (system_left - system_right) * 0.5
 			} else {
-				mixed
+				0.0
 			};
-			let [limited] = if raw { [sample] } else { self.limiter.process([sample]) };
-			self.sample_accum.push(limited);
+			if muted {
+				(mid, side) = (0.0, 0.0);
+			}
+			let pair = [mid + side, mid - side];
+			let [left, right] = if raw { pair.map(|s| s.clamp(-1.0, 1.0)) } else { self.limiter.process(pair) };
+			self.sample_accum.push((left + right) * 0.5);
+			self.side_accum.push((left - right) * 0.5);
 		}
 		drop(system);
 
 		while self.sample_accum.len() >= FRAME_SAMPLES {
 			self.frame.clear();
 			self.frame.extend(self.sample_accum.drain(..FRAME_SAMPLES));
+			self.stereo_frame.clear();
+			let sides = self.side_accum.drain(..FRAME_SAMPLES);
+			if self.stereo_encoder {
+				for (&mid, side) in self.frame.iter().zip(sides) {
+					self.stereo_frame.extend([mid + side, mid - side]);
+				}
+			} else {
+				drop(sides);
+			}
 			let planned_loss = CALL_PACKET_LOSS_PERCENT.load(Ordering::Relaxed);
 			if planned_loss != self.applied_loss_percent {
 				if let Some(encoder) = self.opus.as_mut() {
 					let _ = encoder.set_packet_loss_perc(planned_loss);
-					let before = call_bitrate(self.send_rate, self.applied_loss_percent);
-					let now = call_bitrate(self.send_rate, planned_loss);
+					let before = call_bitrate(self.send_rate, self.applied_loss_percent, self.stereo_on);
+					let now = call_bitrate(self.send_rate, planned_loss, self.stereo_on);
 					if now != before {
 						let _ = encoder.set_bitrate(crate::audio::libopus::Bitrate::Bits(now));
 						log_line(&format!("call audio: {now} bit/s for {planned_loss}% loss"));
@@ -754,6 +886,7 @@ impl CaptureDsp {
 					high_band.wide_frame(&self.frame, &mut self.wide_frame);
 					Some(self.wide_frame.as_slice())
 				}
+				None if self.stereo_encoder => Some(self.stereo_frame.as_slice()),
 				None => None,
 			};
 			pack_call_frame(&self.frame, wide, self.opus.as_mut(), &mut self.send_buf);
@@ -857,6 +990,9 @@ struct RenderDsp {
 	phase: f64,
 	previous: f32,
 	upcoming: f32,
+	/// The same for the side of a stereo peer.
+	previous_side: f32,
+	upcoming_side: f32,
 	smoothed_level: f64,
 	max_buffered_src: usize,
 	/// The least audio waiting before an arrival in this window, the
@@ -888,6 +1024,8 @@ impl RenderDsp {
 			phase: 0.0,
 			previous: 0.0,
 			upcoming: 0.0,
+			previous_side: 0.0,
+			upcoming_side: 0.0,
 			smoothed_level: 0.0,
 			max_buffered_src: PLAYOUT_FRAME * 8,
 			low_point: usize::MAX,
@@ -909,7 +1047,7 @@ impl RenderDsp {
 		if !self.playout.refilling {
 			self.low_point = self.low_point.min(self.playout.queue.len());
 		}
-		let (queue, opus) = (&mut self.playout.queue, &mut self.playout.opus);
+		let (queue, side, opus) = (&mut self.playout.queue, &mut self.playout.side, &mut self.playout.opus);
 		while let Ok(item) = frame_rx.try_recv() {
 			match item {
 				Incoming::Pcm(frame) => {
@@ -919,6 +1057,7 @@ impl RenderDsp {
 					self.upsampled.clear();
 					self.upsampler.process(&frame, &mut self.upsampled);
 					queue.extend(&self.upsampled);
+					side.resize(queue.len(), 0.0);
 				}
 				Incoming::Opus { sequence, timestamp, packet } => {
 					if opus.is_none() {
@@ -935,7 +1074,9 @@ impl RenderDsp {
 					if let Some(jitter) = opus.as_mut() {
 						jitter.set_enhanced(!call_raw_audio());
 						jitter.push(sequence, timestamp, packet);
+						side.resize(queue.len(), 0.0);
 						jitter.drain_ready(queue);
+						side.extend(jitter.side.drain(..));
 					}
 				}
 				// Taken by the reader thread; never queued.
@@ -944,6 +1085,7 @@ impl RenderDsp {
 		}
 		while queue.len() > self.max_buffered_src {
 			queue.pop_front();
+			side.pop_front();
 		}
 		self.smoothed_level += (queue.len() as f64 - self.smoothed_level) * 0.02;
 		let trimming = self.playout.accelerated - self.accelerated_mark < self.trim_left;
@@ -952,15 +1094,24 @@ impl RenderDsp {
 		let concealed_before = self.playout.concealed;
 		let mut pulled = 0u64;
 		for out_frame in data.chunks_mut(channels) {
-			let sample = self.previous + (self.upcoming - self.previous) * self.phase as f32;
+			let phase = self.phase as f32;
+			let sample = self.previous + (self.upcoming - self.previous) * phase;
+			let side = self.previous_side + (self.upcoming_side - self.previous_side) * phase;
 			for slot in out_frame.iter_mut() {
 				*slot = sample;
+			}
+			// A stereo peer's left and right on the first two speakers.
+			if let [left, right, ..] = out_frame {
+				*left = sample + side;
+				*right = sample - side;
 			}
 			self.phase += self.step;
 			while self.phase >= 1.0 {
 				self.phase -= 1.0;
 				self.previous = self.upcoming;
+				self.previous_side = self.upcoming_side;
 				self.upcoming = self.playout.next(backlog);
+				self.upcoming_side = self.playout.last_side;
 				pulled += 1;
 			}
 		}
@@ -1647,10 +1798,12 @@ mod tests {
 
 	#[test]
 	fn bitrate_steps_down_with_heavy_loss() {
-		assert_eq!(call_bitrate(16_000, 0), OPUS_BITRATE);
-		assert_eq!(call_bitrate(16_000, 12), OPUS_BITRATE * 4 / 5);
-		assert_eq!(call_bitrate(16_000, 30), OPUS_BITRATE * 3 / 5);
-		assert_eq!(call_bitrate(48_000, 0), OPUS_FB_BITRATE);
+		assert_eq!(call_bitrate(16_000, 0, false), OPUS_BITRATE);
+		assert_eq!(call_bitrate(16_000, 12, false), OPUS_BITRATE * 4 / 5);
+		assert_eq!(call_bitrate(16_000, 30, false), OPUS_BITRATE * 3 / 5);
+		assert_eq!(call_bitrate(48_000, 0, false), OPUS_FB_BITRATE);
+		assert_eq!(call_bitrate(16_000, 0, true), OPUS_STEREO_BITRATE);
+		assert_eq!(call_bitrate(48_000, 0, true), OPUS_FB_BITRATE);
 	}
 
 	#[test]
@@ -1747,5 +1900,49 @@ mod tests {
 		let mut datagram = vec![1, 2, 3];
 		pack_call_frame(&tone_frame(0), None, None, &mut datagram);
 		assert_eq!(datagram.len(), FRAME_SAMPLES * 4);
+	}
+
+	/// A stereo call frame (left a tone, right silent) goes out as stereo
+	/// Opus, and the playout's decoder gets its side back: left loud, right
+	/// near silent.
+	#[test]
+	fn stereo_frames_come_back_as_left_and_right() {
+		let mut encoder = call_opus_encoder(NETWORK_SAMPLE_RATE, true).expect("stereo encoder");
+		let mut jitter = crate::calls::opus_jitter::OpusJitter::new(PLAYOUT_RATE).expect("decoder");
+		let mut mid = std::collections::VecDeque::new();
+		let mut datagram = Vec::new();
+		for n in 0..20 {
+			let frame: Vec<f32> = tone_frame(n * FRAME_SAMPLES).iter().map(|s| s * 0.5).collect();
+			let stereo: Vec<f32> = tone_frame(n * FRAME_SAMPLES).iter().flat_map(|&l| [l, 0.0]).collect();
+			pack_call_frame(&frame, Some(&stereo), Some(&mut encoder), &mut datagram);
+			let packet = datagram[FRAME_SAMPLES * 4..].to_vec();
+			assert_ne!(packet[0] & 0x04, 0, "frame {n} went out mono");
+			jitter.push(n as u16, (n * FRAME_SAMPLES) as u32, packet);
+			jitter.drain_ready(&mut mid);
+		}
+		let side: Vec<f32> = jitter.side.iter().copied().collect();
+		assert_eq!(side.len(), mid.len());
+		let skip = PLAYOUT_FRAME * 4;
+		let (mut left, mut right) = (0.0f32, 0.0f32);
+		for (m, s) in mid.iter().zip(&side).skip(skip) {
+			left += (m + s) * (m + s);
+			right += (m - s) * (m - s);
+		}
+		assert!(right * 20.0 < left, "right isn't quieter than left: {right} against {left}");
+	}
+
+	#[test]
+	fn a_mono_peer_has_no_side() {
+		let mut encoder = new_call_opus_encoder().expect("encoder");
+		let mut jitter = crate::calls::opus_jitter::OpusJitter::new(PLAYOUT_RATE).expect("decoder");
+		let mut mid = std::collections::VecDeque::new();
+		let mut datagram = Vec::new();
+		for n in 0..5 {
+			pack_call_frame(&tone_frame(n * FRAME_SAMPLES), None, Some(&mut encoder), &mut datagram);
+			jitter.push(n as u16, (n * FRAME_SAMPLES) as u32, datagram[FRAME_SAMPLES * 4..].to_vec());
+			jitter.drain_ready(&mut mid);
+		}
+		assert_eq!(jitter.side.len(), mid.len());
+		assert!(jitter.side.iter().all(|&s| s == 0.0));
 	}
 }

@@ -2950,6 +2950,7 @@ pub fn bind_input_handlers(
 		let old_effective_id = crate::i18n::is_indonesian();
 		settings_parts_ok.read_chat_settings(&mut s.settings);
 		crate::calls::audio::set_call_raw_audio(s.settings.call_raw_audio);
+		crate::calls::audio::set_call_stereo_send(s.settings.call_stereo);
 		let language_changed = crate::i18n::is_indonesian() != old_effective_id;
 		crate::ui::spell_check::configure(s.settings.spell_check, &s.settings.spell_language);
 		if s.settings.theme != old_theme {

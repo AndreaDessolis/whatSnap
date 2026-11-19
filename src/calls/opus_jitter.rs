@@ -21,6 +21,10 @@
 //! the band above 8 kHz that a 16 kHz call leaves out (WhatsApp's engine does
 //! the same for MLow calls with its "bwenet"), and LACE/NoLACE speech
 //! enhancement. Time is still counted on the RTP clock, 16 kHz.
+//!
+//! Stereo packets (another whatSnap sending stereo, an experimental setting)
+//! are decoded a second time by a plain stereo decoder for their side
+//! ((left - right) / 2); the mid stays the enhanced mono decoder's.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -43,6 +47,8 @@ const MAX_LOSS: u64 = 6400;
 /// How many of the latest packets' sequence numbers are remembered to tell
 /// reordering and silence from loss.
 const RECENT_SEQUENCES: usize = 64;
+/// The stereo decoder is let go after this many mono packets in a row (30 s).
+const STEREO_IDLE_PACKETS: u32 = 500;
 
 pub(crate) struct OpusJitter {
 	decoder: Decoder,
@@ -68,6 +74,13 @@ pub(crate) struct OpusJitter {
 	/// Samples made up since the last real audio: their time is covered.
 	covered: usize,
 	pcm: Vec<f32>,
+	/// Decodes again for the side once a stereo packet came.
+	stereo: Option<Decoder>,
+	stereo_pcm: Vec<f32>,
+	mono_packets: u32,
+	/// The side of every sample written to the playout queue, in step with
+	/// it: zero but for stereo packets. The playout takes it after each call.
+	pub(crate) side: VecDeque<f32>,
 	pub(crate) concealed: u64,
 	pub(crate) recovered: u64,
 	pub(crate) dropped_late: u64,
@@ -111,6 +124,10 @@ impl OpusJitter {
 			packet_samples: 960,
 			covered: 0,
 			pcm: vec![0.0; MAX_PACKET_SAMPLES * scale],
+			stereo: None,
+			stereo_pcm: vec![0.0; MAX_PACKET_SAMPLES * scale * 2],
+			mono_packets: 0,
+			side: VecDeque::new(),
 			concealed: 0,
 			recovered: 0,
 			dropped_late: 0,
@@ -181,10 +198,45 @@ impl OpusJitter {
 		}
 	}
 
+	/// The side of a packet the mono decoder just made `n` samples of.
+	fn decode_side(&mut self, packet: &[u8], n: usize) {
+		let stereo_packet = packet.first().is_some_and(|toc| toc & 0x04 != 0);
+		if stereo_packet {
+			self.mono_packets = 0;
+			if self.stereo.is_none() {
+				match Decoder::new(RTP_RATE * self.scale as u32, Channels::Stereo) {
+					Ok(decoder) => {
+						crate::calls::audio::log_line("playout: the peer sends stereo; playing it in stereo");
+						self.stereo = Some(decoder);
+					}
+					Err(e) => crate::calls::audio::log_line(&format!("playout: no stereo decoder: {e}")),
+				}
+			}
+		} else {
+			self.mono_packets += 1;
+			if self.mono_packets > STEREO_IDLE_PACKETS && self.stereo.take().is_some() {
+				crate::calls::audio::log_line("playout: the peer sends mono again");
+			}
+		}
+		// Mono packets go through the stereo decoder too, so its state follows
+		// the stream; they come out with no side.
+		let decoded = match self.stereo.as_mut() {
+			Some(decoder) => decoder.decode_float(packet, &mut self.stereo_pcm, false).ok(),
+			None => None,
+		};
+		match decoded {
+			Some(m) if m == n => {
+				self.side.extend(self.stereo_pcm[..2 * n].chunks_exact(2).map(|lr| (lr[0] - lr[1]) * 0.5));
+			}
+			_ => self.side.extend(std::iter::repeat_n(0.0, n)),
+		}
+	}
+
 	fn decode_packet(&mut self, packet: &[u8], at: u64, out: &mut VecDeque<f32>) {
 		let samples = match self.decoder.decode_float(packet, &mut self.pcm, false) {
 			Ok(n) => {
 				out.extend(&self.pcm[..n]);
+				self.decode_side(packet, n);
 				n / self.scale
 			}
 			Err(_) => {
@@ -207,10 +259,17 @@ impl OpusJitter {
 		while left > 0 {
 			let step = left.min(MAX_PACKET_SAMPLES);
 			let produced = step * self.scale;
-			match self.decoder.decode_float(&[], &mut self.pcm[..produced], false) {
-				Ok(n) if n > 0 => out.extend(&self.pcm[..n]),
-				_ => out.extend(std::iter::repeat_n(0.0, produced)),
-			}
+			let n = match self.decoder.decode_float(&[], &mut self.pcm[..produced], false) {
+				Ok(n) if n > 0 => {
+					out.extend(&self.pcm[..n]);
+					n
+				}
+				_ => {
+					out.extend(std::iter::repeat_n(0.0, produced));
+					produced
+				}
+			};
+			self.side.extend(std::iter::repeat_n(0.0, n));
 			self.concealed += step as u64;
 			left -= step;
 		}
@@ -245,6 +304,7 @@ impl OpusJitter {
 						match self.decoder.decode_float(&packet, &mut self.pcm[..fec * self.scale], true) {
 							Ok(n) if n > 0 => {
 								out.extend(&self.pcm[..n]);
+								self.side.extend(std::iter::repeat_n(0.0, n));
 								self.recovered += (n / self.scale) as u64;
 							}
 							_ => self.conceal_into(fec, out),
@@ -262,6 +322,7 @@ impl OpusJitter {
 					self.conceal_into(CONCEAL_STEP, out);
 				} else {
 					out.extend(std::iter::repeat_n(0.0, CONCEAL_STEP * self.scale));
+					self.side.extend(std::iter::repeat_n(0.0, CONCEAL_STEP * self.scale));
 				}
 				self.covered += CONCEAL_STEP;
 			}
