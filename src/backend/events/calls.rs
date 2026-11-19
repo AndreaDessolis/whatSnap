@@ -243,6 +243,15 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 			}
 		}
+		"call_peer_downlink" => {
+			if let Some(data) = val.get("data") {
+				let call_id = data.get("call_id").and_then(|c| c.as_str()).unwrap_or("");
+				if state.borrow().active_call_id.as_deref() == Some(call_id) {
+					let bps = data.get("bps").and_then(|p| p.as_u64()).unwrap_or(0);
+					crate::calls::video_send::set_peer_downlink(bps);
+				}
+			}
+		}
 		"call_network_health" => {
 			if let Some(data) = val.get("data") {
 				let call_id = data.get("call_id").and_then(|c| c.as_str()).unwrap_or("");

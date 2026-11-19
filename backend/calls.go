@@ -353,7 +353,7 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 	go func() {
 		last := uint32(0)
 		var lastVideoLoss uint32
-		var lastRelayBitrate uint64
+		var lastRelayBitrate, lastPeerDownlink uint64
 		ticks := 0
 		for range time.Tick(2 * time.Second) {
 			if call.State() == meowcaller.CallPhaseEnded {
@@ -363,6 +363,12 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 			if loss := stats.PeerReportedLossPercent; loss != last {
 				last = loss
 				acc.broadcastEvent("call_loss", map[string]interface{}{"call_id": call.ID(), "percent": loss})
+			}
+			// The bandwidth the peer says its downlink carries, sent when its
+			// video starts: our video starts from it, like WhatsApp's sender.
+			if dl := stats.PeerDownlinkBitrateBps; dl != lastPeerDownlink {
+				lastPeerDownlink = dl
+				acc.broadcastEvent("call_peer_downlink", map[string]interface{}{"call_id": call.ID(), "bps": dl})
 			}
 			if stats.PeerReportedVideoLossPercent != lastVideoLoss || stats.RelayEstimatedBitrateBps != lastRelayBitrate {
 				lastVideoLoss, lastRelayBitrate = stats.PeerReportedVideoLossPercent, stats.RelayEstimatedBitrateBps

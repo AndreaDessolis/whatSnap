@@ -95,6 +95,32 @@ pub(crate) fn set_video_network_feedback(loss_percent: u32, relay_bitrate_bps: u
 	}
 }
 
+/// Share of the peer's reported downlink our video may start at, leaving room
+/// for the call's audio and the other side's own traffic.
+const PEER_DOWNLINK_SHARE: f64 = 0.8;
+
+/// The peer said how much its downlink carries (`<te dl_bw>`, sent when its
+/// video starts). WhatsApp's sender starts its estimate there instead of at
+/// its cap; a tester's calls started at 1 Mbit/s toward a phone that
+/// reported 330 kbit/s, and the first seconds lost a fifth of the video.
+/// Clean reports raise it again from there.
+pub(crate) fn set_peer_downlink(bps: u64) {
+	if bps == 0 {
+		return;
+	}
+	let current = VIDEO_TARGET_BPS.load(Ordering::Relaxed);
+	let next = ((bps as f64 * PEER_DOWNLINK_SHARE) as u32).clamp(MIN_BITRATE, current.max(MIN_BITRATE));
+	if next != current {
+		VIDEO_TARGET_BPS.store(next, Ordering::Relaxed);
+		log_line(&format!(
+			"Video bitrate {} -> {} kbit/s (the other side's downlink is {} kbit/s)",
+			current / 1000,
+			next / 1000,
+			bps / 1000
+		));
+	}
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum VideoSource {
 	Camera,
@@ -244,6 +270,41 @@ struct Output {
 	tcp: TcpStream,
 	/// The bitrate last handed to the encoder.
 	applied_bps: u32,
+	clock: FrameClock,
+}
+
+/// The longest real gap between two frames taken as is; past it (a clock jump)
+/// the frame's stated duration is used.
+const MAX_FRAME_GAP_100NS: i64 = 50_000_000;
+
+/// How far each frame moves the call's video clock (the RTP timestamp, in the
+/// backend): the real time between captured frames. A camera stays on its 30
+/// fps format while it delivers fewer frames in dim light, and its samples keep
+/// saying 33 ms each; a tester's webcam gave 10 frames a second all call while
+/// the timestamps claimed 30, so the other side saw a stream running at a
+/// third of real time, and its player lagged and stuttered trying to follow.
+#[derive(Default)]
+struct FrameClock {
+	last: Option<i64>,
+	/// What the whole milliseconds sent so far left out, in 100 ns.
+	carry: i64,
+}
+
+impl FrameClock {
+	/// `time` is the frame's capture time and `stated` its own duration, both
+	/// in 100 ns; returns the milliseconds to send with it.
+	fn duration_ms(&mut self, time: Option<i64>, stated: i64) -> u32 {
+		let spacing = match (time, self.last) {
+			(Some(now), Some(previous)) if now > previous && now - previous <= MAX_FRAME_GAP_100NS => now - previous,
+			_ => stated.max(0),
+		};
+		if time.is_some() {
+			self.last = time;
+		}
+		let total = spacing + self.carry;
+		self.carry = total % 10_000;
+		(total / 10_000) as u32
+	}
 }
 
 fn pack(high: u32, low: u32) -> u64 {
@@ -374,7 +435,7 @@ fn open_output(target_port: u16, fps: u32, bitrate: u32) -> crate::error::Result
 
 		let tcp = connect_with_retry(target_port)?;
 
-		Ok(Output { encoder, codec_api, tcp, applied_bps: bitrate })
+		Ok(Output { encoder, codec_api, tcp, applied_bps: bitrate, clock: FrameClock::default() })
 	}
 }
 
@@ -633,8 +694,8 @@ fn send_sample(output: &mut Output, sample: &IMFSample) -> crate::error::Result<
 		let mut ptr: *mut u8 = std::ptr::null_mut();
 		let mut len: u32 = 0;
 		buffer.Lock(&mut ptr, None, Some(&mut len))?;
-		let duration_100ns = sample.GetSampleDuration().unwrap_or(0).max(0);
-		let duration_ms = (duration_100ns / 10_000) as u32;
+		let stated = sample.GetSampleDuration().unwrap_or(0).max(0);
+		let duration_ms = output.clock.duration_ms(sample.GetSampleTime().ok(), stated);
 
 		let mut header = [0u8; 8];
 		header[..4].copy_from_slice(&len.to_be_bytes());
@@ -701,6 +762,25 @@ mod tests {
 	use super::*;
 
 	#[test]
+	fn the_video_clock_follows_the_real_frame_rate() {
+		let mut clock = FrameClock::default();
+		// A camera on a 30 fps format delivering 10 frames a second.
+		let durations: Vec<u32> = (0..5).map(|i| clock.duration_ms(Some(i * 1_000_000), 333_333)).collect();
+		assert_eq!(durations, [33, 100, 100, 100, 100]);
+		// Real 30 fps keeps its thirds of a millisecond instead of running 1% slow.
+		let mut clock = FrameClock::default();
+		let total: u32 = (0..31).map(|i| clock.duration_ms(Some(i * 333_333), 333_333)).sum();
+		assert_eq!(total, 1033, "31 frames of 33.33 ms");
+		// No capture time, or a jump back: the frame's own duration.
+		let mut clock = FrameClock::default();
+		assert_eq!(clock.duration_ms(None, 666_666), 66);
+		let mut clock = FrameClock::default();
+		clock.duration_ms(Some(5_000_000), 333_333);
+		let carry = clock.carry;
+		assert_eq!(clock.duration_ms(Some(0), 333_333), ((333_333 + carry) / 10_000) as u32);
+	}
+
+	#[test]
 	fn video_bitrate_backs_off_on_loss_and_respects_the_relay_and_the_cap() {
 		VIDEO_CAP_BPS.store(SCREEN_BITRATE, Ordering::Relaxed);
 		VIDEO_TARGET_BPS.store(SCREEN_BITRATE, Ordering::Relaxed);
@@ -717,6 +797,16 @@ mod tests {
 		for _ in 0..20 {
 			set_video_network_feedback(50, 0);
 		}
+		assert_eq!(VIDEO_TARGET_BPS.load(Ordering::Relaxed), MIN_BITRATE, "never below the floor");
+		// The peer's downlink lowers the start but never raises it (same
+		// statics, so in the same test).
+		VIDEO_CAP_BPS.store(TARGET_BITRATE, Ordering::Relaxed);
+		VIDEO_TARGET_BPS.store(TARGET_BITRATE, Ordering::Relaxed);
+		set_peer_downlink(400_000);
+		assert_eq!(VIDEO_TARGET_BPS.load(Ordering::Relaxed), 320_000);
+		set_peer_downlink(5_000_000);
+		assert_eq!(VIDEO_TARGET_BPS.load(Ordering::Relaxed), 320_000, "a fast downlink isn't a reason to jump up");
+		set_peer_downlink(100_000);
 		assert_eq!(VIDEO_TARGET_BPS.load(Ordering::Relaxed), MIN_BITRATE, "never below the floor");
 	}
 
