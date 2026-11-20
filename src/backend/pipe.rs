@@ -1,13 +1,14 @@
 use std::{
 	io::{self, Read, Write},
 	sync::Arc,
+	time::{Duration, Instant},
 };
 
 use windows::{
 	Win32::{
 		Foundation::{
-			CloseHandle, ERROR_BROKEN_PIPE, ERROR_IO_PENDING, ERROR_MORE_DATA, ERROR_NO_DATA, ERROR_PIPE_BUSY,
-			ERROR_PIPE_CONNECTED, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
+			CloseHandle, ERROR_BROKEN_PIPE, ERROR_FILE_NOT_FOUND, ERROR_IO_PENDING, ERROR_MORE_DATA, ERROR_NO_DATA,
+			ERROR_PIPE_BUSY, ERROR_PIPE_CONNECTED, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
 		},
 		Storage::FileSystem::{
 			CreateFileW, FILE_FLAG_FIRST_PIPE_INSTANCE, FILE_FLAG_OVERLAPPED, FILE_SHARE_NONE, FlushFileBuffers,
@@ -63,8 +64,19 @@ impl PipeStream {
 	}
 
 	pub(crate) fn connect(name: &str) -> io::Result<Self> {
+		Self::connect_with_timeout(name, Duration::from_secs(2), false)
+	}
+
+	// Used only by the background link: UI shutdown and single-instance
+	// probes must not wait ten seconds for a server that may never appear.
+	pub(crate) fn connect_backend(name: &str) -> io::Result<Self> {
+		Self::connect_with_timeout(name, Duration::from_secs(10), true)
+	}
+
+	fn connect_with_timeout(name: &str, timeout: Duration, wait_missing: bool) -> io::Result<Self> {
 		let path = pipe_path(name);
-		let mut waited = false;
+		let deadline = Instant::now() + timeout;
+		let mut backoff = Duration::from_millis(25);
 		loop {
 			let handle = unsafe {
 				CreateFileW(
@@ -80,9 +92,19 @@ impl PipeStream {
 			};
 			match handle {
 				Ok(h) => return PipeStream::new(Arc::new(OwnedHandle(h))),
-				Err(e) if is(&e, ERROR_PIPE_BUSY) && !waited => {
-					waited = true;
-					let _ = unsafe { WaitNamedPipeW(&path, 2000) };
+				Err(e) if is(&e, ERROR_PIPE_BUSY) || (wait_missing && is(&e, ERROR_FILE_NOT_FOUND)) => {
+					let remaining = deadline.saturating_duration_since(Instant::now());
+					if remaining.is_zero() {
+						return Err(io_error(e));
+					}
+					let delay = backoff.min(remaining);
+					let started = Instant::now();
+					let ready = is(&e, ERROR_PIPE_BUSY)
+						&& unsafe { WaitNamedPipeW(&path, delay.as_millis().max(1) as u32) }.as_bool();
+					if !ready {
+						std::thread::sleep(delay.saturating_sub(started.elapsed()));
+					}
+					backoff = (backoff * 2).min(Duration::from_millis(250));
 				}
 				Err(e) => return Err(io_error(e)),
 			}
@@ -196,5 +218,57 @@ impl PipeListener {
 		}
 		let connected = std::mem::replace(&mut self.next, Self::instance(&self.path, false)?);
 		PipeStream::new(Arc::new(connected))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn backend_connect_waits_for_pipe_creation() {
+		let name = format!("whatsnap-pipe-test-{}", crate::util::random_hex());
+		let server_name = name.clone();
+		let server = std::thread::spawn(move || {
+			std::thread::sleep(Duration::from_millis(100));
+			let mut listener = PipeListener::bind(&server_name).unwrap();
+			let mut stream = listener.accept().unwrap();
+			stream.write_all(b"ready").unwrap();
+		});
+		let mut stream = PipeStream::connect_with_timeout(&name, Duration::from_secs(3), true).unwrap();
+		let mut message = [0; 5];
+		stream.read_exact(&mut message).unwrap();
+		assert_eq!(&message, b"ready");
+		server.join().unwrap();
+	}
+
+	#[test]
+	fn missing_pipe_retry_has_a_deadline() {
+		let name = format!("whatsnap-pipe-test-{}", crate::util::random_hex());
+		let start = Instant::now();
+		let result = PipeStream::connect_with_timeout(&name, Duration::from_millis(60), true);
+		assert!(result.is_err());
+		assert!(start.elapsed() >= Duration::from_millis(60));
+		assert!(start.elapsed() < Duration::from_secs(2));
+	}
+
+	#[test]
+	fn backend_connect_waits_for_busy_pipe() {
+		let name = format!("whatsnap-pipe-test-{}", crate::util::random_hex());
+		let mut listener = PipeListener::bind(&name).unwrap();
+		let _first_client = PipeStream::connect(&name).unwrap();
+		let server = std::thread::spawn(move || {
+			// Until accept creates another instance, the first client owns
+			// the only instance and the second must handle ERROR_PIPE_BUSY.
+			std::thread::sleep(Duration::from_millis(100));
+			let _first_server = listener.accept().unwrap();
+			let mut second = listener.accept().unwrap();
+			second.write_all(b"ready").unwrap();
+		});
+		let mut second = PipeStream::connect_with_timeout(&name, Duration::from_secs(3), true).unwrap();
+		let mut message = [0; 5];
+		second.read_exact(&mut message).unwrap();
+		assert_eq!(&message, b"ready");
+		server.join().unwrap();
 	}
 }

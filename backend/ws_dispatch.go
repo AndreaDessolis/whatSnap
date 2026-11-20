@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"runtime/debug"
@@ -14,6 +15,33 @@ import (
 )
 
 const maxCommandBytes = 1024 * 1024
+
+// Drain an oversized JSON line without allocating it or losing the next command.
+// Scanner cannot recover from ErrTooLong and would disconnect every account.
+func readCommandLine(reader *bufio.Reader) ([]byte, error) {
+	var line []byte
+	tooLong := false
+	for {
+		part, err := reader.ReadSlice('\n')
+		if len(line)+len(part) > maxCommandBytes {
+			tooLong = true
+			line = nil
+		}
+		if !tooLong {
+			line = append(line, part...)
+		}
+		if err == bufio.ErrBufferFull {
+			continue
+		}
+		if tooLong {
+			return nil, bufio.ErrTooLong
+		}
+		if err == io.EOF && len(line) != 0 {
+			return line, nil
+		}
+		return line, err
+	}
+}
 
 // handleConnection reads the app's commands. Each one names the account it
 // is for; "open_account", "close_account" and "shutdown" are for the backend
@@ -32,13 +60,24 @@ func handleConnection(conn net.Conn) {
 		wsMutex.Unlock()
 	}()
 
-	scanner := bufio.NewScanner(conn)
-	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, maxCommandBytes)
-
-	for scanner.Scan() {
+	reader := bufio.NewReaderSize(conn, 64*1024)
+	for {
+		line, err := readCommandLine(reader)
+		if err == bufio.ErrTooLong {
+			log.Printf("IPC command rejected: exceeded %d bytes", maxCommandBytes)
+			sendAccountEvent(conn, "", "error", map[string]string{"message": "The request is too large. Try sending less text or fewer items at once."})
+			continue
+		}
+		if err != nil {
+			if err == io.EOF {
+				log.Println("IPC connection closed by client")
+			} else {
+				log.Println("IPC connection dropped:", err)
+			}
+			return
+		}
 		var cmd Command
-		if err := json.Unmarshal(scanner.Bytes(), &cmd); err != nil {
+		if err := json.Unmarshal(line, &cmd); err != nil {
 			continue
 		}
 		switch cmd.Action {
@@ -61,16 +100,6 @@ func handleConnection(conn net.Conn) {
 		case acc.commands <- queuedCommand{conn: conn, cmd: cmd}:
 		case <-acc.ctx.Done():
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		if err == bufio.ErrTooLong {
-			log.Printf("IPC connection dropped: command exceeded %d bytes", maxCommandBytes)
-		} else {
-			log.Println("IPC connection dropped:", err)
-		}
-	} else {
-		log.Println("IPC connection closed by client")
 	}
 }
 

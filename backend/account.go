@@ -200,6 +200,9 @@ func (acc *Account) close() {
 	acc.cancel()
 	acc.endPairingAttempt()
 	if c := acc.wa(); c != nil {
+		// The frontend's writer may already have stopped. Flush typing here,
+		// on the backend shutdown goroutine, before disconnecting the socket.
+		acc.outgoingChatStates.pauseAll(c.SendChatPresence)
 		c.Disconnect()
 	}
 	if acc.db != nil {

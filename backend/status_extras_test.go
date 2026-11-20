@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waAdv"
 	"go.mau.fi/whatsmeow/proto/waSyncAction"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
@@ -16,7 +17,7 @@ import (
 
 func setupTestAccount(t *testing.T) (*Account, func()) {
 	t.Helper()
-	db, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite", ":memory:?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("failed to open in-memory sqlite: %v", err)
 	}
@@ -35,10 +36,23 @@ func setupTestAccount(t *testing.T) (*Account, func()) {
 		t.Fatalf("failed to upgrade whatsmeow store: %v", err)
 	}
 	deviceStore := container.NewDevice()
+	// A new, unpaired device has no contact/LID stores until it is saved.
+	// These tests exercise a paired account's stores without connecting it.
+	ownJID := types.NewJID("6280000000", types.DefaultUserServer)
+	deviceStore.ID = &ownJID
+	deviceStore.Account = &waAdv.ADVSignedDeviceIdentity{
+		Details: []byte{}, AccountSignature: make([]byte, 64),
+		AccountSignatureKey: make([]byte, 32), DeviceSignature: make([]byte, 64),
+	}
+	if err := deviceStore.Save(context.Background()); err != nil {
+		db.Close()
+		t.Fatalf("failed to initialize test device: %v", err)
+	}
 	cli := whatsmeow.NewClient(deviceStore, waLog.Noop)
 	testAcc.waClient.Store(cli)
 
 	cleanup := func() {
+		testAcc.cancel()
 		db.Close()
 	}
 	return testAcc, cleanup

@@ -15,7 +15,20 @@ use crate::media::foundation;
 
 pub(crate) fn first_frame_png(path: &str) -> Option<Vec<u8>> {
 	let (width, height, rgba) = first_frame_rgba(path).ok()?;
-	Some(crate::media::png::encode_rgba(width, height, &rgba))
+	Some(thumbnail_png(width, height, rgba))
+}
+
+// Only a preview travels in JSON. Even incompressible RGBA at this size
+// stays comfortably below the backend's 1 MiB command limit after base64.
+pub(super) fn thumbnail_png(width: u32, height: u32, rgba: Vec<u8>) -> Vec<u8> {
+	let edge = width.max(height).max(1);
+	let size = if edge > 256 {
+		((width as u64 * 256 / edge as u64).max(1) as u32, (height as u64 * 256 / edge as u64).max(1) as u32)
+	} else {
+		(width, height)
+	};
+	let rgba = crate::media::gif_video::resize(rgba, (width, height), size);
+	crate::media::png::encode_rgba(size.0, size.1, &rgba)
 }
 
 fn first_frame_rgba(path: &str) -> crate::error::Result<(u32, u32, Vec<u8>)> {
@@ -92,4 +105,26 @@ unsafe fn sample_to_rgba(sample: &IMFSample, width: u32, height: u32) -> crate::
 	}
 	let _ = unsafe { contiguous.Unlock() };
 	Ok(rgba)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn large_noisy_preview_fits_in_ipc_command() {
+		let mut seed = 42u32;
+		let rgba: Vec<u8> = (0..1024 * 768 * 4)
+			.map(|_| {
+				seed ^= seed << 13;
+				seed ^= seed >> 17;
+				seed ^= seed << 5;
+				seed as u8
+			})
+			.collect();
+		let png = thumbnail_png(1024, 768, rgba);
+		assert_eq!(u32::from_be_bytes(png[16..20].try_into().unwrap()), 256);
+		assert_eq!(u32::from_be_bytes(png[20..24].try_into().unwrap()), 192);
+		assert!(crate::util::base64(&png).len() < 400_000);
+	}
 }

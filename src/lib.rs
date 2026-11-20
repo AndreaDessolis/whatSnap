@@ -2442,6 +2442,20 @@ mod sequential_voice_tests {
 	}
 
 	#[test]
+	fn autoplay_follows_display_order_even_with_equal_or_older_timestamps() {
+		let mut a = msg("z", "[Voice Message]", "voice");
+		let mut b = msg("a", "[Voice Message]", "voice");
+		let mut c = msg("b", "[Voice Message]", "voice");
+		a.timestamp = 100;
+		b.timestamp = 100;
+		c.timestamp = 99;
+		let messages = rc(&[a, b, c]);
+		assert_eq!(next_sequential_voice(&messages, "z").map(|m| m.id.as_str()), Some("a"));
+		assert_eq!(next_sequential_voice(&messages, "a").map(|m| m.id.as_str()), Some("b"));
+		assert!(next_sequential_voice(&messages, "b").is_none());
+	}
+
+	#[test]
 	fn anything_in_between_ends_the_run() {
 		let m = vec![
 			msg("a", "[Voice Message] (0:05)", "voice"),

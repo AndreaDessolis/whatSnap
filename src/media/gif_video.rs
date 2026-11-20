@@ -47,7 +47,7 @@ pub(crate) fn gif_to_mp4(gif_path: &str, mp4_path: &str) -> crate::error::Result
 		let ms = if frame.delay_ms < MIN_DELAY_MS { DEFAULT_DELAY_MS } else { frame.delay_ms };
 		let rgba = resize(frame.rgba, source_size, (width, height));
 		if first_png.is_none() {
-			first_png = Some(crate::media::png::encode_rgba(width, height, &rgba));
+			first_png = Some(crate::media::video_thumbnail::thumbnail_png(width, height, rgba.clone()));
 		}
 		let encoder = match encoder.as_mut() {
 			Some(encoder) => encoder,
@@ -76,7 +76,7 @@ fn encoded_size(width: u32, height: u32) -> (u32, u32) {
 	(w & !1, h & !1)
 }
 
-fn resize(rgba: Vec<u8>, (sw, sh): (u32, u32), (dw, dh): (u32, u32)) -> Vec<u8> {
+pub(super) fn resize(rgba: Vec<u8>, (sw, sh): (u32, u32), (dw, dh): (u32, u32)) -> Vec<u8> {
 	if (sw, sh) == (dw, dh) {
 		return rgba;
 	}

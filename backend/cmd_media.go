@@ -64,7 +64,7 @@ func (acc *Account) ensureMediaCached(messageID string) (path, mediaType, mimety
 	if dErr != nil {
 		if strings.Contains(dErr.Error(), "403") || strings.Contains(dErr.Error(), "404") || strings.Contains(dErr.Error(), "410") {
 			fmt.Printf("Requesting media retry (sync) for %s...\n", messageID)
-			retryErr := acc.requestMediaRetry(messageID)
+			retryErr := acc.requestMediaRetry(acc.ctx, messageID)
 			if retryErr != nil {
 				return "", "", "", "", fmt.Errorf("URL expired and retry request failed: %v", retryErr)
 			}
@@ -253,7 +253,7 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 		acc.activeDownloadsMu.Unlock()
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(acc.ctx)
 	acc.activeDownloads[data.MessageID] = cancel
 	acc.activeDownloadsMu.Unlock()
 	failed := false
@@ -331,7 +331,9 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 			if !auto && attempt == 0 && (hashMismatch || strings.Contains(err.Error(), "403") || strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "410")) {
 				failed = false
 				fmt.Printf("Requesting media retry for %s...\n", data.MessageID)
-				retryErr := acc.requestMediaRetry(data.MessageID)
+				ch, removeWaiter := acc.addMediaRetryWaiter(data.MessageID)
+				defer removeWaiter()
+				retryErr := acc.requestMediaRetry(ctx, data.MessageID)
 				if retryErr != nil {
 					fmt.Printf("Retry request failed: %v\n", retryErr)
 					acc.broadcastEvent("media_download_failed", map[string]interface{}{
@@ -342,11 +344,6 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 					})
 					return
 				}
-
-				ch := make(chan bool, 1)
-				acc.retryWaitersMu.Lock()
-				acc.retryWaiters[data.MessageID] = ch
-				acc.retryWaitersMu.Unlock()
 
 				select {
 				case success := <-ch:
@@ -367,9 +364,6 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 						"auto":       auto,
 						"message":    "Timeout waiting for phone to re-upload media",
 					})
-					acc.retryWaitersMu.Lock()
-					delete(acc.retryWaiters, data.MessageID)
-					acc.retryWaitersMu.Unlock()
 					return
 				case <-ctx.Done():
 					acc.broadcastEvent("media_download_cancelled", map[string]interface{}{
@@ -377,9 +371,6 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 						"jid":        data.JID,
 						"auto":       auto,
 					})
-					acc.retryWaitersMu.Lock()
-					delete(acc.retryWaiters, data.MessageID)
-					acc.retryWaitersMu.Unlock()
 					return
 				}
 			}
@@ -1670,7 +1661,7 @@ func (acc *Account) handleCopyAlbumToClipboard(conn net.Conn, raw json.RawMessag
 	}()
 }
 
-func (acc *Account) requestMediaRetry(messageID string) error {
+func (acc *Account) requestMediaRetry(ctx context.Context, messageID string) error {
 	rawBytes, jidStr, senderJidStr, fromMe, dbErr := acc.getMessageRaw(messageID)
 	if dbErr != nil {
 		return dbErr
@@ -1686,12 +1677,12 @@ func (acc *Account) requestMediaRetry(messageID string) error {
 	}
 
 	if chatJID.Server == "lid" {
-		if pn, err := acc.wa().Store.LIDs.GetPNForLID(context.Background(), chatJID); err == nil && !pn.IsEmpty() {
+		if pn, err := acc.wa().Store.LIDs.GetPNForLID(ctx, chatJID); err == nil && !pn.IsEmpty() {
 			chatJID = pn
 		}
 	}
 	if senderJID.Server == "lid" {
-		if pn, err := acc.wa().Store.LIDs.GetPNForLID(context.Background(), senderJID); err == nil && !pn.IsEmpty() {
+		if pn, err := acc.wa().Store.LIDs.GetPNForLID(ctx, senderJID); err == nil && !pn.IsEmpty() {
 			senderJID = pn
 		}
 	}
@@ -1722,7 +1713,7 @@ func (acc *Account) requestMediaRetry(messageID string) error {
 	if mediaKey == nil {
 		return fmt.Errorf("no media key found")
 	}
-	return acc.wa().SendMediaRetryReceipt(context.Background(), msgInfo, mediaKey)
+	return acc.wa().SendMediaRetryReceipt(ctx, msgInfo, mediaKey)
 }
 
 func (acc *Account) handleMediaRetryEvent(evt *events.MediaRetry) {
@@ -1752,23 +1743,19 @@ func (acc *Account) handleMediaRetryEvent(evt *events.MediaRetry) {
 	retryData, err := whatsmeow.DecryptMediaRetryNotification(evt, mediaKey)
 	if err != nil || retryData.GetResult() != waMmsRetry.MediaRetryNotification_SUCCESS {
 		fmt.Printf("Failed to decrypt media retry or result not success for %s: %v\n", evt.MessageID, err)
-		acc.retryWaitersMu.Lock()
-		if ch, ok := acc.retryWaiters[string(evt.MessageID)]; ok {
-			ch <- false
-			delete(acc.retryWaiters, string(evt.MessageID))
-		} else {
+		if !acc.notifyMediaRetryWaiters(string(evt.MessageID), false) {
 			acc.broadcastEvent("media_download_failed", map[string]interface{}{
 				"message_id": string(evt.MessageID),
 				"jid":        jidStr,
 				"message":    "Phone could not re-upload the expired media",
 			})
 		}
-		acc.retryWaitersMu.Unlock()
 		return
 	}
 
 	newPath := retryData.GetDirectPath()
 	if newPath == "" {
+		acc.notifyMediaRetryWaiters(string(evt.MessageID), false)
 		return
 	}
 	switch {
@@ -1785,16 +1772,14 @@ func (acc *Account) handleMediaRetryEvent(evt *events.MediaRetry) {
 	}
 
 	newRawBytes, _ := proto.Marshal(msg)
-	acc.db.Exec("UPDATE messages SET raw = ? WHERE id = ?", newRawBytes, string(evt.MessageID))
-
-	acc.retryWaitersMu.Lock()
-	if ch, ok := acc.retryWaiters[string(evt.MessageID)]; ok {
-		ch <- true
-		delete(acc.retryWaiters, string(evt.MessageID))
-		acc.retryWaitersMu.Unlock()
+	if _, err := acc.db.Exec("UPDATE messages SET raw = ? WHERE id = ?", newRawBytes, string(evt.MessageID)); err != nil {
+		acc.notifyMediaRetryWaiters(string(evt.MessageID), false)
 		return
 	}
-	acc.retryWaitersMu.Unlock()
+
+	if acc.notifyMediaRetryWaiters(string(evt.MessageID), true) {
+		return
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	acc.activeDownloadsMu.Lock()

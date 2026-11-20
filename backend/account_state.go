@@ -97,7 +97,8 @@ type Account struct {
 	activeUploadsMu        sync.Mutex
 	activeUploads          map[string]context.CancelFunc
 	retryWaitersMu         sync.Mutex
-	retryWaiters           map[string]chan bool
+	retryWaiters           map[string][]chan bool
+	outgoingChatStates     outgoingChatStates
 	pendingAutoOpens       sync.Map
 	desiredPresenceMu      sync.Mutex
 	desiredPresence        types.Presence
@@ -207,7 +208,7 @@ func (acc *Account) initAccountState() {
 	acc.activeDownloads = map[string]context.CancelFunc{}
 	acc.autoDownloadFailed = map[string]bool{}
 	acc.activeUploads = map[string]context.CancelFunc{}
-	acc.retryWaiters = map[string]chan bool{}
+	acc.retryWaiters = map[string][]chan bool{}
 	acc.desiredPresence = types.PresenceUnavailable
 	acc.sendInFlight = map[string]bool{}
 	acc.retryAttempts = map[string]int{}

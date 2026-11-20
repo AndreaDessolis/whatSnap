@@ -495,7 +495,7 @@ func (acc *Account) handleSendTyping(raw json.RawMessage) {
 	if data.State == "paused" {
 		pState = types.ChatPresencePaused
 	}
-	go acc.wa().SendChatPresence(context.Background(), jid, pState, types.ChatPresenceMedia(data.Media))
+	acc.queueOutgoingChatState(jid, pState, types.ChatPresenceMedia(data.Media))
 }
 
 func (acc *Account) handleSetPresence(raw json.RawMessage) {

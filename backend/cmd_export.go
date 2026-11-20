@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,7 +28,7 @@ func (acc *Account) downloadMediaForExportSync(messageID string) (path string, o
 		}
 	}
 
-	ctx := context.Background()
+	ctx := acc.ctx
 	for attempt := 0; attempt < 2; attempt++ {
 		p, _, _, _, err := acc.downloadMessageMediaToFile(ctx, messageID, nil)
 		if err == nil {
@@ -41,22 +40,19 @@ func (acc *Account) downloadMediaForExportSync(messageID string) (path string, o
 			return "", false
 		}
 
-		if retryErr := acc.requestMediaRetry(messageID); retryErr != nil {
+		ch, removeWaiter := acc.addMediaRetryWaiter(messageID)
+		defer removeWaiter()
+		if retryErr := acc.requestMediaRetry(ctx, messageID); retryErr != nil {
 			return "", false
 		}
-		ch := make(chan bool, 1)
-		acc.retryWaitersMu.Lock()
-		acc.retryWaiters[messageID] = ch
-		acc.retryWaitersMu.Unlock()
 		select {
 		case success := <-ch:
 			if !success {
 				return "", false
 			}
 		case <-time.After(45 * time.Second):
-			acc.retryWaitersMu.Lock()
-			delete(acc.retryWaiters, messageID)
-			acc.retryWaitersMu.Unlock()
+			return "", false
+		case <-ctx.Done():
 			return "", false
 		}
 	}

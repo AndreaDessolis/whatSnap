@@ -135,6 +135,20 @@ pub fn start(account: &str) -> Link {
 				break;
 			}
 			if let Some(line) = tag(&forwarded, &command) {
+				// Includes the newline written by pipe_loop. Keep in sync with
+				// maxCommandBytes in backend/ws_dispatch.go, and report through
+				// the usual accessible error UI for this account.
+				if line.len() + 1 > 1024 * 1024 {
+					if let Some((ui_tx, _)) = UI.get() {
+						let payload = serde_json::json!({
+							"type": "error",
+							"data": { "message": "The request is too large. Try sending less text or fewer items at once." }
+						})
+						.to_string();
+						let _ = ui_tx.send(UiCommand::BackendEvent { account: forwarded.clone(), payload });
+					}
+					continue;
+				}
 				let _ = out_tx.send(line);
 			}
 		}
@@ -202,7 +216,7 @@ fn pipe_loop(ui_tx: UiCommandSender, alive: Arc<AtomicBool>, out_rx: Arc<Mutex<m
 			}
 		}
 
-		if let Ok(socket) = crate::backend::pipe::PipeStream::connect(&backend.pipe_id) {
+		if let Ok(socket) = crate::backend::pipe::PipeStream::connect_backend(&backend.pipe_id) {
 			let expected_pid = backend.process.as_ref().map(|b| b.pid());
 			let peer_ok = match (expected_pid, socket.server_pid()) {
 				(Some(Some(expected)), Some(actual)) => actual == expected,
