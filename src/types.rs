@@ -160,6 +160,8 @@ pub enum UiCommand {
 	AdmitCallPerson(bool),
 	MuteCallPerson,
 	RemoveCallPerson,
+	RingCallPerson,
+	ToggleCallPeople,
 	CallPersonSelected,
 	SetCallApproval(bool),
 	DismissIncomingCall,
@@ -642,9 +644,10 @@ pub(crate) struct CallVideo {
 	pub(crate) peer_video_ignored: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallParticipant {
 	pub(crate) jid: String,
 	pub(crate) name: String,
 	pub(crate) state: String,
+	pub(crate) hand_raised: bool,
 }
