@@ -89,7 +89,9 @@ jobs:
   release:
     needs: [build-windows]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # The daily WhatsApp version job uses workflow_dispatch because its token's push
+    # doesn't trigger workflows. Those builds must publish updates too.
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
     permissions:
       contents: write
     # Every run publishes to the same `latest` release, so two of them uploading at once
@@ -109,28 +111,19 @@ jobs:
         pattern: whatSnap-windows-*
         merge-multiple: true
         path: windows-build
-    - name: Get latest tag reachable from HEAD
-      id: get_tag
-      shell: bash
-      run: |
-        TAG=$(git describe --tags --abbrev=0 --exclude latest 2>/dev/null || echo "")
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
     # The update check's dev channel reads these lines, newest first, as
     # "- <7-character hash> <subject>", to tell a build which commits are new to it.
+    # Always include HEAD, even when it has a version tag. A tag..HEAD range is
+    # empty on release day, which makes already-installed copies report up to date.
     - name: Generate release notes
-      id: release_notes
       shell: bash
       run: |
-        PREV_TAG="${{ steps.get_tag.outputs.tag }}"
-        if [ -z "$PREV_TAG" ]; then
-          COMMITS=$(git log -50 --abbrev=7 --pretty=format:"- %h %s" HEAD)
-        else
-          COMMITS=$(git log --abbrev=7 --pretty=format:"- %h %s" "$PREV_TAG"..HEAD)
-        fi
-        COMMITS="${COMMITS//'%'/'%25'}"
-        echo "commits<<EOF" >> $GITHUB_OUTPUT
-        echo "$COMMITS" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        {
+          printf '## Recent commits\n\n'
+          # Force exactly seven characters: git's %h can grow as the repo grows,
+          # but existing updaters compare it against a seven-character local hash.
+          git log -50 --format='- %H %s' HEAD | sed -E 's/^- ([0-9a-f]{7})[0-9a-f]+ /- \1 /'
+        } > dev-release-notes.md
     # A queued run whose commit has since been superseded would otherwise replace the newer
     # build with its own older one.
     - name: Check this is still the head of master
@@ -152,9 +145,7 @@ jobs:
       with:
         tag_name: latest
         name: Development Build
-        body: |
-          ## Commits since last release
-          ${{ steps.release_notes.outputs.commits }}
+        body_path: dev-release-notes.md
         files: windows-build/*
         prerelease: true
       env:
