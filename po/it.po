@@ -6363,3 +6363,168 @@ msgstr "{}, {}, su WhatsApp"
 
 msgid "{}, {}, {}, on WhatsApp"
 msgstr "{}, {}, {}, su WhatsApp"
+
+msgid ". Going on now, press Enter to join"
+msgstr ". In corso ora, premi Invio per partecipare"
+
+msgid ". In progress, press Enter to return to it"
+msgstr ". In corso, premi Invio per tornarci"
+
+msgid "Bali Hai"
+msgstr "Grigio azzurro"
+
+msgid "Bittersweet"
+msgstr "Arancio rossastro"
+
+msgid "Brandy Rose"
+msgstr "Rosa brandy"
+
+msgid "Bright Sun"
+msgstr "Giallo sole"
+
+msgid "Business name"
+msgstr "Nome dell'attività"
+
+msgid "Call with {}"
+msgstr "Chiamata con {}"
+
+msgid "Ce Soir"
+msgstr "Lavanda"
+
+msgid "Connection is good again."
+msgstr "La connessione è di nuovo buona."
+
+msgid "Couldn't receive video from"
+msgstr "Impossibile ricevere il video da"
+
+msgid "Create call link"
+msgstr "Crea link di chiamata"
+
+msgid "Description"
+msgstr "Descrizione"
+
+msgid "Dodger Blue"
+msgstr "Blu acceso"
+
+msgid "Earls Green"
+msgstr "Verde oliva"
+
+msgid "Elephant"
+msgstr "Grigio scuro"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Emerald"
+msgstr "Smeraldo"
+
+msgid "Home"
+msgstr "Casa"
+
+msgid "Home fax"
+msgstr "Fax di casa"
+
+msgid "I'd like you to be an admin of my WhatsApp channel."
+msgstr "Vorrei che diventassi amministratore del mio canale WhatsApp."
+
+msgid "Ignore"
+msgstr "Ignora"
+
+msgid "Join call link"
+msgstr "Partecipa da link di chiamata"
+
+msgid "Main"
+msgstr "Principale"
+
+msgid "Maya Blue"
+msgstr "Azzurro Maya"
+
+msgid "Medium Red Violet"
+msgstr "Viola rossastro"
+
+msgid "Mobile"
+msgstr "Cellulare"
+
+msgid "Mona Lisa"
+msgstr "Rosa salmone"
+
+msgid "Monte Carlo"
+msgstr "Verde acqua"
+
+msgid "Pager"
+msgstr "Cercapersone"
+
+msgid "Polo Blue"
+msgstr "Blu polvere"
+
+msgid "Poor connection. Your internet is unstable."
+msgstr "Connessione debole. La tua connessione a Internet è instabile."
+
+msgid "Poor connection: {}'s internet is unstable."
+msgstr "Connessione debole: la connessione a Internet di {} è instabile."
+
+msgid "Prelude"
+msgstr "Lilla"
+
+msgid "Scorpion"
+msgstr "Grigio antracite"
+
+msgid "Send stereo in calls (experimental)"
+msgstr "Invia in stereo nelle chiamate (sperimentale)"
+
+msgid "Send voice messages in stereo"
+msgstr "Invia i messaggi vocali in stereo"
+
+msgid "Sends left and right apart while you share your screen's sound, or with a stereo microphone while all sound processing is off. Only other whatSnap users hear it in stereo; WhatsApp's own apps play it in mono. Uses a little more data."
+msgstr "Invia separati il canale sinistro e quello destro mentre condividi l'audio dello schermo, oppure con un microfono stereo quando tutta l'elaborazione del suono è disattivata. Solo gli altri utenti di whatSnap lo sentono in stereo; le app di WhatsApp lo riproducono in mono. Usa un po' più di dati."
+
+msgid "Summer Sky"
+msgstr "Azzurro cielo"
+
+msgid "Sundance"
+msgstr "Giallo oro"
+
+msgid "Takes effect right away, also during a call, so you can hear the difference; OK keeps it and Cancel undoes it. Your microphone is sent exactly as it is (no echo cancelling, noise removal, automatic volume or limiter, and the microphone level is left alone), and the other person's sound is played without speech enhancement or bandwidth extension."
+msgstr "Ha effetto subito, anche durante una chiamata, così puoi sentire la differenza; OK la conserva e Annulla la toglie. Il microfono viene inviato così com'è (senza cancellazione dell'eco, riduzione del rumore, volume automatico o limiter, e il livello del microfono non viene toccato), e l'audio dell'altra persona viene riprodotto senza miglioramento della voce né estensione della banda."
+
+msgid "Tawny Port"
+msgstr "Rosso vinaccia"
+
+msgid "Turn off all sound processing in calls"
+msgstr "Disattiva tutta l'elaborazione del suono nelle chiamate"
+
+msgid "Very poor connection. Check your internet connection."
+msgstr "Connessione molto debole. Controlla la connessione a Internet."
+
+msgid "Video call with {}"
+msgstr "Videochiamata con {}"
+
+msgid "Vivid Violet"
+msgstr "Viola intenso"
+
+msgid "Warning: voice messages sent in stereo might not play on iPhones. WhatsApp's own apps always send them in mono. Only useful with a stereo microphone."
+msgstr "Attenzione: i messaggi vocali inviati in stereo potrebbero non essere riprodotti sugli iPhone. Le app di WhatsApp li inviano sempre in mono. Utile solo con un microfono stereo."
+
+msgid "Wasabi"
+msgstr "Verde wasabi"
+
+msgid "Work"
+msgstr "Lavoro"
+
+msgid "Work fax"
+msgstr "Fax di lavoro"
+
+msgid "Your microphone is picking up sound again."
+msgstr "Il microfono capta di nuovo il suono."
+
+msgid "Your microphone isn't picking up any sound. Check that it's connected and not muted in Windows."
+msgstr "Il microfono non capta nessun suono. Controlla che sia collegato e non disattivato in Windows."
+
+msgid "didn't accept video. Your camera is off."
+msgstr "non ha accettato il video. La tua fotocamera è spenta."
+
+msgid "iPhone"
+msgstr "iPhone"
+
+msgid "{} is sharing video"
+msgstr "{} sta condividendo un video"
