@@ -489,7 +489,11 @@ pub(crate) fn message_box_label(s: &AppState, jid: &str) -> String {
 	if name.trim().is_empty() {
 		return crate::i18n::tr("Type a message").to_string();
 	}
-	crate::i18n::tr_fmt("Type a message to {}", &[&name])
+	if jid.ends_with("@g.us") {
+		crate::i18n::tr_fmt("Type a message to group {}", &[&name])
+	} else {
+		crate::i18n::tr_fmt("Type a message to {}", &[&name])
+	}
 }
 
 pub(crate) fn group_send_block_reason(s: &AppState, jid: &str) -> Option<&'static str> {

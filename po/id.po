@@ -6531,3 +6531,6 @@ msgstr "Mengirim saluran kiri dan kanan secara terpisah saat Anda membagikan sua
 
 msgid "Type a message to {}"
 msgstr "Ketik pesan ke {}"
+
+msgid "Type a message to group {}"
+msgstr "Ketik pesan ke grup {}"

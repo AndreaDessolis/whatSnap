@@ -6531,3 +6531,6 @@ msgstr "{} sta condividendo un video"
 
 msgid "Type a message to {}"
 msgstr "Scrivi un messaggio a {}"
+
+msgid "Type a message to group {}"
+msgstr "Scrivi un messaggio al gruppo {}"
