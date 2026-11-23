@@ -6528,3 +6528,6 @@ msgstr "iPhone"
 
 msgid "{} is sharing video"
 msgstr "{} sta condividendo un video"
+
+msgid "Type a message to {}"
+msgstr "Scrivi un messaggio a {}"

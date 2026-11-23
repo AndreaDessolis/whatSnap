@@ -169,7 +169,7 @@ The open chat has these controls, in this order:
 - The Messages list.
 - The buttons for the selected message, such as `Play voice message`, `Open`, `Save as`, and `Download`.
 - The `Emoji and stickers` button.
-- The message box, named `Type a message`.
+- The message box, named `Type a message to` and the name of the chat, so you know who you're writing to.
 - The `Add attachment`, `Send message`, and `Record voice message` buttons.
 
 Press `Alt+M` to go to the Messages list. Press `Alt+E` to go to the message box. Press `Alt+E` again to go back to where you were. Press `Alt+T` to hear the status of the chat, for example online, or typing. Press `Alt+L` to turn reading new messages aloud on or off for the open chat. Press `Alt+I` to open the information of the chat. Press `Escape` to close the chat.

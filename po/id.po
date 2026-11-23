@@ -6529,3 +6529,5 @@ msgstr "Kirim stereo di panggilan (eksperimental)"
 msgid "Sends left and right apart while you share your screen's sound, or with a stereo microphone while all sound processing is off. Only other whatSnap users hear it in stereo; WhatsApp's own apps play it in mono. Uses a little more data."
 msgstr "Mengirim saluran kiri dan kanan secara terpisah saat Anda membagikan suara layar, atau memakai mikrofon stereo ketika semua pemrosesan suara dimatikan. Hanya pengguna whatSnap lain yang mendengarnya dalam stereo; aplikasi resmi WhatsApp memutarnya dalam mono. Menggunakan sedikit lebih banyak data."
 
+msgid "Type a message to {}"
+msgstr "Ketik pesan ke {}"

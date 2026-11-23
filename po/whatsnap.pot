@@ -4619,6 +4619,9 @@ msgstr ""
 msgid "Type a message to schedule."
 msgstr ""
 
+msgid "Type a message to {}"
+msgstr ""
+
 msgid "Type a name for the event."
 msgstr ""
 
@@ -5707,4 +5710,3 @@ msgstr ""
 
 msgid "{}{}. Reported by {}"
 msgstr ""
-

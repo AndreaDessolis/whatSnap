@@ -309,14 +309,15 @@ pub(crate) fn update_composer_buttons(s: &AppState, cp: &crate::ui::conversation
 		let target_label = if let Some(ref preview) = s.pending_reply_preview {
 			preview.split_once(": ").map_or(preview.as_str(), |(who, _)| who)
 		} else {
-			group_send_block_reason(s, jid).unwrap_or(if jid.ends_with("@newsletter") {
-				crate::i18n::tr("Type an update")
-			} else {
-				crate::i18n::tr("Type a message")
-			})
+			""
+		};
+		let target_label = if target_label.is_empty() {
+			group_send_block_reason(s, jid).map(str::to_string).unwrap_or_else(|| message_box_label(s, jid))
+		} else {
+			target_label.to_string()
 		};
 		if cp.message_label.get_label() != target_label {
-			cp.message_label.set_label(target_label);
+			cp.message_label.set_label(&target_label);
 		}
 	}
 	if changed {
@@ -478,6 +479,19 @@ pub(crate) fn open_chat_for_jid(jid: &str, state: &Rc<RefCell<AppState>>, parts:
 	parts.conversations_parts.messages_list.set_focus();
 }
 
+/// The message box's name: "Type a message to Name", like the official
+/// client, so a screen reader confirms who the message is going to.
+pub(crate) fn message_box_label(s: &AppState, jid: &str) -> String {
+	if jid.ends_with("@newsletter") {
+		return crate::i18n::tr("Type an update").to_string();
+	}
+	let name = s.contacts.get(jid).cloned().unwrap_or_else(|| display_name_for_jid(jid));
+	if name.trim().is_empty() {
+		return crate::i18n::tr("Type a message").to_string();
+	}
+	crate::i18n::tr_fmt("Type a message to {}", &[&name])
+}
+
 pub(crate) fn group_send_block_reason(s: &AppState, jid: &str) -> Option<&'static str> {
 	if !jid.ends_with("@g.us") {
 		None
@@ -521,13 +535,9 @@ pub(crate) fn apply_composer_access(s: &AppState, parts: &WindowParts, jid: &str
 	} else {
 		cp.blocked_banner_btn.show(false);
 		if s.editing_message_id.is_none() && s.pending_reply_preview.is_none() {
-			let label = reason.unwrap_or(if jid.ends_with("@newsletter") {
-				crate::i18n::tr("Type an update")
-			} else {
-				crate::i18n::tr("Type a message")
-			});
+			let label = reason.map(str::to_string).unwrap_or_else(|| message_box_label(s, jid));
 			if cp.message_label.get_label() != label {
-				cp.message_label.set_label(label);
+				cp.message_label.set_label(&label);
 			}
 		}
 	}
