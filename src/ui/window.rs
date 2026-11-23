@@ -1133,12 +1133,18 @@ pub fn bind_input_handlers(
 	});
 
 	let phone_ctrl2 = parts.phone_field;
+	let combo_pair = parts.country_combo;
 	parts.pair_btn.on_click(move |_| {
 		let phone = phone_ctrl2.get_value();
-		let clean_phone: String = phone.chars().filter(|c| c.is_ascii_digit()).collect();
-		if !clean_phone.is_empty() {
-			let _ = tx_pair.send(UiCommand::RequestPairing(clean_phone));
+		if !phone.chars().any(|c| c.is_alphanumeric()) {
+			return;
 		}
+		let country_code = combo_pair
+			.get_selection()
+			.and_then(|i| crate::countries::COUNTRIES.get(i as usize))
+			.map(|c| c.2.to_string())
+			.unwrap_or_default();
+		let _ = tx_pair.send(UiCommand::RequestPairing(phone, country_code));
 	});
 
 	let login_ctl = LoginControls::from_parts(parts);

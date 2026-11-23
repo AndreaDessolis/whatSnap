@@ -26,12 +26,18 @@ pub(crate) fn cancel_pairing(state: &Rc<RefCell<AppState>>, _parts: &Rc<WindowPa
 	let _ = state.borrow().ws_tx.send(payload.to_string());
 }
 
-pub(crate) fn request_pairing(state: &Rc<RefCell<AppState>>, _parts: &Rc<WindowParts>, phone: String) {
+pub(crate) fn request_pairing(
+	state: &Rc<RefCell<AppState>>,
+	_parts: &Rc<WindowParts>,
+	phone: String,
+	country_code: String,
+) {
 	state.borrow_mut().is_pairing_active = true;
 	let payload = serde_json::json!({
 		"action": "pair",
 		"data": {
-			"phone": phone
+			"phone": phone,
+			"country_code": country_code
 		}
 	});
 	let _ = state.borrow().ws_tx.send(payload.to_string());

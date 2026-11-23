@@ -248,9 +248,11 @@ pub const COUNTRIES: &[(&str, &str, &str)] = &[
 ];
 
 /// Index of the country Windows is set to (Settings > Time & language > Region),
-/// so the login picker starts on the user's own country. Falls back to the first entry.
+/// so the login picker starts on the user's own country. Falls back to the United
+/// States, which is what WA Web uses when it can't tell.
 pub fn default_index() -> usize {
-	user_region().and_then(|iso| COUNTRIES.iter().position(|c| c.1.eq_ignore_ascii_case(&iso))).unwrap_or(0)
+	let find = |iso: &str| COUNTRIES.iter().position(|c| c.1.eq_ignore_ascii_case(iso));
+	user_region().and_then(|iso| find(&iso)).or_else(|| find("US")).unwrap_or(0)
 }
 
 #[cfg(windows)]

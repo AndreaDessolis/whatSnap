@@ -50,7 +50,7 @@ pub enum MemberAction {
 
 #[derive(Clone)]
 pub enum UiCommand {
-	RequestPairing(String),
+	RequestPairing(String, String),
 	SendMessage(String),
 	ConversationSelectionChanged(usize),
 	ProcessWebSocketMessage(String),

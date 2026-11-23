@@ -125,13 +125,18 @@ func (acc *Account) handlePair(raw json.RawMessage) {
 	if err := json.Unmarshal(raw, &data); err != nil {
 		return
 	}
+	phone, err := normalizePairPhone(data.Phone, data.CountryCode)
+	if err != nil {
+		acc.broadcastEvent("error", map[string]string{"message": err.Error()})
+		return
+	}
 	go func() {
 		if acc.wa().Store.ID != nil {
 			return
 		}
 		ctx := acc.beginPairingAttempt()
 		for range maxPairingCodes {
-			if !acc.runPairingCode(ctx, data.Phone) {
+			if !acc.runPairingCode(ctx, phone) {
 				return
 			}
 		}

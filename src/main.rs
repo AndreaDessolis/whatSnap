@@ -1168,7 +1168,9 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::RequestQr => ui_commands::misc::request_qr(state, parts),
 		UiCommand::CancelQr => ui_commands::misc::cancel_qr(state, parts),
 		UiCommand::CancelPairing => ui_commands::misc::cancel_pairing(state, parts),
-		UiCommand::RequestPairing(phone) => ui_commands::misc::request_pairing(state, parts, phone),
+		UiCommand::RequestPairing(phone, country_code) => {
+			ui_commands::misc::request_pairing(state, parts, phone, country_code)
+		}
 		UiCommand::SendMessage(text) => ui_commands::messaging::send_message(state, parts, text),
 		UiCommand::ConversationSelectionChanged(idx) => {
 			ui_commands::chat_list::conversation_selection_changed(idx, state, parts);

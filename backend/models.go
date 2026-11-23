@@ -15,7 +15,8 @@ type Command struct {
 }
 
 type PairCommandData struct {
-	Phone string `json:"phone"`
+	Phone       string `json:"phone"`
+	CountryCode string `json:"country_code"`
 }
 
 type NewContactCommandData struct {
