@@ -13,6 +13,7 @@ import (
 	"net"
 
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/types/events"
 )
 
 var shutdownOnce sync.Once
@@ -172,6 +173,18 @@ func (acc *Account) runPairingCode(ctx context.Context, phone string) (expired b
 		}
 		return false
 	}
+	// The phone can ask for the code to be replaced (refresh_code); WA Web then
+	// makes a new one, or, when forced manual, shows "Code expired" and waits.
+	refresh := make(chan bool, 1)
+	handlerID := c.AddEventHandler(func(evt any) {
+		if r, ok := evt.(*events.PairCodeRefresh); ok {
+			select {
+			case refresh <- r.ForceManual:
+			default:
+			}
+		}
+	})
+	defer c.RemoveEventHandler(handlerID)
 	code, err := c.PairPhone(ctx, phone, true, whatsmeow.PairClientUWP, "Chrome (Windows)")
 	if err != nil {
 		if ctx.Err() == nil {
@@ -192,6 +205,14 @@ func (acc *Account) runPairingCode(ctx context.Context, phone string) (expired b
 		var ok bool
 		select {
 		case item, ok = <-qrChan:
+		case forceManual := <-refresh:
+			log.Println("Pairing code refresh requested by the phone")
+			c.Disconnect()
+			if forceManual {
+				acc.broadcastEvent("error", map[string]string{"message": "The pairing code expired. Ask for a new one to try again."})
+				return false
+			}
+			return ctx.Err() == nil
 		case <-ctx.Done():
 			return false
 		}
