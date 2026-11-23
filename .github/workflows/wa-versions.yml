@@ -40,8 +40,8 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         SUMMARY: ${{ steps.check.outputs.summary }}
       run: |
-        git config user.name "$(git log -1 --format=%an)"
-        git config user.email "$(git log -1 --format=%ae)"
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git commit -am "Update WhatsApp versions ($SUMMARY)"
         git push origin master
         gh workflow run build.yml --ref master
