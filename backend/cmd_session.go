@@ -96,10 +96,10 @@ func (acc *Account) handleLogout() {
 }
 
 // maxPairingCodes is how many codes one pairing request may go through
-// before it gives up: the first one plus two replacements for codes that
-// expired unused (about eight minutes in all). The server throttles code
-// requests per phone number, so this must not run on forever.
-const maxPairingCodes = 3
+// before it gives up: the first one plus five replacements, the same as WA
+// Web's five code refreshes. The server throttles code requests per phone
+// number, so this must not run on forever.
+const maxPairingCodes = 6
 
 func (acc *Account) beginPairingAttempt() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
