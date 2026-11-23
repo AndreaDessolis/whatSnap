@@ -6534,3 +6534,118 @@ msgstr "Scrivi un messaggio a {}"
 
 msgid "Type a message to group {}"
 msgstr "Scrivi un messaggio al gruppo {}"
+
+msgid "%A, %B %e, %Y"
+msgstr "%A %e %B %Y"
+
+msgid "%I:%M %p"
+msgstr "%H:%M"
+
+msgid "%b %e"
+msgstr "%e %b"
+
+msgid "%l:%M %p"
+msgstr "%H:%M"
+
+msgid "April"
+msgstr "aprile"
+
+msgid "August"
+msgstr "agosto"
+
+msgid "Call upgraded to group call."
+msgstr "La chiamata è diventata una chiamata di gruppo."
+
+msgid "December"
+msgstr "dicembre"
+
+msgid "February"
+msgstr "febbraio"
+
+msgid "Friday"
+msgstr "venerdì"
+
+msgid "Hide people"
+msgstr "Nascondi persone"
+
+msgid "Incoming group video call in"
+msgstr "Videochiamata di gruppo in arrivo in"
+
+msgid "Incoming group voice call from"
+msgstr "Chiamata vocale di gruppo in arrivo da"
+
+msgid "Incoming group voice call in"
+msgstr "Chiamata vocale di gruppo in arrivo in"
+
+msgid "January"
+msgstr "gennaio"
+
+msgid "Join call ({})"
+msgstr "Partecipa alla chiamata ({})"
+
+msgid "July"
+msgstr "luglio"
+
+msgid "June"
+msgstr "giugno"
+
+msgid "March"
+msgstr "marzo"
+
+msgid "May"
+msgstr "maggio"
+
+msgid "Monday"
+msgstr "lunedì"
+
+msgid "November"
+msgstr "novembre"
+
+msgid "October"
+msgstr "ottobre"
+
+msgid "People list closed."
+msgstr "Elenco delle persone chiuso."
+
+msgid "People list opened."
+msgstr "Elenco delle persone aperto."
+
+msgid "Ring again"
+msgstr "Fai squillare di nuovo"
+
+msgid "Ring {} again"
+msgstr "Fai squillare di nuovo {}"
+
+msgid "Ringing {} again."
+msgstr "Faccio squillare di nuovo {}."
+
+msgid "Saturday"
+msgstr "sabato"
+
+msgid "Select someone to ring first."
+msgstr "Seleziona prima qualcuno da far squillare."
+
+msgid "September"
+msgstr "settembre"
+
+msgid "Sunday"
+msgstr "domenica"
+
+msgid "Thursday"
+msgstr "giovedì"
+
+msgid "Tuesday"
+msgstr "martedì"
+
+msgid "Wednesday"
+msgstr "mercoledì"
+
+msgid "hand raised"
+msgstr "mano alzata"
+
+msgid "unmuted"
+msgstr "microfono attivo"
+
+msgid "{} at {}"
+msgstr "{} alle {}"
+

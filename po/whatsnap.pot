@@ -53,7 +53,19 @@ msgstr ""
 msgid " {} couldn't be."
 msgstr ""
 
+msgid "%A, %B %e, %Y"
+msgstr ""
+
+msgid "%I:%M %p"
+msgstr ""
+
+msgid "%b %e"
+msgstr ""
+
 msgid "%b %e, %Y"
+msgstr ""
+
+msgid "%l:%M %p"
 msgstr ""
 
 msgid "&Account"
@@ -776,6 +788,9 @@ msgstr ""
 msgid "Approved {}."
 msgstr ""
 
+msgid "April"
+msgstr ""
+
 msgid "Archive or unarchive chat"
 msgstr ""
 
@@ -828,6 +843,9 @@ msgid "Audio and video settings closed."
 msgstr ""
 
 msgid "Audio and video settings opened."
+msgstr ""
+
+msgid "August"
 msgstr ""
 
 msgid "Availability"
@@ -990,6 +1008,9 @@ msgid "Call log cleared."
 msgstr ""
 
 msgid "Call notifications: show notifications for incoming calls"
+msgstr ""
+
+msgid "Call upgraded to group call."
 msgstr ""
 
 msgid "Call with"
@@ -1586,6 +1607,9 @@ msgstr ""
 msgid "Deactivate community..."
 msgstr ""
 
+msgid "December"
+msgstr ""
+
 msgid "Decline"
 msgstr ""
 
@@ -1988,6 +2012,9 @@ msgstr ""
 msgid "Favorites"
 msgstr ""
 
+msgid "February"
+msgstr ""
+
 msgid "File"
 msgstr ""
 
@@ -2046,6 +2073,9 @@ msgid "Forward this message to contacts or groups"
 msgstr ""
 
 msgid "Frequent contacts"
+msgstr ""
+
+msgid "Friday"
 msgstr ""
 
 msgid "Fullscreen"
@@ -2111,7 +2141,13 @@ msgstr ""
 msgid "Group sounds: play sounds for new group messages"
 msgstr ""
 
+msgid "Group video call"
+msgstr ""
+
 msgid "Group video call in"
+msgstr ""
+
+msgid "Group voice call"
 msgstr ""
 
 msgid "Group voice call in"
@@ -2150,6 +2186,9 @@ msgstr ""
 msgid "Hide message content: notifications from this chat don't show what the message says"
 msgstr ""
 
+msgid "Hide people"
+msgstr ""
+
 msgid "Hide phone numbers in groups: show Unknown member for people with no saved name or profile name"
 msgstr ""
 
@@ -2172,6 +2211,9 @@ msgid "I'd like you to be an admin of my WhatsApp channel."
 msgstr ""
 
 msgid "Ignore"
+msgstr ""
+
+msgid "In group call"
 msgstr ""
 
 msgid "In group call with"
@@ -2205,6 +2247,15 @@ msgid "Incoming group call from"
 msgstr ""
 
 msgid "Incoming group video call from"
+msgstr ""
+
+msgid "Incoming group video call in"
+msgstr ""
+
+msgid "Incoming group voice call from"
+msgstr ""
+
+msgid "Incoming group voice call in"
 msgstr ""
 
 msgid "Incoming sounds: play a sound for new messages"
@@ -2264,6 +2315,9 @@ msgstr ""
 msgid "JSON files (*.json)|*.json|All files (*.*)|*.*"
 msgstr ""
 
+msgid "January"
+msgstr ""
+
 msgid "Join Call Link"
 msgstr ""
 
@@ -2277,6 +2331,9 @@ msgid "Join a call from a link someone shared"
 msgstr ""
 
 msgid "Join call"
+msgstr ""
+
+msgid "Join call ({})"
 msgstr ""
 
 msgid "Join call link"
@@ -2301,6 +2358,12 @@ msgid "Joining call..."
 msgstr ""
 
 msgid "Joining group..."
+msgstr ""
+
+msgid "July"
+msgstr ""
+
+msgid "June"
 msgstr ""
 
 msgid "Keep"
@@ -2537,6 +2600,9 @@ msgstr ""
 msgid "Manage channel..."
 msgstr ""
 
+msgid "March"
+msgstr ""
+
 msgid "Mark as &read"
 msgstr ""
 
@@ -2550,6 +2616,9 @@ msgid "Mark chat as read or unread"
 msgstr ""
 
 msgid "Markdown file (*.md)|*.md"
+msgstr ""
+
+msgid "May"
 msgstr ""
 
 msgid "Maya Blue"
@@ -2700,6 +2769,9 @@ msgid "Mobile"
 msgstr ""
 
 msgid "Mona Lisa"
+msgstr ""
+
+msgid "Monday"
 msgstr ""
 
 msgid "Monte Carlo"
@@ -3002,10 +3074,16 @@ msgstr ""
 msgid "Notifications from {} unmuted."
 msgstr ""
 
+msgid "November"
+msgstr ""
+
 msgid "Number"
 msgstr ""
 
 msgid "OK"
+msgstr ""
+
+msgid "October"
 msgstr ""
 
 msgid "Only admins can add members"
@@ -3162,6 +3240,12 @@ msgid "Pending admin invites for {}"
 msgstr ""
 
 msgid "People"
+msgstr ""
+
+msgid "People list closed."
+msgstr ""
+
+msgid "People list opened."
 msgstr ""
 
 msgid "Permanently delete your whole call history"
@@ -3767,7 +3851,16 @@ msgstr ""
 msgid "Retrying send..."
 msgstr ""
 
+msgid "Ring again"
+msgstr ""
+
+msgid "Ring {} again"
+msgstr ""
+
 msgid "Ringing"
+msgstr ""
+
+msgid "Ringing {} again."
 msgstr ""
 
 msgid "Ringing {}."
@@ -3780,6 +3873,9 @@ msgid "Ringtone"
 msgstr ""
 
 msgid "Sale price"
+msgstr ""
+
+msgid "Saturday"
 msgstr ""
 
 msgid "Save"
@@ -3995,6 +4091,9 @@ msgstr ""
 msgid "Select someone in the call first."
 msgstr ""
 
+msgid "Select someone to ring first."
+msgstr ""
+
 msgid "Select someone who wants to join first."
 msgstr ""
 
@@ -4161,6 +4260,9 @@ msgid "Sent to {}."
 msgstr ""
 
 msgid "Sent: {}"
+msgstr ""
+
+msgid "September"
 msgstr ""
 
 msgid "Set tag"
@@ -4436,6 +4538,9 @@ msgstr ""
 msgid "Sundance"
 msgstr ""
 
+msgid "Sunday"
+msgstr ""
+
 msgid "Surname"
 msgstr ""
 
@@ -4589,7 +4694,13 @@ msgstr ""
 msgid "This video's format can't be played here."
 msgstr ""
 
+msgid "Thursday"
+msgstr ""
+
 msgid "Today"
+msgstr ""
+
+msgid "Tuesday"
 msgstr ""
 
 msgid "Turn camera off"
@@ -4616,10 +4727,10 @@ msgstr ""
 msgid "Type a message"
 msgstr ""
 
-msgid "Type a message to schedule."
+msgid "Type a message to group {}"
 msgstr ""
 
-msgid "Type a message to group {}"
+msgid "Type a message to schedule."
 msgstr ""
 
 msgid "Type a message to {}"
@@ -4931,6 +5042,9 @@ msgstr ""
 msgid "Website"
 msgstr ""
 
+msgid "Wednesday"
+msgstr ""
+
 msgid "What kind of call?"
 msgstr ""
 
@@ -5231,6 +5345,9 @@ msgstr ""
 msgid "group voice call from"
 msgstr ""
 
+msgid "hand raised"
+msgstr ""
+
 msgid "iPhone"
 msgstr ""
 
@@ -5372,6 +5489,9 @@ msgstr ""
 msgid "unknown error"
 msgstr ""
 
+msgid "unmuted"
+msgstr ""
+
 msgid "unread"
 msgstr ""
 
@@ -5430,6 +5550,9 @@ msgid "{} admins"
 msgstr ""
 
 msgid "{} asking to join:"
+msgstr ""
+
+msgid "{} at {}"
 msgstr ""
 
 msgid "{} blocked."
@@ -5713,3 +5836,4 @@ msgstr ""
 
 msgid "{}{}. Reported by {}"
 msgstr ""
+

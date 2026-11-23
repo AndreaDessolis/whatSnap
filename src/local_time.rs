@@ -22,36 +22,43 @@ impl Date {
 	}
 }
 
-const WEEKDAYS: [&str; 7] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const WEEKDAYS_ID: [&str; 7] = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-const MONTHS: [&str; 12] = [
-	"January",
-	"February",
-	"March",
-	"April",
-	"May",
-	"June",
-	"July",
-	"August",
-	"September",
-	"October",
-	"November",
-	"December",
-];
-const MONTHS_ID: [&str; 12] = [
-	"Januari",
-	"Februari",
-	"Maret",
-	"April",
-	"Mei",
-	"Juni",
-	"Juli",
-	"Agustus",
-	"September",
-	"Oktober",
-	"November",
-	"Desember",
-];
+/// The day name in the app language, from the po files like any other text.
+/// Spelled out one by one so `tools/i18n.py` finds every name.
+fn weekday_name(weekday: u32) -> &'static str {
+	match weekday % 7 {
+		0 => crate::i18n::tr("Sunday"),
+		1 => crate::i18n::tr("Monday"),
+		2 => crate::i18n::tr("Tuesday"),
+		3 => crate::i18n::tr("Wednesday"),
+		4 => crate::i18n::tr("Thursday"),
+		5 => crate::i18n::tr("Friday"),
+		_ => crate::i18n::tr("Saturday"),
+	}
+}
+
+/// The month name in the app language; `month` counts from 1.
+fn month_name(month: u32) -> &'static str {
+	match (month + 11) % 12 {
+		0 => crate::i18n::tr("January"),
+		1 => crate::i18n::tr("February"),
+		2 => crate::i18n::tr("March"),
+		3 => crate::i18n::tr("April"),
+		4 => crate::i18n::tr("May"),
+		5 => crate::i18n::tr("June"),
+		6 => crate::i18n::tr("July"),
+		7 => crate::i18n::tr("August"),
+		8 => crate::i18n::tr("September"),
+		9 => crate::i18n::tr("October"),
+		10 => crate::i18n::tr("November"),
+		_ => crate::i18n::tr("December"),
+	}
+}
+
+/// The first three letters, counted as characters so a translated name that
+/// starts with an accented letter can't be cut in the middle of it.
+fn abbreviated(name: &str) -> &str {
+	name.char_indices().nth(3).map_or(name, |(at, _)| &name[..at])
+}
 
 impl LocalTime {
 	#[cfg(windows)]
@@ -119,9 +126,8 @@ impl LocalTime {
 			0 => 12,
 			h => h,
 		};
-		let is_id = crate::i18n::is_indonesian();
-		let weekday = if is_id { WEEKDAYS_ID } else { WEEKDAYS }[self.weekday as usize % 7];
-		let month = if is_id { MONTHS_ID } else { MONTHS }[(self.month as usize + 11) % 12];
+		let weekday = weekday_name(self.weekday);
+		let month = month_name(self.month);
 		while let Some(c) = chars.next() {
 			if c != '%' {
 				out.push(c);
@@ -139,10 +145,10 @@ impl LocalTime {
 				Some('S') => write!(out, "{:02}", self.second),
 				Some('p') => write!(out, "{}", if self.hour < 12 { "AM" } else { "PM" }),
 				Some('A') => write!(out, "{weekday}"),
-				Some('a') => write!(out, "{}", &weekday[..3]),
+				Some('a') => write!(out, "{}", abbreviated(weekday)),
 				Some('B') => write!(out, "{month}"),
 				Some('%') => write!(out, "%"),
-				Some('b') => write!(out, "{}", &month[..3]),
+				Some('b') => write!(out, "{}", abbreviated(month)),
 				Some(other) => write!(out, "%{other}"),
 				None => write!(out, "%"),
 			};
@@ -199,6 +205,15 @@ mod tests {
 		let t = LocalTime { hour: 13, ..t };
 		assert_eq!(t.format("%l:%M %p"), " 1:07 PM");
 		assert_eq!(t.format("%I %p"), "01 PM");
+	}
+
+	#[test]
+	fn abbreviations_count_characters() {
+		assert_eq!(abbreviated("Tuesday"), "Tue");
+		assert_eq!(abbreviated("lunedì"), "lun");
+		assert_eq!(abbreviated("Ätna"), "Ätn");
+		assert_eq!(abbreviated("Mei"), "Mei");
+		assert_eq!(abbreviated("Ma"), "Ma");
 	}
 
 	#[test]

@@ -1174,20 +1174,13 @@ pub(crate) fn format_call_log_label(name: &str, text: &str, from_me: bool, times
 			let msg_date = local_dt.date();
 			let today = now_dt.date();
 			let yesterday = today.add_days(-1);
-			if crate::i18n::is_indonesian() {
-				if msg_date == today {
-					format!("{} {}", crate::i18n::tr("Today"), local_dt.format("%H:%M"))
-				} else if msg_date == yesterday {
-					format!("{} {}", crate::i18n::tr("Yesterday"), local_dt.format("%H:%M"))
-				} else {
-					local_dt.format("%d/%m/%Y %H:%M")
-				}
-			} else if msg_date == today {
-				format!("Today {}", local_dt.format("%I:%M %p"))
+			let time = local_dt.format(crate::i18n::tr("%I:%M %p"));
+			if msg_date == today {
+				format!("{} {}", crate::i18n::tr("Today"), time)
 			} else if msg_date == yesterday {
-				format!("Yesterday {}", local_dt.format("%I:%M %p"))
+				format!("{} {}", crate::i18n::tr("Yesterday"), time)
 			} else {
-				local_dt.format("%d/%m/%Y %I:%M %p")
+				format!("{} {}", local_dt.format("%d/%m/%Y"), time)
 			}
 		} else {
 			String::new()

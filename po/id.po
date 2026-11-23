@@ -6534,3 +6534,118 @@ msgstr "Ketik pesan ke {}"
 
 msgid "Type a message to group {}"
 msgstr "Ketik pesan ke grup {}"
+
+msgid "%A, %B %e, %Y"
+msgstr "%A, %e %B %Y"
+
+msgid "%I:%M %p"
+msgstr "%H:%M"
+
+msgid "%b %e"
+msgstr "%e %b"
+
+msgid "%l:%M %p"
+msgstr "%H:%M"
+
+msgid "April"
+msgstr "April"
+
+msgid "August"
+msgstr "Agustus"
+
+msgid "Call upgraded to group call."
+msgstr ""
+
+msgid "December"
+msgstr "Desember"
+
+msgid "February"
+msgstr "Februari"
+
+msgid "Friday"
+msgstr "Jumat"
+
+msgid "Hide people"
+msgstr ""
+
+msgid "Incoming group video call in"
+msgstr ""
+
+msgid "Incoming group voice call from"
+msgstr ""
+
+msgid "Incoming group voice call in"
+msgstr ""
+
+msgid "January"
+msgstr "Januari"
+
+msgid "Join call ({})"
+msgstr ""
+
+msgid "July"
+msgstr "Juli"
+
+msgid "June"
+msgstr "Juni"
+
+msgid "March"
+msgstr "Maret"
+
+msgid "May"
+msgstr "Mei"
+
+msgid "Monday"
+msgstr "Senin"
+
+msgid "November"
+msgstr "November"
+
+msgid "October"
+msgstr "Oktober"
+
+msgid "People list closed."
+msgstr ""
+
+msgid "People list opened."
+msgstr ""
+
+msgid "Ring again"
+msgstr ""
+
+msgid "Ring {} again"
+msgstr ""
+
+msgid "Ringing {} again."
+msgstr ""
+
+msgid "Saturday"
+msgstr "Sabtu"
+
+msgid "Select someone to ring first."
+msgstr ""
+
+msgid "September"
+msgstr "September"
+
+msgid "Sunday"
+msgstr "Minggu"
+
+msgid "Thursday"
+msgstr "Kamis"
+
+msgid "Tuesday"
+msgstr "Selasa"
+
+msgid "Wednesday"
+msgstr "Rabu"
+
+msgid "hand raised"
+msgstr ""
+
+msgid "unmuted"
+msgstr ""
+
+msgid "{} at {}"
+msgstr "{} pukul {}"
+
