@@ -1830,8 +1830,14 @@ pub fn bind_input_handlers(
 			};
 			call_status_label.set_label(&status);
 
-			let running_info =
-				crate::calls::helpers::call_running_info_text(direction, is_video, is_group, &peer_name, secs, is_reconnecting);
+			let running_info = crate::calls::helpers::call_running_info_text(
+				direction,
+				is_video,
+				is_group,
+				&peer_name,
+				secs,
+				is_reconnecting,
+			);
 			// Rewriting the read-only box every second would reset a screen
 			// reader's caret while the user reads it, so refresh it only every
 			// 30 seconds and keep the caret where it was.

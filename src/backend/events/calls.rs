@@ -815,22 +815,23 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 					};
 					let win_title = if is_group {
 						if let Some(grp) = group_name.as_deref() {
-							let kind = crate::i18n::tr(if is_video { "Incoming group video call in" } else { "Incoming group voice call in" });
+							let kind = crate::i18n::tr(if is_video {
+								"Incoming group video call in"
+							} else {
+								"Incoming group voice call in"
+							});
 							format!("{kind} {grp}")
 						} else {
 							let title_name = crate::calls::helpers::clean_call_title_peer_name(&name, is_saved);
-							let kind = crate::i18n::tr(if is_video { "Incoming group video call from" } else { "Incoming group voice call from" });
+							let kind = crate::i18n::tr(if is_video {
+								"Incoming group video call from"
+							} else {
+								"Incoming group voice call from"
+							});
 							format!("{kind} {title_name}")
 						}
 					} else {
-						crate::calls::helpers::format_call_window_title(
-							true,
-							false,
-							is_video,
-							&name,
-							is_saved,
-							None,
-						)
+						crate::calls::helpers::format_call_window_title(true, false, is_video, &name, is_saved, None)
 					};
 					let avatar_target = chat_jid.unwrap_or(caller);
 					crate::calls::helpers::update_call_avatar(parts, avatar_target);

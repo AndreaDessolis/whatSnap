@@ -825,8 +825,14 @@ pub(crate) fn toggle_camera(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowPart
 	let win_title =
 		crate::calls::helpers::format_call_window_title(is_incoming, is_group, true, &name, is_saved, clock.as_deref());
 	parts.call_parts.frame.set_title(&win_title);
-	let running_info =
-		crate::calls::helpers::call_running_info_text(s.call_info_direction(), true, is_group, &name, secs, s.call_is_reconnecting);
+	let running_info = crate::calls::helpers::call_running_info_text(
+		s.call_info_direction(),
+		true,
+		is_group,
+		&name,
+		secs,
+		s.call_is_reconnecting,
+	);
 	parts.call_parts.caller_info.set_value(&running_info);
 	crate::calls::helpers::show_call_device_combos(&s, parts);
 	drop(s);

@@ -147,7 +147,10 @@ pub(crate) fn call_running_info_text(
 		if peer_name.trim().is_empty() {
 			crate::i18n::tr(if is_video { "Group video call" } else { "Group voice call" }).to_string()
 		} else {
-			format!("{} {peer_name}", crate::i18n::tr(if is_video { "Group video call in" } else { "Group voice call in" }))
+			format!(
+				"{} {peer_name}",
+				crate::i18n::tr(if is_video { "Group video call in" } else { "Group voice call in" })
+			)
 		}
 	} else {
 		let p = match (direction, is_video) {
@@ -533,7 +536,11 @@ pub(crate) fn format_call_window_title(
 			crate::i18n::tr(if is_video { "Group video call" } else { "Group voice call" }).to_string()
 		} else if is_incoming {
 			let title_name = clean_call_title_peer_name(peer_name, is_saved);
-			let kind = crate::i18n::tr(if is_video { "Incoming group video call from" } else { "Incoming group voice call from" });
+			let kind = crate::i18n::tr(if is_video {
+				"Incoming group video call from"
+			} else {
+				"Incoming group voice call from"
+			});
 			format!("{kind} {title_name}")
 		} else {
 			let kind = crate::i18n::tr(if is_video { "Group video call in" } else { "Group voice call in" });
@@ -759,14 +766,8 @@ mod call_participant_tests {
 			format_call_window_title(false, true, false, "Dev Group", true, Some("04:12")),
 			"Group voice call in Dev Group"
 		);
-		assert_eq!(
-			format_call_window_title(false, true, false, "", true, None),
-			"Group voice call"
-		);
-		assert_eq!(
-			format_call_window_title(false, true, true, "", true, None),
-			"Group video call"
-		);
+		assert_eq!(format_call_window_title(false, true, false, "", true, None), "Group voice call");
+		assert_eq!(format_call_window_title(false, true, true, "", true, None), "Group video call");
 		assert_eq!(
 			format_call_window_title(true, true, false, "Alice", true, None),
 			"Incoming group voice call from Alice"

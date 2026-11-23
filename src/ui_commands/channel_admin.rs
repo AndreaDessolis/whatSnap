@@ -20,7 +20,6 @@ use crate::{
 	},
 };
 
-
 fn admin_invite_targets(s: &AppState) -> Vec<SendTarget> {
 	let person = |jid: &str| jid.ends_with("@s.whatsapp.net") || jid.ends_with("@lid");
 	let mut seen = std::collections::HashSet::new();

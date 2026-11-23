@@ -66,21 +66,14 @@ struct PersonRow {
 fn people_rows(s: &AppState) -> Vec<PersonRow> {
 	let mut rows: Vec<PersonRow> = Vec::new();
 	if s.active_call_id.is_some() || s.active_call_audio.is_some() {
-		let self_hand = if s.call_video.hand_raised {
-			format!(" [{}]", crate::i18n::tr("hand raised"))
-		} else {
-			String::new()
-		};
+		let self_hand =
+			if s.call_video.hand_raised { format!(" [{}]", crate::i18n::tr("hand raised")) } else { String::new() };
 		let self_muted = s
 			.active_call_audio
 			.as_ref()
 			.map(|a| a.is_muted.load(std::sync::atomic::Ordering::Relaxed))
 			.unwrap_or(s.call_start_muted);
-		let self_mute = if self_muted {
-			crate::i18n::tr("muted")
-		} else {
-			crate::i18n::tr("unmuted")
-		};
+		let self_mute = if self_muted { crate::i18n::tr("muted") } else { crate::i18n::tr("unmuted") };
 		rows.push(PersonRow {
 			jid: "self".to_string(),
 			name: crate::i18n::tr("You").to_string(),
@@ -107,11 +100,7 @@ fn people_rows(s: &AppState) -> Vec<PersonRow> {
 			"" => crate::i18n::tr("joining"),
 			other => other,
 		};
-		let hand = if p.hand_raised {
-			format!(" [{}]", crate::i18n::tr("hand raised"))
-		} else {
-			String::new()
-		};
+		let hand = if p.hand_raised { format!(" [{}]", crate::i18n::tr("hand raised")) } else { String::new() };
 		rows.push(PersonRow {
 			jid: p.jid.clone(),
 			name: p.name.clone(),
@@ -455,7 +444,12 @@ fn waiting_room(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, data: &s
 	let waiting: Vec<CallParticipant> = users
 		.iter()
 		.filter(|u| !text(u, "jid").is_empty())
-		.map(|u| CallParticipant { jid: text(u, "jid"), name: text(u, "name"), state: text(u, "state"), hand_raised: false })
+		.map(|u| CallParticipant {
+			jid: text(u, "jid"),
+			name: text(u, "name"),
+			state: text(u, "state"),
+			hand_raised: false,
+		})
 		.collect();
 	let arrived: Vec<String> = waiting
 		.iter()

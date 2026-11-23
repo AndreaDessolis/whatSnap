@@ -290,7 +290,12 @@ pub fn build_call_window() -> CallWindowParts {
 	let (camera_device_group, camera_device_combo) =
 		device_selector(&device_settings_panel, &device_settings_sizer, crate::i18n::tr("Camera"));
 	device_settings_panel.set_sizer(device_settings_sizer, true);
-	sizer.add(&device_settings_panel, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right | SizerFlag::Bottom, 10);
+	sizer.add(
+		&device_settings_panel,
+		0,
+		SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right | SizerFlag::Bottom,
+		10,
+	);
 	device_settings_panel.show(false);
 
 	let people_panel = Panel::builder(&panel).build();
