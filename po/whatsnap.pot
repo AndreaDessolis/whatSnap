@@ -1010,9 +1010,6 @@ msgstr ""
 msgid "Call notifications: show notifications for incoming calls"
 msgstr ""
 
-msgid "Call upgraded to group call."
-msgstr ""
-
 msgid "Call with"
 msgstr ""
 
@@ -2141,13 +2138,7 @@ msgstr ""
 msgid "Group sounds: play sounds for new group messages"
 msgstr ""
 
-msgid "Group video call"
-msgstr ""
-
 msgid "Group video call in"
-msgstr ""
-
-msgid "Group voice call"
 msgstr ""
 
 msgid "Group voice call in"
@@ -2186,9 +2177,6 @@ msgstr ""
 msgid "Hide message content: notifications from this chat don't show what the message says"
 msgstr ""
 
-msgid "Hide people"
-msgstr ""
-
 msgid "Hide phone numbers in groups: show Unknown member for people with no saved name or profile name"
 msgstr ""
 
@@ -2211,9 +2199,6 @@ msgid "I'd like you to be an admin of my WhatsApp channel."
 msgstr ""
 
 msgid "Ignore"
-msgstr ""
-
-msgid "In group call"
 msgstr ""
 
 msgid "In group call with"
@@ -2247,15 +2232,6 @@ msgid "Incoming group call from"
 msgstr ""
 
 msgid "Incoming group video call from"
-msgstr ""
-
-msgid "Incoming group video call in"
-msgstr ""
-
-msgid "Incoming group voice call from"
-msgstr ""
-
-msgid "Incoming group voice call in"
 msgstr ""
 
 msgid "Incoming sounds: play a sound for new messages"
@@ -2331,9 +2307,6 @@ msgid "Join a call from a link someone shared"
 msgstr ""
 
 msgid "Join call"
-msgstr ""
-
-msgid "Join call ({})"
 msgstr ""
 
 msgid "Join call link"
@@ -3242,12 +3215,6 @@ msgstr ""
 msgid "People"
 msgstr ""
 
-msgid "People list closed."
-msgstr ""
-
-msgid "People list opened."
-msgstr ""
-
 msgid "Permanently delete your whole call history"
 msgstr ""
 
@@ -3851,16 +3818,7 @@ msgstr ""
 msgid "Retrying send..."
 msgstr ""
 
-msgid "Ring again"
-msgstr ""
-
-msgid "Ring {} again"
-msgstr ""
-
 msgid "Ringing"
-msgstr ""
-
-msgid "Ringing {} again."
 msgstr ""
 
 msgid "Ringing {}."
@@ -4089,9 +4047,6 @@ msgid "Select messages"
 msgstr ""
 
 msgid "Select someone in the call first."
-msgstr ""
-
-msgid "Select someone to ring first."
 msgstr ""
 
 msgid "Select someone who wants to join first."
@@ -5345,9 +5300,6 @@ msgstr ""
 msgid "group voice call from"
 msgstr ""
 
-msgid "hand raised"
-msgstr ""
-
 msgid "iPhone"
 msgstr ""
 
@@ -5487,9 +5439,6 @@ msgid "typing…"
 msgstr ""
 
 msgid "unknown error"
-msgstr ""
-
-msgid "unmuted"
 msgstr ""
 
 msgid "unread"
