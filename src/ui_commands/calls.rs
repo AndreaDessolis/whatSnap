@@ -90,19 +90,10 @@ pub(crate) fn joinable_call_for_chat<'a>(s: &'a AppState, jid: &str) -> Option<&
 
 pub(crate) fn apply_call_buttons(s: &AppState, parts: &WindowParts, jid: &str) {
 	let can_call = can_call(s, jid);
-	let joinable_call = if can_call { joinable_call_for_chat(s, jid) } else { None };
-	let joinable = joinable_call.is_some();
+	let joinable = can_call && joinable_call_for_chat(s, jid).is_some();
 	let c = &parts.conversations_parts;
 	c.place_call_btn.show(can_call && !joinable);
 	c.place_video_call_btn.show(can_call && !joinable);
-	if let Some(call) = joinable_call {
-		let label = if call.connected > 0 {
-			crate::i18n::tr_fmt("Join call ({})", &[&call.connected.to_string()])
-		} else {
-			crate::i18n::tr("Join call").to_string()
-		};
-		c.join_call_btn.set_label(&label);
-	}
 	c.join_call_btn.show(joinable);
 }
 
@@ -224,7 +215,6 @@ pub(crate) fn join_group_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowPa
 	c.mute_btn.show(true);
 	c.device_settings_btn.set_label(crate::i18n::tr("Device settings"));
 	c.device_settings_btn.show(true);
-	c.device_settings_panel.show(false);
 	c.input_device_group.show(false);
 	c.output_device_group.show(false);
 	c.camera_device_group.show(false);
@@ -386,7 +376,6 @@ fn dial(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, jid: String, vid
 	parts.call_parts.mute_btn.show(true);
 	parts.call_parts.device_settings_btn.set_label(crate::i18n::tr("Device settings"));
 	parts.call_parts.device_settings_btn.show(true);
-	parts.call_parts.device_settings_panel.show(false);
 	parts.call_parts.input_device_group.show(false);
 	parts.call_parts.output_device_group.show(false);
 	parts.call_parts.camera_device_group.show(false);
@@ -497,7 +486,6 @@ pub(crate) fn answer_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>
 		parts.call_parts.dismiss_btn.show(false);
 		parts.call_parts.callback_btn.show(false);
 		parts.call_parts.close_btn.show(false);
-		parts.call_parts.device_settings_panel.show(false);
 		parts.call_parts.input_device_group.show(false);
 		parts.call_parts.output_device_group.show(false);
 		parts.call_parts.camera_device_group.show(false);
@@ -539,7 +527,6 @@ pub(crate) fn reject_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>
 		parts.frame.layout();
 		parts.call_parts.frame.show(false);
 		parts.call_parts.device_settings_btn.show(false);
-		parts.call_parts.device_settings_panel.show(false);
 		parts.call_parts.input_device_group.show(false);
 		parts.call_parts.output_device_group.show(false);
 		parts.call_parts.camera_device_group.show(false);
@@ -574,7 +561,6 @@ pub(crate) fn leave_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>)
 		parts.frame.layout();
 		parts.call_parts.frame.show(false);
 		parts.call_parts.device_settings_btn.show(false);
-		parts.call_parts.device_settings_panel.show(false);
 		parts.call_parts.input_device_group.show(false);
 		parts.call_parts.output_device_group.show(false);
 		parts.call_parts.camera_device_group.show(false);
@@ -596,7 +582,6 @@ pub(crate) fn leave_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>)
 		parts.frame.layout();
 		parts.call_parts.frame.show(false);
 		parts.call_parts.device_settings_btn.show(false);
-		parts.call_parts.device_settings_panel.show(false);
 		parts.call_parts.input_device_group.show(false);
 		parts.call_parts.output_device_group.show(false);
 		parts.call_parts.camera_device_group.show(false);
@@ -688,9 +673,8 @@ pub(crate) fn mute_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) 
 
 pub(crate) fn toggle_call_device_settings(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
 	let c = &parts.call_parts;
-	let is_shown = c.device_settings_panel.is_shown();
+	let is_shown = c.input_device_group.is_shown();
 	if is_shown {
-		c.device_settings_panel.show(false);
 		c.input_device_group.show(false);
 		c.output_device_group.show(false);
 		c.camera_device_group.show(false);
@@ -702,12 +686,10 @@ pub(crate) fn toggle_call_device_settings(state: &Rc<RefCell<AppState>>, parts: 
 		let s = state.borrow();
 		crate::calls::helpers::show_call_device_combos(&s, parts);
 		drop(s);
-		c.device_settings_panel.show(true);
 		c.input_device_group.show(true);
 		c.output_device_group.show(true);
 		// camera combo visibility is handled by show_call_device_combos based on is_video
 		c.device_settings_btn.set_label(crate::i18n::tr("Hide device settings"));
-		c.device_settings_panel.layout();
 		c.frame.layout();
 		// Keep focus on device settings button, don't steal it
 		announce_call(parts, crate::i18n::tr("Audio and video settings opened."), Priority::Medium);
@@ -828,7 +810,6 @@ pub(crate) fn toggle_camera(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowPart
 	let running_info = crate::calls::helpers::call_running_info_text(
 		s.call_info_direction(),
 		true,
-		is_group,
 		&name,
 		secs,
 		s.call_is_reconnecting,
