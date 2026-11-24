@@ -15,3 +15,17 @@ func TestUnifiedResponseText(t *testing.T) {
 		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestUnifiedEntityTextEdges(t *testing.T) {
+	for in, want := range map[string]string{
+		"plain":                        "plain",
+		"{{a}}x{{/a}} {{b}}y":          "x {{b}}y",
+		"{{ {{a}}x{{/a}}":              "{{ x",
+		"{{a}}unclosed":                "{{a}}unclosed",
+		"{{a}}one{{/a}}{{a}}two{{/a}}": "onetwo",
+	} {
+		if got := unifiedEntityText(in, nil); got != want {
+			t.Errorf("%q: got %q want %q", in, got, want)
+		}
+	}
+}

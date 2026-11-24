@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"go.mau.fi/whatsmeow/proto/waAICommonDeprecated"
@@ -74,8 +73,6 @@ type unifiedPrimitive struct {
 	} `json:"item"`
 }
 
-var unifiedPlaceholder = regexp.MustCompile(`\{\{([^\s}]+)}}([\s\S]*?)\{\{/[^\s}]+}}`)
-
 func isHTTPURL(raw string) bool {
 	u, err := url.Parse(raw)
 	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
@@ -85,56 +82,80 @@ func isHTTPURL(raw string) bool {
 // primitive: links keep their label and gain their address, citations show
 // the name of their source, everything else keeps the wrapped text.
 func unifiedEntityText(text string, entities []unifiedEntity) string {
-	return unifiedPlaceholder.ReplaceAllStringFunc(text, func(match string) string {
-		parts := unifiedPlaceholder.FindStringSubmatch(match)
-		key, inner := parts[1], parts[2]
-		for _, ent := range entities {
-			if ent.Key != key {
-				continue
-			}
-			meta := ent.Metadata
-			switch meta.TypeName {
-			case "GenAIInlineLinkItem":
-				label := strings.TrimSpace(meta.DisplayName)
-				if label == "" {
-					label = strings.TrimSpace(inner)
-				}
-				if isHTTPURL(meta.URL) && label != meta.URL {
-					return label + " (" + meta.URL + ")"
-				}
-				return label
-			case "GenAIDeeplinkItem", "GenAIDeepLinkItem":
-				label := strings.TrimSpace(meta.Text)
-				if label == "" {
-					label = strings.TrimSpace(inner)
-				}
-				if isHTTPURL(meta.DeepLinkURL) && label != meta.DeepLinkURL {
-					return label + " (" + meta.DeepLinkURL + ")"
-				}
-				return label
-			case "GenAISearchCitationItem":
-				name := ""
-				if len(meta.Sources) > 0 {
-					name = meta.Sources[0].DisplayName
-				}
-				if name == "" {
-					name = meta.ReferenceName
-				}
-				if name == "" {
-					name = meta.ReferenceTitle
-				}
-				if name = strings.TrimSpace(name); name != "" {
-					return "[" + name + "]"
-				}
-			case "GenAILatexItem":
-				if meta.LatexExpression != "" {
-					return meta.LatexExpression
-				}
-			}
+	var out strings.Builder
+	for {
+		start := strings.Index(text, "{{")
+		if start < 0 {
 			break
 		}
-		return inner
-	})
+		keyEnd := strings.Index(text[start:], "}}")
+		key := ""
+		if keyEnd > 2 {
+			key = text[start+2 : start+keyEnd]
+		}
+		closeTag := "{{/" + key + "}}"
+		innerStart := start + keyEnd + 2
+		innerLen := strings.Index(text[min(innerStart, len(text)):], closeTag)
+		if key == "" || strings.ContainsAny(key, " \t\r\n{}/") || innerLen < 0 {
+			out.WriteString(text[:start+2])
+			text = text[start+2:]
+			continue
+		}
+		out.WriteString(text[:start])
+		out.WriteString(unifiedEntityLabel(key, text[innerStart:innerStart+innerLen], entities))
+		text = text[innerStart+innerLen+len(closeTag):]
+	}
+	out.WriteString(text)
+	return out.String()
+}
+
+func unifiedEntityLabel(key, inner string, entities []unifiedEntity) string {
+	for _, ent := range entities {
+		if ent.Key != key {
+			continue
+		}
+		meta := ent.Metadata
+		switch meta.TypeName {
+		case "GenAIInlineLinkItem":
+			label := strings.TrimSpace(meta.DisplayName)
+			if label == "" {
+				label = strings.TrimSpace(inner)
+			}
+			if isHTTPURL(meta.URL) && label != meta.URL {
+				return label + " (" + meta.URL + ")"
+			}
+			return label
+		case "GenAIDeeplinkItem", "GenAIDeepLinkItem":
+			label := strings.TrimSpace(meta.Text)
+			if label == "" {
+				label = strings.TrimSpace(inner)
+			}
+			if isHTTPURL(meta.DeepLinkURL) && label != meta.DeepLinkURL {
+				return label + " (" + meta.DeepLinkURL + ")"
+			}
+			return label
+		case "GenAISearchCitationItem":
+			name := ""
+			if len(meta.Sources) > 0 {
+				name = meta.Sources[0].DisplayName
+			}
+			if name == "" {
+				name = meta.ReferenceName
+			}
+			if name == "" {
+				name = meta.ReferenceTitle
+			}
+			if name = strings.TrimSpace(name); name != "" {
+				return "[" + name + "]"
+			}
+		case "GenAILatexItem":
+			if meta.LatexExpression != "" {
+				return meta.LatexExpression
+			}
+		}
+		break
+	}
+	return inner
 }
 
 // unifiedPrimitiveText mirrors WA Web's per-primitive plain text. follow
