@@ -62,7 +62,8 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				// WA Web mutes every notification while the offline backlog is
 				// still being delivered (isOfflineResumeInProgress); old
 				// timestamps cover history and late retries.
-				let is_backlog = data.get("offline").and_then(|v| v.as_bool()).unwrap_or(false)
+				let is_offline_resume = data.get("offline").and_then(|v| v.as_bool()).unwrap_or(false);
+				let is_backlog = is_offline_resume
 					|| whatsnap::is_backlog_message(
 						data.get("timestamp").and_then(|t| t.as_i64()).unwrap_or(0),
 						std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs()
@@ -466,7 +467,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 										s.settings.output_device_name.clone(),
 									);
 								}
-							} else if is_missed_call || !is_call_line {
+							} else if !is_offline_resume && (is_missed_call || !is_call_line) {
 								crate::ui::chat_ui::record_catch_up_alert(
 									&mut s,
 									jid,
@@ -513,7 +514,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 								alert
 							};
 							let alert = if is_backlog {
-								if is_missed_call || !is_call_line {
+								if !is_offline_resume && (is_missed_call || !is_call_line) {
 									let allowed = whatsnap::IncomingAlert {
 										sound: alert.sound
 											&& s.settings.sounds_enabled
