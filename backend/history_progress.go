@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"time"
 
+	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/proto/waHistorySync"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -111,6 +114,19 @@ func (acc *Account) resetRecentSyncProgress() {
 // The backlog the server kept while whatSnap was closed or offline, shown the
 // way WA Web's loading screen does ("Downloading messages: N%"), from the
 // offline_preview count and the stanzas received since.
+// offlineResumeGrace caps how long the backlog counts as being delivered if the
+// end marker never shows up (whatsmeow's own watchdog fires after 60 s).
+const offlineResumeGrace = 90 * time.Second
+
+// offlineResumeInProgress is WA Web's isOfflineResumeInProgress: from the
+// login until the server's end-of-offline marker, incoming messages are
+// delivered without a sound or toast (WAWebMsgNotification mutes them with
+// OfflineResumeInProgress).
+func (acc *Account) offlineResumeInProgress() bool {
+	since := acc.offlineSince.Load()
+	return since != 0 && time.Since(time.Unix(0, since)) < offlineResumeGrace
+}
+
 func (acc *Account) handleOfflineSyncProgress(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.OfflineSyncPreview:
@@ -120,6 +136,36 @@ func (acc *Account) handleOfflineSyncProgress(evt interface{}) {
 	case *events.OfflineSyncProgress:
 		acc.broadcastEvent("offline_sync", map[string]interface{}{"active": v.Percent < 100, "percent": v.Percent, "total": v.Total})
 	case *events.OfflineSyncCompleted:
+		acc.offlineSince.Store(0)
+		go acc.syncAppStateAfterOffline()
 		acc.broadcastEvent("offline_sync", map[string]interface{}{"active": false, "percent": 100})
 	}
+}
+
+// syncAppStateAfterOffline fetches every app state collection once the offline
+// backlog is done, the way WA Web does on each start (WAWebSyncdCoreApi waits
+// for offline delivery end, then processOnAppResume). The server's
+// server_sync notifications are only delivered while they are fresh, so after
+// days offline contact names, pins and archive changes made on the phone in
+// that time would otherwise never arrive. An up to date collection costs one
+// small round trip.
+func (acc *Account) syncAppStateAfterOffline() {
+	c := acc.wa()
+	if c == nil || !c.IsLoggedIn() {
+		return
+	}
+	for _, name := range appstate.AllPatchNames {
+		// A collection never synced yet belongs to the pairing bootstrap,
+		// which waits for the phone's keys; leave it alone.
+		if version, _, err := c.Store.AppState.GetAppStateVersion(acc.ctx, string(name)); err != nil || version == 0 {
+			continue
+		}
+		if err := c.FetchAppState(acc.ctx, name, false, false); err != nil {
+			log.Printf("App state %s sync after the offline backlog failed: %v", name, err)
+			if errors.Is(err, whatsmeow.ErrNotConnected) || errors.Is(err, whatsmeow.ErrIQDisconnected) {
+				return
+			}
+		}
+	}
+	acc.populateChatsFromStore()
 }

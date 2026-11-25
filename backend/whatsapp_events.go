@@ -2055,6 +2055,7 @@ func (acc *Account) eventHandler(evt interface{}) {
 			"for_everyone": false,
 		})
 	case *events.Connected:
+		acc.offlineSince.Store(time.Now().UnixNano())
 		acc.forgetPresenceSubscriptions()
 		acc.forgetChannelRefreshes()
 		acc.convertStoredVotesOnce.Do(func() { go acc.runOnce("convert_stored_poll_votes_v1", acc.convertStoredPollVotes) })

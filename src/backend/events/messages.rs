@@ -59,11 +59,15 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				// Group event lines ("X joined", "Y left", a new subject) never
 				// alert or count as unread in the official apps, muted or not.
 				let is_system = data.get("mediaType").and_then(|m| m.as_str()) == Some("system");
-				let is_backlog = whatsnap::is_backlog_message(
-					data.get("timestamp").and_then(|t| t.as_i64()).unwrap_or(0),
-					std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs()
-						as i64,
-				);
+				// WA Web mutes every notification while the offline backlog is
+				// still being delivered (isOfflineResumeInProgress); old
+				// timestamps cover history and late retries.
+				let is_backlog = data.get("offline").and_then(|v| v.as_bool()).unwrap_or(false)
+					|| whatsnap::is_backlog_message(
+						data.get("timestamp").and_then(|t| t.as_i64()).unwrap_or(0),
+						std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs()
+							as i64,
+					);
 				let is_call_line = data.get("mediaType").and_then(|m| m.as_str()) == Some("call");
 				let is_missed_call = is_call_line && text.starts_with("Missed");
 
@@ -1700,7 +1704,9 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 								s.muted_jids.contains(chat_jid),
 								s.archived_jids.contains(chat_jid),
 							);
-							let alert = if s.settings.reaction_notifications {
+							let alert = if s.settings.reaction_notifications
+								&& !data.get("offline").and_then(|v| v.as_bool()).unwrap_or(false)
+							{
 								alert
 							} else {
 								whatsnap::IncomingAlert { sound: false, toast: false }

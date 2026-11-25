@@ -15,6 +15,11 @@ import (
 )
 
 func (acc *Account) broadcastEvent(evtType string, data interface{}) {
+	if evtType == "message" || evtType == "message_reaction" {
+		if m, ok := data.(map[string]interface{}); ok && acc.offlineResumeInProgress() {
+			m["offline"] = true
+		}
+	}
 	line := acc.encodeEvent(evtType, data)
 	if line == nil {
 		return

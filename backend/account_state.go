@@ -25,6 +25,9 @@ type Account struct {
 	cancel   context.CancelFunc
 	commands chan queuedCommand
 	closing  atomic.Bool
+	// offlineSince is when the current connection started receiving the
+	// offline backlog (unix nanoseconds), 0 once the server has finished it.
+	offlineSince atomic.Int64
 
 	autoDownloadSlots   chan struct{}
 	autoDownloadMu      sync.Mutex
