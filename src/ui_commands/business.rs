@@ -156,10 +156,7 @@ pub(crate) fn show_message_options(state: &Rc<RefCell<AppState>>, parts: &Rc<Win
 						let _ = state.borrow().ui_tx.send(UiCommand::OpenWhatsAppLink(option.value.clone()));
 						dialog.end_modal(ID_CANCEL);
 					} else {
-						wxdragon::utils::launch_default_browser(
-							&option.value,
-							wxdragon::utils::BrowserLaunchFlags::Default,
-						);
+						crate::platform::shell_open::open_url(&option.value);
 					}
 				}
 				"call" | "copy" => {
@@ -490,7 +487,7 @@ pub(crate) fn show_catalog(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts
 		if let Some(p) = list.get_selection().and_then(|i| products_site.get(i as usize))
 			&& !p.url.is_empty()
 		{
-			wxdragon::utils::launch_default_browser(&p.url, wxdragon::utils::BrowserLaunchFlags::Default);
+			crate::platform::shell_open::open_url(&p.url);
 		}
 	});
 	close_btn.on_click(move |_| dialog.end_modal(ID_CANCEL));

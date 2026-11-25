@@ -407,7 +407,7 @@ fn show_contact_dialog(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, e
 					dialog.end_modal(ID_OK);
 				}
 				RowAction::Link(url, _) => {
-					wxdragon::utils::launch_default_browser(url, wxdragon::utils::BrowserLaunchFlags::Default);
+					crate::platform::shell_open::open_url(url);
 				}
 			}
 		}

@@ -6448,10 +6448,7 @@ pub fn bind_input_handlers(
 								if whatsnap::parse_whatsapp_link(url).is_some() {
 									let _ = tx_invite_enter.send(UiCommand::OpenWhatsAppLink(url.to_string()));
 								} else {
-									wxdragon::utils::launch_default_browser(
-										url,
-										wxdragon::utils::BrowserLaunchFlags::Default,
-									);
+									crate::platform::shell_open::open_url(url);
 								}
 							};
 							if urls.len() == 1 {

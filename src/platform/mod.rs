@@ -14,6 +14,7 @@ pub mod link_handler;
 pub mod memory;
 pub mod paths;
 pub mod quit;
+pub mod shell_open;
 pub mod single_instance;
 pub mod toast;
 #[cfg(target_os = "windows")]
