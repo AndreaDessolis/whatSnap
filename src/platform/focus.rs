@@ -82,10 +82,38 @@ pub fn bring_to_front(hwnd: HWND) {
 /// closes Windows leaves nothing focused (a screen reader says "unknown").
 static PREVIOUS: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
 
+fn class_name(hwnd: HWND) -> String {
+	let mut name = [0u16; 128];
+	let len = unsafe { windows::Win32::UI::WindowsAndMessaging::GetClassNameW(hwnd, &mut name) };
+	usize::try_from(len).map_or_else(|_| String::new(), |len| String::from_utf16_lossy(&name[..len.min(name.len())]))
+}
+
 fn is_notification_host(hwnd: HWND) -> bool {
-	let mut name = [0u16; 64];
-	let len = unsafe { windows::Win32::UI::WindowsAndMessaging::GetClassNameW(hwnd, &mut name) } as usize;
-	String::from_utf16_lossy(&name[..len.min(name.len())]) == "Windows.UI.Core.CoreWindow"
+	class_name(hwnd) == "Windows.UI.Core.CoreWindow"
+}
+
+/// Shell surfaces that aren't somewhere the user works: the taskbar, flyouts
+/// and the notification host. The desktop itself (Progman, WorkerW) counts as
+/// a place to go back to.
+fn is_shell_surface(hwnd: HWND) -> bool {
+	matches!(
+		class_name(hwnd).as_str(),
+		"Shell_TrayWnd"
+			| "Shell_SecondaryTrayWnd"
+			| "Windows.UI.Core.CoreWindow"
+			| "XamlExplorerHostIslandWindow"
+			| "TopLevelWindowForOverflowXamlIsland"
+	)
+}
+
+fn is_desktop(hwnd: HWND) -> bool {
+	matches!(class_name(hwnd).as_str(), "Progman" | "WorkerW")
+}
+
+fn process_id(hwnd: HWND) -> u32 {
+	let mut pid = 0u32;
+	unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
+	pid
 }
 
 unsafe extern "system" fn on_foreground(
@@ -97,12 +125,10 @@ unsafe extern "system" fn on_foreground(
 	_thread: u32,
 	_time: u32,
 ) {
-	if hwnd.is_invalid() || is_notification_host(hwnd) {
+	if hwnd.is_invalid() || is_shell_surface(hwnd) {
 		return;
 	}
-	let mut pid = 0u32;
-	unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
-	if pid != std::process::id() {
+	if process_id(hwnd) != std::process::id() {
 		PREVIOUS.store(hwnd.0 as isize, std::sync::atomic::Ordering::SeqCst);
 	}
 }
@@ -136,43 +162,152 @@ pub fn track_foreground() {
 	});
 }
 
-/// After a notification button that works without whatSnap's window: waits for
-/// the notification to close and, if that left no window focused, puts the
-/// user back in the window they were in. Does nothing if they already moved on.
-pub fn restore_previous_after_toast() {
-	let raw = PREVIOUS.load(std::sync::atomic::Ordering::SeqCst);
-	if raw == 0 {
-		return;
+/// Visible and not cloaked (Windows cloaks closed shell surfaces and windows
+/// on other virtual desktops).
+fn shown(hwnd: HWND) -> bool {
+	use windows::Win32::Graphics::Dwm::{DWMWA_CLOAKED, DwmGetWindowAttribute};
+	if !unsafe { IsWindowVisible(hwnd) }.as_bool() {
+		return false;
 	}
-	crate::util::spawn_named("focus restore", move || {
-		let target = HWND(raw as *mut _);
+	let mut cloaked = 0u32;
+	let read =
+		unsafe { DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&raw mut cloaked).cast(), size_of::<u32>() as u32) };
+	read.is_err() || cloaked == 0
+}
+
+/// Whether the window is one the user works in: shown, not minimized, not a
+/// tool, shell or desktop window, and not whatSnap's.
+fn is_app_window(hwnd: HWND) -> bool {
+	use windows::Win32::UI::WindowsAndMessaging::{
+		GWL_EXSTYLE, GetWindowLongPtrW, GetWindowTextLengthW, IsIconic, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+	};
+	if hwnd.is_invalid() || !unsafe { IsWindow(Some(hwnd)) }.as_bool() || !shown(hwnd) {
+		return false;
+	}
+	if unsafe { IsIconic(hwnd) }.as_bool() {
+		return false;
+	}
+	let ex_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+	if ex_style & (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) as isize != 0 {
+		return false;
+	}
+	if !owner_of(hwnd).is_invalid() || unsafe { GetWindowTextLengthW(hwnd) } == 0 {
+		return false;
+	}
+	process_id(hwnd) != std::process::id() && !is_shell_surface(hwnd) && !is_desktop(hwnd)
+}
+
+/// The window highest in the z-order that `matches` accepts, if any.
+fn topmost(matches: fn(HWND) -> bool) -> Option<HWND> {
+	use windows::Win32::{Foundation::LPARAM, UI::WindowsAndMessaging::EnumWindows};
+	struct Search {
+		matches: fn(HWND) -> bool,
+		found: HWND,
+	}
+	unsafe extern "system" fn visit(hwnd: HWND, search: LPARAM) -> windows::core::BOOL {
+		let search = unsafe { &mut *(search.0 as *mut Search) };
+		if (search.matches)(hwnd) {
+			search.found = hwnd;
+			return false.into();
+		}
+		true.into()
+	}
+	let mut search = Search { matches, found: HWND::default() };
+	unsafe {
+		let _ = EnumWindows(Some(visit), LPARAM((&raw mut search) as isize));
+	}
+	(!search.found.is_invalid()).then_some(search.found)
+}
+
+/// The notification center, if it's open: the shell's notification host still
+/// showing a window once the pressed notification has gone.
+fn notification_center() -> Option<HWND> {
+	fn is_center(hwnd: HWND) -> bool {
+		is_notification_host(hwnd) && shown(hwnd) && process_name(hwnd).eq_ignore_ascii_case("ShellExperienceHost.exe")
+	}
+	topmost(is_center)
+}
+
+/// The file name of the window's program, such as `ShellExperienceHost.exe`.
+fn process_name(hwnd: HWND) -> String {
+	use windows::{
+		Win32::{
+			Foundation::CloseHandle,
+			System::Threading::{
+				OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
+			},
+		},
+		core::PWSTR,
+	};
+	unsafe {
+		let Ok(process) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id(hwnd)) else {
+			return String::new();
+		};
+		let mut buffer = [0u16; 1024];
+		let mut len = buffer.len() as u32;
+		let read = QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, PWSTR(buffer.as_mut_ptr()), &mut len);
+		let _ = CloseHandle(process);
+		if read.is_err() {
+			return String::new();
+		}
+		let path = String::from_utf16_lossy(&buffer[..len as usize]);
+		path.rsplit('\\').next().unwrap_or_default().to_owned()
+	}
+}
+
+/// Where the user was: the window tracked as last in front while it's still
+/// there to go back to, else the topmost app window, else the desktop.
+fn last_place() -> Option<HWND> {
+	use windows::{Win32::UI::WindowsAndMessaging::FindWindowW, core::w};
+	let previous = HWND(PREVIOUS.load(std::sync::atomic::Ordering::SeqCst) as *mut _);
+	let previous_usable = !previous.is_invalid()
+		&& (is_app_window(previous) || (unsafe { IsWindow(Some(previous)) }.as_bool() && is_desktop(previous)));
+	if previous_usable {
+		return Some(previous);
+	}
+	topmost(is_app_window)
+		.or_else(|| unsafe { FindWindowW(w!("Progman"), None) }.ok().filter(|hwnd| !hwnd.is_invalid()))
+}
+
+/// Moves the foreground to `hwnd` from the background: directly if Windows
+/// allows it, else by sharing input with the foreground thread for a moment,
+/// else the way Alt+Tab switches.
+fn switch_to(hwnd: HWND) {
+	use windows::Win32::UI::WindowsAndMessaging::SwitchToThisWindow;
+	unsafe {
+		if SetForegroundWindow(hwnd).as_bool() {
+			return;
+		}
+		let current = GetForegroundWindow();
+		let foreground_thread = if current.is_invalid() { 0 } else { GetWindowThreadProcessId(current, None) };
+		let me = GetCurrentThreadId();
+		let attached = foreground_thread != 0
+			&& foreground_thread != me
+			&& AttachThreadInput(me, foreground_thread, true).as_bool();
+		let moved = SetForegroundWindow(hwnd).as_bool();
+		if attached {
+			let _ = AttachThreadInput(me, foreground_thread, false);
+		}
+		if !moved {
+			SwitchToThisWindow(hwnd, true);
+		}
+	}
+}
+
+/// After a notification button that works without whatSnap's window: waits for
+/// the notification to close and, if that left focus nowhere, puts it back on
+/// the notification center when that's still open, otherwise where the user
+/// was (their last app, or the desktop). Never on whatSnap, and nothing at all
+/// once the user is in an app.
+pub fn restore_previous_after_toast() {
+	crate::util::spawn_named("focus restore", || {
 		for _ in 0..12 {
-			std::thread::sleep(std::time::Duration::from_millis(100));
-			unsafe {
-				use windows::Win32::UI::WindowsAndMessaging::IsIconic;
-				if !IsWindow(Some(target)).as_bool() || !IsWindowVisible(target).as_bool() || IsIconic(target).as_bool()
-				{
-					return;
-				}
-				let current = GetForegroundWindow();
-				if current == target {
-					return;
-				}
-				if !current.is_invalid() && !is_notification_host(current) {
-					return;
-				}
-				if SetForegroundWindow(target).as_bool() {
-					return;
-				}
-				let foreground_thread = GetWindowThreadProcessId(current, None);
-				let me = GetCurrentThreadId();
-				let attached = foreground_thread != 0
-					&& foreground_thread != me
-					&& AttachThreadInput(me, foreground_thread, true).as_bool();
-				let _ = SetForegroundWindow(target);
-				if attached {
-					let _ = AttachThreadInput(me, foreground_thread, false);
-				}
+			std::thread::sleep(std::time::Duration::from_millis(125));
+			if is_app_window(unsafe { GetForegroundWindow() }) {
+				return;
+			}
+			if let Some(target) = notification_center().or_else(last_place) {
+				switch_to(target);
 			}
 		}
 	});
