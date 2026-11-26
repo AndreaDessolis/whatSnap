@@ -513,6 +513,11 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 							} else {
 								alert
 							};
+							let alert = if crate::ui::chat_ui::locked_chat_silenced(&s, jid) {
+								whatsnap::IncomingAlert { sound: false, toast: false }
+							} else {
+								alert
+							};
 							let alert = if is_backlog {
 								if !is_offline_resume && (is_missed_call || !is_call_line) {
 									let allowed = whatsnap::IncomingAlert {
@@ -1714,6 +1719,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 							);
 							let alert = if s.settings.reaction_notifications
 								&& !data.get("offline").and_then(|v| v.as_bool()).unwrap_or(false)
+								&& !crate::ui::chat_ui::locked_chat_silenced(&s, chat_jid)
 							{
 								alert
 							} else {

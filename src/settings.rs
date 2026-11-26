@@ -114,6 +114,10 @@ pub struct Settings {
 	pub chat_lock_hello_offered: bool,
 	/// Minutes without a key press before shown locked chats lock again; 0 never.
 	pub chat_lock_auto_lock_mins: u32,
+	/// Lock shown locked chats when whatSnap is minimized or hidden to the tray.
+	pub chat_lock_on_minimize: bool,
+	/// Sound and notifications for locked chats while they are locked; off is silent.
+	pub chat_lock_notify: bool,
 }
 
 pub const TAB_NAMES: [&str; 7] =
@@ -205,6 +209,8 @@ impl Default for Settings {
 			chat_lock_hello: false,
 			chat_lock_hello_offered: false,
 			chat_lock_auto_lock_mins: 0,
+			chat_lock_on_minimize: false,
+			chat_lock_notify: true,
 		}
 	}
 }

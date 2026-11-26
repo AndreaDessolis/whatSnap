@@ -374,6 +374,12 @@ pub(crate) fn chat_status_label(s: &AppState, jid: &str) -> String {
 	crate::backend::events::format_conv_data_label(jid, &name, &name, kind == 1, kind == 2, presence_label)
 }
 
+/// A locked chat while the locked chats are hidden, with "Notify About
+/// Messages in Locked Chats" off: no sound and no notification at all.
+pub(crate) fn locked_chat_silenced(s: &AppState, jid: &str) -> bool {
+	!s.settings.chat_lock_notify && !s.chats_unlocked && s.locked_jids.contains(jid)
+}
+
 pub(crate) fn open_chat_for_jid(jid: &str, state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
 	{
 		let mut s = state.borrow_mut();

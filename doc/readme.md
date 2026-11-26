@@ -161,6 +161,10 @@ To lock chats or open them on this computer, your phone needs a secret code. Set
 
 In Settings, Chat Lock, `Lock Chats Again When Idle For` locks the shown locked chats again after that long without a key press. It is `Never` at first.
 
+`Lock chats again when whatSnap is minimized or hidden` locks them as soon as you minimize whatSnap or hide it to the tray. It is off at first.
+
+`Notify about messages in locked chats while they are locked` is on at first, and then a locked chat's message only shows "1 new message" without its name or text. Turn it off for no sound and no notification at all from locked chats while they are locked.
+
 ### Chat Notifications
 `Notification settings...` in the actions menu of a chat opens a dialog with these settings:
 

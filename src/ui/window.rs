@@ -4329,22 +4329,27 @@ pub fn bind_input_handlers(
 		data.skip(true);
 	});
 
-	// Shown locked chats lock again after the chosen time without a key press.
+	// Shown locked chats lock again after the chosen time without a key press,
+	// or as soon as the window is minimized or hidden to the tray if chosen.
 	let chat_lock_timer = Box::leak(Box::new(Timer::new(&parts.frame)));
 	let tx_chat_lock_timer = ui_tx.clone();
 	let state_chat_lock_timer = state.clone();
+	let frame_chat_lock_timer = parts.frame;
 	chat_lock_timer.on_tick(move |_| {
 		let Ok(s) = state_chat_lock_timer.try_borrow() else { return };
+		if !s.chats_unlocked {
+			return;
+		}
 		let mins = s.settings.chat_lock_auto_lock_mins;
-		if s.chats_unlocked
-			&& mins > 0
-			&& s.chat_lock_last_activity.elapsed() >= std::time::Duration::from_secs(u64::from(mins) * 60)
-		{
+		let idle = mins > 0
+			&& s.chat_lock_last_activity.elapsed() >= std::time::Duration::from_secs(u64::from(mins) * 60);
+		let minimized = s.settings.chat_lock_on_minimize && frame_chat_lock_timer.is_iconized();
+		if idle || minimized {
 			drop(s);
 			let _ = tx_chat_lock_timer.send(UiCommand::CloseLockedChats);
 		}
 	});
-	chat_lock_timer.start(15_000, false);
+	chat_lock_timer.start(1_000, false);
 
 	// Chats and contacts are matched as each key is typed; message text is
 	// searched once typing pauses, as WA Web debounces it (300 ms).

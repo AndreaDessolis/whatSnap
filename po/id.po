@@ -6624,3 +6624,9 @@ msgstr "5 Menit"
 
 msgid "15 Minutes"
 msgstr "15 Menit"
+
+msgid "Lock chats again when whatSnap is minimized or hidden"
+msgstr "Kunci chat lagi saat whatSnap diminimalkan atau disembunyikan"
+
+msgid "Notify about messages in locked chats while they are locked"
+msgstr "Beri tahu pesan di chat terkunci selagi terkunci"

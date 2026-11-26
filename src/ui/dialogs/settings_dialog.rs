@@ -167,6 +167,8 @@ pub struct SettingsDialogParts {
 	pub lock_panel: Panel,
 	pub chat_lock_hello_check: CheckBox,
 	pub chat_lock_auto_lock_combo: ComboBox,
+	pub chat_lock_on_minimize_check: CheckBox,
+	pub chat_lock_notify_check: CheckBox,
 
 	pub backup_panel: Panel,
 	pub backup_btn: Button,
@@ -709,6 +711,10 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		"Lock Chats Again When Idle For",
 		CHAT_LOCK_AUTO_LOCK_CHOICES,
 	);
+	let chat_lock_on_minimize_check =
+		setting_switch(&lock_panel, &lock_sizer, "Lock chats again when whatSnap is minimized or hidden");
+	let chat_lock_notify_check =
+		setting_switch(&lock_panel, &lock_sizer, "Notify about messages in locked chats while they are locked");
 	lock_panel.set_sizer(lock_sizer, true);
 
 	// 11. Backup and Restore Panel
@@ -868,6 +874,8 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		lock_panel,
 		chat_lock_hello_check,
 		chat_lock_auto_lock_combo,
+		chat_lock_on_minimize_check,
+		chat_lock_notify_check,
 		backup_panel,
 		backup_btn,
 		restore_btn,
@@ -1103,6 +1111,8 @@ impl SettingsDialogParts {
 			CHAT_LOCK_AUTO_LOCK_CHOICES,
 			&settings.chat_lock_auto_lock_mins.to_string(),
 		);
+		self.chat_lock_on_minimize_check.set_value(settings.chat_lock_on_minimize);
+		self.chat_lock_notify_check.set_value(settings.chat_lock_notify);
 		self.announce_incoming_check.set_value(settings.announce_incoming);
 		self.announce_outgoing_check.set_value(settings.announce_outgoing);
 		self.replace_emoji_check.set_value(settings.replace_text_with_emoji);
@@ -1172,6 +1182,8 @@ impl SettingsDialogParts {
 			.and_then(|i| CHAT_LOCK_AUTO_LOCK_CHOICES.get(i as usize))
 			.and_then(|(_, v)| v.parse().ok())
 			.unwrap_or(0);
+		settings.chat_lock_on_minimize = self.chat_lock_on_minimize_check.is_checked();
+		settings.chat_lock_notify = self.chat_lock_notify_check.is_checked();
 		settings.announce_incoming = self.announce_incoming_check.is_checked();
 		settings.announce_outgoing = self.announce_outgoing_check.is_checked();
 		settings.status_auto_advance = self.status_auto_advance_check.is_checked();
