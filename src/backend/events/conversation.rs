@@ -298,6 +298,18 @@ pub(super) fn apply_conversation_messages(page: MessagesPage, state: &Rc<RefCell
 	crate::ui_commands::calls::mark_joinable_rows(&s, parts);
 
 	let count = parts.conversations_parts.messages_list.get_count();
+	// A chat opened at a message (from a search or a link) goes to it even
+	// when chats open in the message box.
+	let to_message_box = s.settings.open_chat_in_message_box
+		&& s.search_target_id.is_none()
+		&& s.search_target_text.is_none();
+	let focus_opened_chat = || {
+		if to_message_box && parts.conversations_parts.message_field.is_shown() {
+			parts.conversations_parts.message_field.set_focus();
+		} else {
+			parts.conversations_parts.messages_list.set_focus();
+		}
+	};
 	let target_pos = if let Some(target_id) = s.search_target_id.take() {
 		s.display_items.iter().position(|item| match item {
 			whatsnap::DisplayItem::Single(m) => m.id == target_id,
@@ -333,7 +345,7 @@ pub(super) fn apply_conversation_messages(page: MessagesPage, state: &Rc<RefCell
 	if let Some(pos) = target_pos {
 		parts.conversations_parts.messages_list.set_selection(pos as u32, true);
 		if !quiet {
-			parts.conversations_parts.messages_list.set_focus();
+			focus_opened_chat();
 		}
 	} else if count > 0 {
 		if parts.conversations_parts.messages_list.get_selection().is_some() && old_count > 0 {
@@ -349,7 +361,7 @@ pub(super) fn apply_conversation_messages(page: MessagesPage, state: &Rc<RefCell
 			let row = if std::mem::take(&mut s.land_on_first) { 0 } else { count - 1 };
 			parts.conversations_parts.messages_list.set_selection(row, true);
 			if !quiet {
-				parts.conversations_parts.messages_list.set_focus();
+				focus_opened_chat();
 			}
 		}
 	}

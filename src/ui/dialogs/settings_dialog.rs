@@ -77,6 +77,9 @@ pub struct SettingsDialogParts {
 	pub hide_phone_numbers_check: CheckBox,
 	pub type_to_compose_check: CheckBox,
 	pub keep_list_position_check: CheckBox,
+	pub open_in_message_box_check: CheckBox,
+	pub up_arrow_edits_check: CheckBox,
+	pub voice_seek_combo: ComboBox,
 	pub replace_emoji_check: CheckBox,
 	pub emoji_help_btn: Button,
 	pub spell_check_check: CheckBox,
@@ -160,6 +163,16 @@ pub struct SettingsDialogParts {
 	pub ok_btn: Button,
 	pub cancel_btn: Button,
 }
+
+const VOICE_SEEK_SECONDS: [u32; 6] = [2, 5, 10, 15, 30, 60];
+const VOICE_SEEK_CHOICES: [(&str, &str); 6] = [
+	("2 seconds", "2"),
+	("5 seconds", "5"),
+	("10 seconds", "10"),
+	("15 seconds", "15"),
+	("30 seconds", "30"),
+	("1 minute", "60"),
+];
 
 fn visibility_combo(panel: &Panel, sizer: &BoxSizer, label: &str, choices: &[(&'static str, &str)]) -> ComboBox {
 	let text = StaticText::builder(panel).with_label(&crate::i18n::tr_str(label)).build();
@@ -330,10 +343,29 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&chats_sizer,
 		"Keep my place in the message list instead of jumping to the newest message",
 	);
+	let open_in_message_box_check = setting_switch(
+		&chats_panel,
+		&chats_sizer,
+		"Open chats in the message box instead of the message list",
+	);
+	let up_arrow_edits_check = setting_switch(
+		&chats_panel,
+		&chats_sizer,
+		"Up Arrow in an empty message box edits your last message",
+	);
 	let replace_emoji_check =
 		setting_switch(&chats_panel, &chats_sizer, "Replace text with emoji as you type, like :-) or (y)");
 	let emoji_help_btn = setting_button(&chats_panel, "Replace Text With Emoji: See Help...");
 	chats_sizer.add(&emoji_help_btn, 0, SizerFlag::Left | SizerFlag::Top, 10);
+
+	chats_sizer.add_spacer(10);
+	section_header(&chats_panel, &chats_sizer, "Voice Messages");
+	let voice_seek_combo = visibility_combo(
+		&chats_panel,
+		&chats_sizer,
+		"Go back and forward in voice messages by",
+		&VOICE_SEEK_CHOICES,
+	);
 
 	chats_sizer.add_spacer(10);
 	section_header(&chats_panel, &chats_sizer, "Spelling");
@@ -709,6 +741,9 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		hide_phone_numbers_check,
 		type_to_compose_check,
 		keep_list_position_check,
+		open_in_message_box_check,
+		up_arrow_edits_check,
+		voice_seek_combo,
 		replace_emoji_check,
 		emoji_help_btn,
 		spell_check_check,
@@ -1006,6 +1041,10 @@ impl SettingsDialogParts {
 		self.enter_is_send_check.set_value(settings.enter_is_send);
 		self.type_to_compose_check.set_value(settings.type_to_compose);
 		self.keep_list_position_check.set_value(settings.keep_list_position);
+		self.open_in_message_box_check.set_value(settings.open_chat_in_message_box);
+		self.up_arrow_edits_check.set_value(settings.up_arrow_edits_last);
+		let seek = VOICE_SEEK_SECONDS.iter().position(|&s| s == settings.voice_seek_seconds);
+		self.voice_seek_combo.set_selection(seek.unwrap_or(1) as u32);
 		// Only offered when Windows Hello is set up now; a saved "on" stays
 		// on, so it isn't lost while the sign-in method is missing.
 		let hello = crate::platform::windows_hello::availability();
@@ -1044,6 +1083,13 @@ impl SettingsDialogParts {
 		settings.enter_is_send = self.enter_is_send_check.is_checked();
 		settings.type_to_compose = self.type_to_compose_check.is_checked();
 		settings.keep_list_position = self.keep_list_position_check.is_checked();
+		settings.open_chat_in_message_box = self.open_in_message_box_check.is_checked();
+		settings.up_arrow_edits_last = self.up_arrow_edits_check.is_checked();
+		if let Some(seconds) =
+			self.voice_seek_combo.get_selection().and_then(|i| VOICE_SEEK_SECONDS.get(i as usize).copied())
+		{
+			settings.voice_seek_seconds = seconds;
+		}
 		settings.chat_lock_hello = self.chat_lock_hello_check.is_checked();
 		settings.announce_incoming = self.announce_incoming_check.is_checked();
 		settings.announce_outgoing = self.announce_outgoing_check.is_checked();

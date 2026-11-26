@@ -47,6 +47,14 @@ pub struct Settings {
 	/// Leaving the message list or sending doesn't jump it to the newest
 	/// message; it stays where the user was.
 	pub keep_list_position: bool,
+	/// Opening a chat puts the focus in the message box, like WA Web, not
+	/// on the message list.
+	pub open_chat_in_message_box: bool,
+	/// Up Arrow in an empty message box edits your last message, like
+	/// WhatsApp on phones and Windows.
+	pub up_arrow_edits_last: bool,
+	/// How far the voice message keys go back and forward, in seconds.
+	pub voice_seek_seconds: u32,
 	/// New messages in the open chat are read out. Chats can override it,
 	/// see [`whatsnap::ChatNotify::announce`].
 	pub announce_incoming: bool,
@@ -157,6 +165,9 @@ impl Default for Settings {
 			enter_is_send: true,
 			type_to_compose: false,
 			keep_list_position: false,
+			open_chat_in_message_box: false,
+			up_arrow_edits_last: true,
+			voice_seek_seconds: 5,
 			announce_incoming: true,
 			announce_outgoing: false,
 			replace_text_with_emoji: true,

@@ -33,7 +33,7 @@ const CHUNKS_AHEAD: usize = 8;
 
 pub(crate) fn open(path: &str, start: Duration) -> Option<Box<dyn Source + Send>> {
 	if is_ogg_opus(path) {
-		return Some(Box::new(OpusFileSource::open(path)?.skip_duration(start)));
+		return Some(Box::new(OpusFileSource::open_at(path, start)?));
 	}
 	MfSource::open(path, start).map(|s| Box::new(s) as Box<dyn Source + Send>)
 }

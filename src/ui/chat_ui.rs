@@ -476,7 +476,11 @@ pub(crate) fn open_chat_for_jid(jid: &str, state: &Rc<RefCell<AppState>>, parts:
 	drop(s);
 	crate::handle_ui_command(UiCommand::SubscribePresence(jid.to_string()), state, parts);
 	crate::handle_ui_command(UiCommand::MarkRead { jid: jid.to_string(), message_ids: Vec::new() }, state, parts);
-	parts.conversations_parts.messages_list.set_focus();
+	if state.borrow().settings.open_chat_in_message_box && parts.conversations_parts.message_field.is_shown() {
+		parts.conversations_parts.message_field.set_focus();
+	} else {
+		parts.conversations_parts.messages_list.set_focus();
+	}
 }
 
 /// The message box's name: "Type a message to Name", like the official

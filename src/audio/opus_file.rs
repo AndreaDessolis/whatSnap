@@ -70,6 +70,25 @@ impl OggPackets {
 	}
 }
 
+/// How much is decoded ahead of a seek target and thrown away, so the
+/// decoder has settled by the time the target plays: 80 ms, as RFC 7845
+/// asks for.
+const PREROLL: u64 = 3840;
+
+/// The granule position and body length of the page at the reader, which is
+/// left at the start of the body. `None` at the end or on a broken page.
+fn read_page_header(reader: &mut BufReader<File>) -> Option<(i64, usize)> {
+	let mut header = [0u8; 27];
+	reader.read_exact(&mut header).ok()?;
+	if &header[0..4] != b"OggS" {
+		return None;
+	}
+	let granule = i64::from_le_bytes(header[6..14].try_into().ok()?);
+	let mut lacing = vec![0u8; header[26] as usize];
+	reader.read_exact(&mut lacing).ok()?;
+	Some((granule, lacing.iter().map(|&b| b as usize).sum()))
+}
+
 struct OpusState {
 	decoder: Option<Decoder>,
 	channels: usize,
@@ -134,6 +153,57 @@ impl OpusFileSource {
 			packets.next_page(|p| state.feed(p, buf))?;
 		}
 		source.duration = granule_duration(path, source.state.pre_skip);
+		Some(source)
+	}
+
+	/// Opens the file at `start`: skips whole pages by their granule
+	/// positions without decoding them, then decodes from a little before
+	/// `start` (so the decoder settles) and drops the samples up to it. A
+	/// seek in a long voice message used to decode everything before it, on
+	/// the audio thread, which froze the sound for a moment on every press.
+	pub(crate) fn open_at(path: &str, start: Duration) -> Option<OpusFileSource> {
+		let mut source = Self::open(path)?;
+		let target = (start.as_nanos() * RATE as u128 / 1_000_000_000) as u64;
+		if target == 0 {
+			return Some(source);
+		}
+		let pre_skip = source.state.pre_skip as u64;
+		let want = target + pre_skip;
+		let resume_at = want.saturating_sub(PREROLL);
+		// The last page that ends at or before `resume_at`: decoding starts
+		// with the page after it, at its granule.
+		let mut resume = None;
+		let reader = &mut source.packets.reader;
+		let headers_end = reader.stream_position().ok()?;
+		loop {
+			let Some((granule, body_len)) = read_page_header(reader) else { break };
+			if granule >= 0 && granule as u64 > resume_at {
+				break;
+			}
+			if reader.seek_relative(body_len as i64).is_err() {
+				break;
+			}
+			if granule >= 0 {
+				resume = Some((reader.stream_position().ok()?, granule as u64));
+			}
+		}
+		let (offset, decoded_from) = resume.unwrap_or((headers_end, 0));
+		reader.seek(SeekFrom::Start(offset)).ok()?;
+		source.packets.pending.clear();
+		if decoded_from > 0 {
+			source.state.skipped = source.state.pre_skip;
+		}
+		let first = decoded_from.max(pre_skip);
+		let channels = source.state.channels.max(1);
+		let mut drop = (want.saturating_sub(first) as usize) * channels;
+		while drop > 0 {
+			if source.at == source.buf.len() && !source.refill() {
+				break;
+			}
+			let take = drop.min(source.buf.len() - source.at);
+			source.at += take;
+			drop -= take;
+		}
 		Some(source)
 	}
 
@@ -239,6 +309,30 @@ mod tests {
 		};
 		let measured = super::duration(&path).unwrap().as_secs_f64();
 		assert!((measured - expected).abs() < 0.05, "{measured} vs {expected}");
+		let _ = std::fs::remove_dir_all(&dir);
+	}
+
+	#[test]
+	fn opening_at_a_time_leaves_the_rest_of_the_file() {
+		let dir = std::env::temp_dir().join(format!("opus_seek_test_{}", std::process::id()));
+		std::fs::create_dir_all(&dir).unwrap();
+		let path = dir.join("tone.ogg");
+		let data = crate::types::NotificationSound::MessageCurrent.ogg();
+		std::fs::write(&path, data).unwrap();
+		let path = path.to_string_lossy().to_string();
+
+		let source = super::OpusFileSource::open(&path).unwrap();
+		let channels = source.state.channels.max(1);
+		let whole: Vec<f32> = source.collect();
+		let frames = whole.len() / channels;
+		for at_frame in [0, frames / 4, frames / 2, frames - 1] {
+			let start = std::time::Duration::from_nanos(at_frame as u64 * 1_000_000_000 / 48_000);
+			let rest = super::OpusFileSource::open_at(&path, start).unwrap().count() / channels;
+			let expected = frames - at_frame;
+			assert!(rest.abs_diff(expected) <= 1, "at {at_frame}: {rest} left, expected {expected}");
+		}
+		let past_end = std::time::Duration::from_secs(3600);
+		assert_eq!(super::OpusFileSource::open_at(&path, past_end).unwrap().count(), 0);
 		let _ = std::fs::remove_dir_all(&dir);
 	}
 }

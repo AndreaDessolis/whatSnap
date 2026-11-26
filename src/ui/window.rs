@@ -577,6 +577,22 @@ impl ShortcutButtons {
 	}
 }
 
+/// Your newest message in the open chat, when it can still be edited and Up
+/// Arrow is set to edit it: like WhatsApp on phones and Windows, only the
+/// very last one you sent, never an older one.
+fn last_editable_message(s: &crate::AppState) -> Option<(String, String)> {
+	if !s.settings.up_arrow_edits_last {
+		return None;
+	}
+	let in_channel = s.selected_chat.as_ref().is_some_and(|j| j.ends_with("@newsletter"));
+	let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+	let last = s.messages.iter().filter(|m| m.from_me && !m.is_date_divider && !m.is_system()).max_by_key(|m| m.timestamp)?;
+	if !last.is_editable(now, in_channel) {
+		return None;
+	}
+	Some((last.id.clone(), last.edit_text()?.to_string()))
+}
+
 pub fn switch_login_view(parts: &WindowParts, view: LoginView) {
 	LoginControls::from_parts(parts).switch_view(view);
 }
@@ -4129,6 +4145,16 @@ pub fn bind_input_handlers(
 			} else if keys::is_tab(code) && is_editing && !key_event.shift_down() {
 				cancel_edit_btn_field.set_focus();
 				event.skip(false);
+			} else if keys::is_up(code)
+				&& !is_editing
+				&& !key_event.control_down()
+				&& !key_event.alt_down()
+				&& !key_event.shift_down()
+				&& conv_msg_field_esc.get_value().is_empty()
+				&& let Some((message_id, text)) = last_editable_message(&state_field.borrow())
+			{
+				let _ = tx_send_field.send(UiCommand::BeginEditMessage { message_id, text });
+				event.skip(false);
 			} else if keys::is_letter(code, 'V') && key_event.control_down() {
 				let mut has_files = false;
 				if let Some(_locker) = Clipboard::get().locker() {
@@ -5901,7 +5927,7 @@ pub fn bind_input_handlers(
 				} else {
 					last_left_arrow.set(now);
 					if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-						let _ = tx_close_list.send(UiCommand::SeekAudio(-5.0));
+						let _ = tx_close_list.send(UiCommand::SeekAudio(-1.0));
 					} else if let Some(idx) = msgs_list_play.get_selection() {
 						let said = state_play.borrow().display_items.get(idx as usize).and_then(|item| match item {
 							whatsnap::DisplayItem::Single(m) => m.reply_announcement(),
@@ -5917,7 +5943,7 @@ pub fn bind_input_handlers(
 				}
 			} else if keys::is_right(code) {
 				if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-					let _ = tx_close_list.send(UiCommand::SeekAudio(5.0));
+					let _ = tx_close_list.send(UiCommand::SeekAudio(1.0));
 					event.skip(false);
 				} else if !search_panel_key.is_shown() {
 					// Right Arrow goes to the next message that replies to the focused one.
@@ -5975,14 +6001,14 @@ pub fn bind_input_handlers(
 				}
 			} else if pressed(message_list::SEEK_BACK) {
 				if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-					let _ = tx_close_list.send(UiCommand::SeekAudio(-5.0));
+					let _ = tx_close_list.send(UiCommand::SeekAudio(-1.0));
 					event.skip(false);
 				} else {
 					event.skip(true);
 				}
 			} else if pressed(message_list::SEEK_FORWARD) {
 				if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-					let _ = tx_close_list.send(UiCommand::SeekAudio(5.0));
+					let _ = tx_close_list.send(UiCommand::SeekAudio(1.0));
 					event.skip(false);
 				} else {
 					event.skip(true);
@@ -7148,10 +7174,10 @@ pub fn bind_input_handlers(
 		if let WindowEventData::Keyboard(ref key) = event {
 			let code = key.get_key_code();
 			if keys::is_left(code) || keys::is_down(code) || keys::is_home(code) {
-				let _ = tx_slider_key.send(UiCommand::SeekAudio(-5.0));
+				let _ = tx_slider_key.send(UiCommand::SeekAudio(-1.0));
 				event.skip(false);
 			} else if keys::is_right(code) || keys::is_up(code) || keys::is_end(code) {
-				let _ = tx_slider_key.send(UiCommand::SeekAudio(5.0));
+				let _ = tx_slider_key.send(UiCommand::SeekAudio(1.0));
 				event.skip(false);
 			} else {
 				event.skip(true);

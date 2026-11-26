@@ -260,14 +260,14 @@ pub const ACTIONS: &[ActionDef] = &[
 		id: message_list::SEEK_BACK,
 		menu_id: None,
 		tab: 6,
-		label: "Voice message: back 5 seconds",
+		label: "Voice message: go back",
 		default: "J",
 	},
 	ActionDef {
 		id: message_list::SEEK_FORWARD,
 		menu_id: None,
 		tab: 6,
-		label: "Voice message: forward 5 seconds",
+		label: "Voice message: go forward",
 		default: "L",
 	},
 	ActionDef {
