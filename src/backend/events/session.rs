@@ -376,32 +376,42 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 			}
 		}
+		"chat_lock_settings" => {
+			if let Some(data) = val.get("data") {
+				let mut s = state.borrow_mut();
+				s.chat_lock_hidden = data.get("hide_locked_chats").and_then(|v| v.as_bool()).unwrap_or(false);
+				s.chat_lock_has_code = data.get("has_secret_code").and_then(|v| v.as_bool());
+				if !s.chat_lock_hidden {
+					s.chat_lock_search_unlocked = false;
+				}
+				crate::ui::message_display::apply_chat_filter(&mut s, parts);
+			}
+		}
 		"chat_lock_verify_result" => {
 			if let Some(data) = val.get("data") {
 				let success = data.get("success").and_then(|s| s.as_bool()).unwrap_or(false);
+				if let Some(seq) = data.get("seq").and_then(|v| v.as_u64()) {
+					crate::ui_commands::chat_list::finish_search_secret_code(state, parts, seq, success);
+					return true;
+				}
 				if success {
 					crate::ui_commands::chat_list::show_locked_chats(state, parts);
 					crate::ui_commands::chat_list::offer_chat_lock_hello(state, parts);
 				} else {
 					state.borrow_mut().pending_locked_chat = None;
 					let err = data.get("error").and_then(|e| e.as_str()).unwrap_or("");
-					let (title, message) = if err == "no secret code configured" {
-						(
-							crate::i18n::tr("Secret Code Required"),
-							crate::i18n::tr(
-								"No Secret Code configured.\n\nTo lock or unlock chats on linked devices, you must first create a Secret Code in WhatsApp on your primary phone:\n\n1. Open WhatsApp on your phone\n2. Go to Settings > Privacy > Chat Lock\n3. Tap 'Secret Code' and set a code.\n\nOnce set, it will sync to this device automatically.",
-							),
-						)
+					if err == "no secret code configured" {
+						crate::ui_commands::chat_list::show_secret_code_required(parts);
 					} else {
-						(
-							crate::i18n::tr("Unlock Failed"),
+						MessageDialog::builder(
+							&parts.frame,
 							crate::i18n::tr("Incorrect Secret Code.\n\nPlease check your secret code and try again."),
+							crate::i18n::tr("Unlock Failed"),
 						)
-					};
-					let alert = MessageDialog::builder(&parts.frame, message, title)
 						.with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
-						.build();
-					alert.show_modal();
+						.build()
+						.show_modal();
+					}
 				}
 			}
 		}

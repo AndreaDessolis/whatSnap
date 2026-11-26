@@ -153,6 +153,14 @@ The `Filters` box shows only some chats: All chats, Unread, Favorites, Groups, a
 ### Locked Chats
 A locked chat doesn't show in the chat list. When you have locked chats, a `Locked Chats` button shows below `New Chat`. Press it and type your secret code to show them.
 
+While the locked chats are shown, the heading says `Locked Chats` and the search box searches only them. `Escape` in an open locked chat goes back to the locked chats, and `Escape` there locks them again. Unlocking the last locked chat goes back to the chat list. Locked chats don't count in the tray icon's unread number while they are locked.
+
+If you turned on `Hide locked chats` in WhatsApp on your phone, the `Locked Chats` button stays hidden. Type your secret code in the chat list's search box: whatSnap says `Locked chats available.` and the button shows. Press `Enter` in the search box or press the button to open them.
+
+To lock chats or open them on this computer, your phone needs a secret code. Set it in WhatsApp on your phone, in `Settings > Privacy > Chat lock > Secret code`.
+
+In Settings, Chat Lock, `Lock Chats Again When Idle For` locks the shown locked chats again after that long without a key press. It is `Never` at first.
+
 ### Chat Notifications
 `Notification settings...` in the actions menu of a chat opens a dialog with these settings:
 

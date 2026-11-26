@@ -1055,11 +1055,7 @@ func (acc *Account) eventHandler(evt interface{}) {
 
 			if gs := v.Data.GetGlobalSettings(); gs != nil {
 				if cls := gs.GetChatLockSettings(); cls != nil {
-					if sc := cls.GetSecretCode(); sc != nil {
-						if b, err := proto.Marshal(sc); err == nil {
-							acc.saveChatLockSecretCode(b)
-						}
-					}
+					acc.applyHistoryChatLockSettings(cls)
 				}
 			}
 
@@ -2247,11 +2243,7 @@ func (acc *Account) eventHandler(evt interface{}) {
 				return
 			}
 			if cls := v.GetChatLockSettings(); cls != nil {
-				if sc := cls.GetSecretCode(); sc != nil {
-					if b, err := proto.Marshal(sc); err == nil {
-						acc.saveChatLockSecretCode(b)
-					}
-				}
+				acc.applySyncedChatLockSettings(cls)
 			}
 			if lca := v.GetLockChatAction(); lca != nil {
 				if len(v.Index) > 1 {

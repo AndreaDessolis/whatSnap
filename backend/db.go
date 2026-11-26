@@ -1425,6 +1425,28 @@ func (acc *Account) saveChatLockSecretCode(b []byte) error {
 	return err
 }
 
+func (acc *Account) clearChatLockSecretCode() error {
+	_, err := acc.db.Exec(`DELETE FROM app_settings WHERE key = 'chat_lock_secret_code'`)
+	return err
+}
+
+func (acc *Account) saveChatLockHide(hide bool) error {
+	v := "0"
+	if hide {
+		v = "1"
+	}
+	_, err := acc.db.Exec(`INSERT INTO app_settings (key, value) VALUES ('chat_lock_hide', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, []byte(v))
+	return err
+}
+
+func (acc *Account) getChatLockHide() bool {
+	var b []byte
+	if err := acc.db.QueryRow(`SELECT value FROM app_settings WHERE key = 'chat_lock_hide'`).Scan(&b); err != nil {
+		return false
+	}
+	return string(b) == "1"
+}
+
 func (acc *Account) getChatLockSecretCode() ([]byte, error) {
 	var b []byte
 	err := acc.db.QueryRow(`SELECT value FROM app_settings WHERE key = 'chat_lock_secret_code'`).Scan(&b)

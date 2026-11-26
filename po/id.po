@@ -6607,3 +6607,20 @@ msgstr "Rabu"
 msgid "{} at {}"
 msgstr "{} pukul {}"
 
+msgid "Lock Chats Again When Idle For"
+msgstr "Kunci chat lagi setelah tidak aktif selama"
+
+msgid "Locked chats available."
+msgstr "Chat terkunci tersedia."
+
+msgid "Search locked chats"
+msgstr "Cari chat terkunci"
+
+msgid "1 Minute"
+msgstr "1 Menit"
+
+msgid "5 Minutes"
+msgstr "5 Menit"
+
+msgid "15 Minutes"
+msgstr "15 Menit"

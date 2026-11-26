@@ -2186,7 +2186,7 @@ pub fn bind_input_handlers(
 				tray_icon.set_icon(&tray_bitmap, whatsnap::TRAY_APP_NAME);
 				let unread = whatsnap::unread_notification_total(
 					&s.unread_counts,
-					&s.settings.quiet_chats(&s.muted_jids),
+					&crate::platform::tray::tray_quiet_chats(&s),
 					&s.archived_jids,
 					&s.settings.archived_alert_levels,
 				);
@@ -4263,6 +4263,11 @@ pub fn bind_input_handlers(
 	let chat_list_hook = parts.conversations_parts.conversations_list;
 	parts.frame.bind_internal(wxdragon::event::EventType::CHAR_HOOK, move |event| {
 		let data = WindowEventData::new(event);
+		if let Ok(mut s) = state_hook.try_borrow_mut()
+			&& s.chats_unlocked
+		{
+			s.chat_lock_last_activity = std::time::Instant::now();
+		}
 		if let WindowEventData::Keyboard(ref key_event) = data
 			&& keys::is_escape(key_event.get_key_code())
 		{
@@ -4278,11 +4283,6 @@ pub fn bind_input_handlers(
 					chat_search_hook.set_value("");
 				}
 				chat_list_hook.set_focus();
-				data.skip(false);
-				return;
-			}
-			if state_hook.borrow().chats_unlocked {
-				let _ = tx_escape_hook.send(UiCommand::CloseLockedChats);
 				data.skip(false);
 				return;
 			}
@@ -4318,9 +4318,33 @@ pub fn bind_input_handlers(
 				data.skip(false);
 				return;
 			}
+			// No chat open (an open locked chat closed first, back to the
+			// locked chats): Escape locks them again.
+			if state_hook.borrow().chats_unlocked {
+				let _ = tx_escape_hook.send(UiCommand::CloseLockedChats);
+				data.skip(false);
+				return;
+			}
 		}
 		data.skip(true);
 	});
+
+	// Shown locked chats lock again after the chosen time without a key press.
+	let chat_lock_timer = Box::leak(Box::new(Timer::new(&parts.frame)));
+	let tx_chat_lock_timer = ui_tx.clone();
+	let state_chat_lock_timer = state.clone();
+	chat_lock_timer.on_tick(move |_| {
+		let Ok(s) = state_chat_lock_timer.try_borrow() else { return };
+		let mins = s.settings.chat_lock_auto_lock_mins;
+		if s.chats_unlocked
+			&& mins > 0
+			&& s.chat_lock_last_activity.elapsed() >= std::time::Duration::from_secs(u64::from(mins) * 60)
+		{
+			drop(s);
+			let _ = tx_chat_lock_timer.send(UiCommand::CloseLockedChats);
+		}
+	});
+	chat_lock_timer.start(15_000, false);
 
 	// Chats and contacts are matched as each key is typed; message text is
 	// searched once typing pauses, as WA Web debounces it (300 ms).
@@ -4348,10 +4372,16 @@ pub fn bind_input_handlers(
 		if let WindowEventData::Keyboard(ref key_event) = event {
 			let code = key_event.get_key_code();
 			let plain = !key_event.control_down() && !key_event.shift_down() && !key_event.alt_down();
-			let (active_tab, first_result) = {
+			let (active_tab, first_result, code_unlocked) = {
 				let s = state_conv_search.borrow();
-				(s.active_tab, s.filtered_chats.iter().position(|jid| !jid.is_empty()))
+				(s.active_tab, s.filtered_chats.iter().position(|jid| !jid.is_empty()), s.chat_lock_search_unlocked)
 			};
+			// The secret code is in the box: Enter opens the locked chats.
+			if keys::is_enter(code) && code_unlocked && active_tab == 0 {
+				let _ = tx_search_enter.send(UiCommand::PromptLockedChats);
+				event.skip(false);
+				return;
+			}
 			if keys::is_enter(code) && active_tab == 6 {
 				let _ = tx_search_enter.send(UiCommand::PlaceCall);
 				event.skip(false);

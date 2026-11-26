@@ -32,6 +32,15 @@ pub const ABOUT_DURATION_CHOICES: &[(&str, &str)] = &[
 	("24 Hours", "86400"),
 ];
 
+pub const CHAT_LOCK_AUTO_LOCK_CHOICES: &[(&str, &str)] = &[
+	("Never", "0"),
+	("1 Minute", "1"),
+	("5 Minutes", "5"),
+	("15 Minutes", "15"),
+	("30 Minutes", "30"),
+	("1 Hour", "60"),
+];
+
 pub const CHAT_LOCK_HELLO_LABEL: &str =
 	"Unlock locked chats with Windows Hello (fingerprint, face or PIN) instead of the secret code";
 
@@ -157,6 +166,7 @@ pub struct SettingsDialogParts {
 
 	pub lock_panel: Panel,
 	pub chat_lock_hello_check: CheckBox,
+	pub chat_lock_auto_lock_combo: ComboBox,
 
 	pub backup_panel: Panel,
 	pub backup_btn: Button,
@@ -693,6 +703,12 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&lock_sizer,
 		"Allows unlocking hidden and locked chats using your Windows Hello biometric or PIN credentials.",
 	);
+	let chat_lock_auto_lock_combo = visibility_combo(
+		&lock_panel,
+		&lock_sizer,
+		"Lock Chats Again When Idle For",
+		CHAT_LOCK_AUTO_LOCK_CHOICES,
+	);
 	lock_panel.set_sizer(lock_sizer, true);
 
 	// 11. Backup and Restore Panel
@@ -851,6 +867,7 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		dual_stream_screen_share_check,
 		lock_panel,
 		chat_lock_hello_check,
+		chat_lock_auto_lock_combo,
 		backup_panel,
 		backup_btn,
 		restore_btn,
@@ -1081,6 +1098,11 @@ impl SettingsDialogParts {
 		let hello = crate::platform::windows_hello::availability();
 		self.chat_lock_hello_check.enable(hello == crate::platform::windows_hello::Availability::Ready);
 		self.chat_lock_hello_check.set_value(settings.chat_lock_hello);
+		set_combo_from_value(
+			&self.chat_lock_auto_lock_combo,
+			CHAT_LOCK_AUTO_LOCK_CHOICES,
+			&settings.chat_lock_auto_lock_mins.to_string(),
+		);
 		self.announce_incoming_check.set_value(settings.announce_incoming);
 		self.announce_outgoing_check.set_value(settings.announce_outgoing);
 		self.replace_emoji_check.set_value(settings.replace_text_with_emoji);
@@ -1144,6 +1166,12 @@ impl SettingsDialogParts {
 			*value = if text.trim().is_empty() { default.to_string() } else { text };
 		}
 		settings.chat_lock_hello = self.chat_lock_hello_check.is_checked();
+		settings.chat_lock_auto_lock_mins = self
+			.chat_lock_auto_lock_combo
+			.get_selection()
+			.and_then(|i| CHAT_LOCK_AUTO_LOCK_CHOICES.get(i as usize))
+			.and_then(|(_, v)| v.parse().ok())
+			.unwrap_or(0);
 		settings.announce_incoming = self.announce_incoming_check.is_checked();
 		settings.announce_outgoing = self.announce_outgoing_check.is_checked();
 		settings.status_auto_advance = self.status_auto_advance_check.is_checked();

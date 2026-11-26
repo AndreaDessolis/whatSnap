@@ -6607,3 +6607,20 @@ msgstr "mercoledì"
 msgid "{} at {}"
 msgstr "{} alle {}"
 
+msgid "Lock Chats Again When Idle For"
+msgstr "Blocca di nuovo le chat dopo un'inattività di"
+
+msgid "Locked chats available."
+msgstr "Chat bloccate disponibili."
+
+msgid "Search locked chats"
+msgstr "Cerca nelle chat bloccate"
+
+msgid "1 Minute"
+msgstr "1 minuto"
+
+msgid "5 Minutes"
+msgstr "5 minuti"
+
+msgid "15 Minutes"
+msgstr "15 minuti"

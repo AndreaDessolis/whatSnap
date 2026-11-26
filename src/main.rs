@@ -148,6 +148,19 @@ struct AppState {
 	archived_jids: std::collections::HashSet<String>,
 	locked_jids: std::collections::HashSet<String>,
 	chats_unlocked: bool,
+	/// WA's "Hide locked chats": the Locked Chats button stays hidden until
+	/// the secret code is typed in the chat list's search box.
+	chat_lock_hidden: bool,
+	/// Whether a secret code is set on the phone; None until the backend says.
+	chat_lock_has_code: Option<bool>,
+	/// The search box holds the secret code, so the hidden button shows.
+	chat_lock_search_unlocked: bool,
+	/// Numbers the search box's secret code checks, so a late answer for
+	/// older text is ignored.
+	chat_lock_search_seq: u64,
+	/// Last key press while the locked chats were shown, for locking them
+	/// again after a while.
+	chat_lock_last_activity: std::time::Instant,
 	pending_locked_chat: Option<String>,
 	community_jids: std::collections::HashSet<String>,
 	chat_parents: std::collections::HashMap<String, String>,
@@ -922,6 +935,11 @@ pub(crate) fn new_app_state(
 		archived_jids: std::collections::HashSet::new(),
 		locked_jids: std::collections::HashSet::new(),
 		chats_unlocked: false,
+		chat_lock_hidden: false,
+		chat_lock_has_code: None,
+		chat_lock_search_unlocked: false,
+		chat_lock_search_seq: 0,
+		chat_lock_last_activity: std::time::Instant::now(),
 		pending_locked_chat: None,
 		community_jids: std::collections::HashSet::new(),
 		chat_parents: std::collections::HashMap::new(),

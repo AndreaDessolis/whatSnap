@@ -112,6 +112,8 @@ pub struct Settings {
 	/// The one-time "unlock your chats faster" offer has been made, so it is
 	/// not shown again whatever the answer was.
 	pub chat_lock_hello_offered: bool,
+	/// Minutes without a key press before shown locked chats lock again; 0 never.
+	pub chat_lock_auto_lock_mins: u32,
 }
 
 pub const TAB_NAMES: [&str; 7] =
@@ -202,6 +204,7 @@ impl Default for Settings {
 			chat_notifications: std::collections::HashMap::new(),
 			chat_lock_hello: false,
 			chat_lock_hello_offered: false,
+			chat_lock_auto_lock_mins: 0,
 		}
 	}
 }

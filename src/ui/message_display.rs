@@ -228,6 +228,9 @@ impl ChatTabRows {
 /// What the chat list's search box is called, as WA Web's placeholder says
 /// it for each filter.
 fn chat_search_label(s: &AppState) -> &'static str {
+	if s.chats_unlocked && s.active_tab == 0 {
+		return crate::i18n::tr("Search locked chats");
+	}
 	if s.active_tab != 0 || s.chats_unlocked {
 		return crate::i18n::tr("Search chats");
 	}
@@ -485,12 +488,23 @@ pub(crate) fn refresh_chat_rows(s: &mut AppState, parts: &crate::ui::window::Win
 pub(crate) fn apply_chat_filter(s: &mut AppState, parts: &crate::ui::window::WindowParts) {
 	crate::ui::window::refresh_menu_bar(s, &parts.frame);
 	crate::platform::tray::refresh_nav_unread_labels(s, parts);
-	let show_locked_btn = s.active_tab == 0 && !s.locked_jids.is_empty();
+	// With WA's "Hide locked chats" on, the button shows only once the
+	// secret code is typed in the search box (or the chats are open).
+	let show_locked_btn = s.active_tab == 0
+		&& !s.locked_jids.is_empty()
+		&& (!s.chat_lock_hidden || s.chats_unlocked || s.chat_lock_search_unlocked);
 	let show_filter = s.active_tab == 0 && !s.chats_unlocked;
 	let conv = &parts.conversations_parts;
 	let btn_label = crate::i18n::tr(if s.chats_unlocked { "Hide Locked Chats" } else { "Locked Chats" });
 	if conv.locked_chats_btn.get_label() != btn_label {
 		conv.locked_chats_btn.set_label(btn_label);
+	}
+	if s.active_tab == 0 {
+		let heading = crate::i18n::tr(if s.chats_unlocked { "Locked Chats" } else { "Chats" });
+		if conv.conversations_label.get_label() != heading {
+			conv.conversations_label.set_label(heading);
+			conv.panel.layout();
+		}
 	}
 	if matches!(s.active_tab, 0 | 3 | 4 | 5) {
 		let search_label = chat_search_label(s);

@@ -113,6 +113,7 @@ func (acc *Account) sendGreeting(conn net.Conn) {
 		acc.sendEvent(conn, "connection_state", acc.currentConnState())
 		acc.sendEvent(conn, "server_flags", acc.serverFlagsPayload())
 		acc.sendBlocklist(conn)
+		acc.sendEvent(conn, "chat_lock_settings", acc.chatLockSettingsPayload())
 		go func() {
 			acc.populateChatsFromStore()
 			acc.broadcastChats()
