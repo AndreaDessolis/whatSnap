@@ -465,6 +465,118 @@ impl LoginControls {
 	}
 }
 
+/// The menu of the `Add attachment` button, also opened by its shortcut.
+fn show_attach_menu(button: Button, tx: &UiCommandSender) {
+	const ATTACH_DOCUMENT_ID: i32 = 4201;
+	const ATTACH_CONTACT_ID: i32 = 4202;
+	const ATTACH_MEDIA_ID: i32 = 4203;
+	const ATTACH_AUDIO_ID: i32 = 4204;
+	const ATTACH_POLL_ID: i32 = 4205;
+	const ATTACH_EVENT_ID: i32 = 4206;
+	const ATTACH_STICKER_ID: i32 = 4207;
+	let mut popup_menu = Menu::builder()
+		.append_item(
+			ATTACH_DOCUMENT_ID,
+			crate::i18n::tr("&Document"),
+			crate::i18n::tr("Send any file as a document, photos at full quality"),
+		)
+		.append_item(
+			ATTACH_MEDIA_ID,
+			crate::i18n::tr("&Photos and videos"),
+			crate::i18n::tr("Send photos and videos"),
+		)
+		.append_item(
+			ATTACH_AUDIO_ID,
+			crate::i18n::tr("&Audio"),
+			crate::i18n::tr("Send audio files to play in the chat"),
+		)
+		.append_item(
+			ATTACH_CONTACT_ID,
+			crate::i18n::tr("&Contact"),
+			crate::i18n::tr("Attach a contact from your WhatsApp contacts"),
+		)
+		.append_item(ATTACH_POLL_ID, crate::i18n::tr("P&oll"), crate::i18n::tr("Create a poll or a quiz"))
+		.append_item(
+			ATTACH_EVENT_ID,
+			crate::i18n::tr("&Event"),
+			crate::i18n::tr("Create an event people can answer"),
+		)
+		.append_item(
+			ATTACH_STICKER_ID,
+			crate::i18n::tr("&Sticker"),
+			crate::i18n::tr("Send a favorite, recent or WhatsApp sticker, or a sticker file"),
+		)
+		.build();
+	let tx_menu = tx.clone();
+	popup_menu.on_selected(move |menu_evt| {
+		let id = menu_evt.get_id();
+		let cmd = match id {
+			ATTACH_DOCUMENT_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Document)),
+			ATTACH_MEDIA_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Media)),
+			ATTACH_AUDIO_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Audio)),
+			ATTACH_CONTACT_ID => Some(UiCommand::PrepareAttachContact),
+			ATTACH_POLL_ID => Some(UiCommand::OpenPollDialog),
+			ATTACH_EVENT_ID => Some(UiCommand::OpenEventDialog),
+			ATTACH_STICKER_ID => Some(UiCommand::OpenEmojiPanel { stickers: true }),
+			_ => None,
+		};
+		if let Some(cmd) = cmd {
+			let _ = tx_menu.send(cmd);
+		}
+	});
+	button.popup_menu(&mut popup_menu, None);
+	popup_menu.destroy_menu();
+}
+
+/// The buttons that have a shortcut. Like a menu item's accelerator, the
+/// key is the button's keyboard shortcut property, so a screen reader says
+/// it after the role ("Call button Alt+Shift+A") while the name stays the
+/// plain label. The tooltip shows it too, like WA Web's.
+#[derive(Clone, Copy)]
+pub(crate) struct ShortcutButtons([(Button, &'static str, &'static str); 6]);
+
+/// Answers only the keyboard shortcut; everything else falls back to the
+/// button's own accessible object.
+#[cfg(target_os = "windows")]
+struct ShortcutAccessible(String);
+
+#[cfg(target_os = "windows")]
+impl wxdragon::accessible::AccessibleImpl for ShortcutAccessible {
+	fn get_keyboard_shortcut(&self, child_id: i32) -> (wxdragon::accessible::AccStatus, Option<String>) {
+		if child_id != 0 || self.0.is_empty() {
+			return (wxdragon::accessible::AccStatus::NotImplemented, None);
+		}
+		(wxdragon::accessible::AccStatus::Ok, Some(self.0.clone()))
+	}
+}
+
+impl ShortcutButtons {
+	pub(crate) fn new(c: &crate::ui::conversations::ConversationsPanelParts) -> Self {
+		Self([
+			(c.search_in_conv_btn, "Search in conversation", "search_in_chat"),
+			(c.place_call_btn, "Call", "voice_call"),
+			(c.place_video_call_btn, "Video call", "video_call"),
+			(c.emoji_btn, "Emoji and stickers", "emoji_panel"),
+			(c.add_attachment_btn, "Add attachment", crate::keymap::ATTACH),
+			(c.record_voice_btn, "Record voice message", voice::START_RECORDING),
+		])
+	}
+
+	pub(crate) fn apply(&self, keymap: &crate::keymap::Keymap) {
+		for (button, label, id) in self.0 {
+			let label = crate::i18n::tr(label);
+			let key = keymap.shortcut_text(id);
+			button.set_label(label);
+			button.set_tooltip(&match &key {
+				Some(key) => format!("{label} ({key})"),
+				None => label.to_string(),
+			});
+			#[cfg(target_os = "windows")]
+			button.set_accessible(wxdragon::Accessible::new(&button, ShortcutAccessible(key.unwrap_or_default())));
+		}
+	}
+}
+
 pub fn switch_login_view(parts: &WindowParts, view: LoginView) {
 	LoginControls::from_parts(parts).switch_view(view);
 }
@@ -515,9 +627,13 @@ pub const MENU_ID_BUSINESS_CATALOG: i32 = 6060;
 pub const MENU_ID_GO_TO_DATE: i32 = 6062;
 pub const MENU_ID_SCHEDULE_MESSAGE: i32 = 6064;
 pub const MENU_ID_SCHEDULED_MESSAGES: i32 = 6065;
+pub const MENU_ID_VOICE_CALL: i32 = 6066;
+pub const MENU_ID_VIDEO_CALL: i32 = 6067;
 
-const CONVERSATION_MENU_IDS: [i32; 24] = [
+const CONVERSATION_MENU_IDS: [i32; 26] = [
 	MENU_ID_CHAT_INFO,
+	MENU_ID_VOICE_CALL,
+	MENU_ID_VIDEO_CALL,
 	MENU_ID_GO_TO_DATE,
 	MENU_ID_BUSINESS_CATALOG,
 	MENU_ID_SCHEDULE_MESSAGE,
@@ -660,8 +776,10 @@ enum ConversationEntry {
 
 use ConversationEntry::{Item, Separator};
 
-const CONVERSATION_MENU: [ConversationEntry; 29] = [
+const CONVERSATION_MENU: [ConversationEntry; 31] = [
 	Item(MENU_ID_CHAT_INFO, None, "Open info for the open chat"),
+	Item(MENU_ID_VOICE_CALL, None, "Start a voice call with the open chat, or join its group call"),
+	Item(MENU_ID_VIDEO_CALL, None, "Start a video call with the open chat, or join its group call"),
 	Item(MENU_ID_FOCUS_MESSAGE_FIELD, None, "Move focus to the message box, or back to where you were"),
 	Item(MENU_ID_FOCUS_MESSAGES_LIST, None, "Move focus to the messages list"),
 	Item(MENU_ID_ANNOUNCE_STATUS, None, "Say the open chat's status: online, typing and so on"),
@@ -718,6 +836,7 @@ fn conversation_item_applies(s: &crate::AppState, jid: &str, id: i32) -> bool {
 		}
 		MENU_ID_BUSINESS_CATALOG => is_person && s.business_jids.contains(jid),
 		MENU_ID_BLOCK_CHAT => is_person,
+		MENU_ID_VOICE_CALL | MENU_ID_VIDEO_CALL => crate::ui_commands::calls::can_call(s, jid),
 		MENU_ID_PINNED_MESSAGES => !is_broadcast,
 		MENU_ID_DISAPPEARING | MENU_ID_STAR_MESSAGE => !is_channel,
 		MENU_ID_REPORT_CHAT | MENU_ID_CHAT_PRIVACY => !is_channel && !is_broadcast,
@@ -2107,6 +2226,7 @@ pub fn bind_input_handlers(
 
 	let keymap = Rc::new(crate::keymap::Keymap::from_saved(&state.borrow().settings.shortcuts));
 	keymap.apply(&parts.frame);
+	ShortcutButtons::new(&parts.conversations_parts).apply(&keymap);
 	state.borrow_mut().keymap = keymap;
 	let pending_shortcuts: Rc<std::cell::RefCell<Option<crate::keymap::Keymap>>> = Rc::default();
 
@@ -2575,6 +2695,7 @@ pub fn bind_input_handlers(
 
 	let tx_voice_keys = ui_tx.clone();
 	let state_voice_keys = state.clone();
+	let attach_key_btn = parts.conversations_parts.add_attachment_btn;
 	parts.frame.on_char_hook(move |event| {
 		if let WindowEventData::Keyboard(ref key_event) = event {
 			let keymap = state_voice_keys.borrow().keymap.clone();
@@ -2588,6 +2709,14 @@ pub fn bind_input_handlers(
 				Some(UiCommand::DiscardVoiceMessage)
 			} else if keymap.is_pressed(voice::SEND, key_event) {
 				Some(UiCommand::SendVoiceMessage)
+			} else if keymap.is_pressed(crate::keymap::ATTACH, key_event) {
+				if attach_key_btn.is_shown() && attach_key_btn.is_enabled() {
+					attach_key_btn.set_focus();
+					show_attach_menu(attach_key_btn, &tx_voice_keys);
+					event.skip(false);
+					return;
+				}
+				None
 			} else {
 				None
 			};
@@ -2602,12 +2731,28 @@ pub fn bind_input_handlers(
 	});
 
 	let tx_call_menu = ui_tx.clone();
+	let state_call_menu = state.clone();
 	parts.frame.on_menu_selected(move |evt| {
 		let id = evt.get_id();
 		if id == MENU_ID_CALL_MUTE {
 			let _ = tx_call_menu.send(UiCommand::MuteCall);
 		} else if id == MENU_ID_CALL_END {
 			let _ = tx_call_menu.send(UiCommand::LeaveCall);
+		} else if id == MENU_ID_VOICE_CALL || id == MENU_ID_VIDEO_CALL {
+			let s = state_call_menu.borrow();
+			let Some(jid) = s.selected_chat.as_deref() else { return };
+			if !crate::ui_commands::calls::can_call(&s, jid) {
+				return;
+			}
+			let command = if crate::ui_commands::calls::joinable_call_for_chat(&s, jid).is_some() {
+				UiCommand::JoinGroupCall(None)
+			} else if id == MENU_ID_VIDEO_CALL {
+				UiCommand::PlaceVideoCall
+			} else {
+				UiCommand::PlaceCall
+			};
+			drop(s);
+			let _ = tx_call_menu.send(command);
 		} else if id == MENU_ID_CREATE_CALL_LINK {
 			let _ = tx_call_menu.send(UiCommand::CreateCallLink);
 		} else if id == MENU_ID_JOIN_CALL_LINK {
@@ -2733,6 +2878,7 @@ pub fn bind_input_handlers(
 	let state_restore = state.clone();
 	let pending_shortcuts_restore = pending_shortcuts.clone();
 	let frame_restore = parts.frame;
+	let shortcut_buttons_restore = ShortcutButtons::new(&parts.conversations_parts);
 	let tx_settings_restore = ui_tx.clone();
 	parts.settings_dialog.restore_btn.on_click(move |_| {
 		let chooser = FileDialog::builder(&settings_dialog_restore)
@@ -2792,6 +2938,7 @@ pub fn bind_input_handlers(
 
 		let keymap = crate::keymap::Keymap::from_saved(&s.settings.shortcuts);
 		keymap.apply(&frame_restore);
+		shortcut_buttons_restore.apply(&keymap);
 		s.keymap = std::rc::Rc::new(keymap);
 		pending_shortcuts_restore.borrow_mut().take();
 
@@ -2908,6 +3055,7 @@ pub fn bind_input_handlers(
 	let dual_stream_check_ok = parts.settings_dialog.dual_stream_screen_share_check;
 	let state_settings_save = state.clone();
 	let frame_shortcuts_save = parts.frame;
+	let shortcut_buttons_save = ShortcutButtons::new(&parts.conversations_parts);
 	let tx_settings_save = ui_tx.clone();
 	parts.settings_dialog.ok_btn.on_click(move |_| {
 		use crate::ui::dialogs::settings_dialog::*;
@@ -2935,6 +3083,7 @@ pub fn bind_input_handlers(
 		}
 		if let Some(keymap) = pending_shortcuts.borrow_mut().take() {
 			keymap.apply(&frame_shortcuts_save);
+			shortcut_buttons_save.apply(&keymap);
 			s.settings.shortcuts = keymap.saved();
 			s.keymap = Rc::new(keymap);
 		}
@@ -6902,67 +7051,7 @@ pub fn bind_input_handlers(
 
 	let tx_attach = ui_tx.clone();
 	let attach_btn_menu = parts.conversations_parts.add_attachment_btn;
-	parts.conversations_parts.add_attachment_btn.on_click(move |_| {
-		const ATTACH_DOCUMENT_ID: i32 = 4201;
-		const ATTACH_CONTACT_ID: i32 = 4202;
-		const ATTACH_MEDIA_ID: i32 = 4203;
-		const ATTACH_AUDIO_ID: i32 = 4204;
-		const ATTACH_POLL_ID: i32 = 4205;
-		const ATTACH_EVENT_ID: i32 = 4206;
-		const ATTACH_STICKER_ID: i32 = 4207;
-		let mut popup_menu = Menu::builder()
-			.append_item(
-				ATTACH_DOCUMENT_ID,
-				crate::i18n::tr("&Document"),
-				crate::i18n::tr("Send any file as a document, photos at full quality"),
-			)
-			.append_item(
-				ATTACH_MEDIA_ID,
-				crate::i18n::tr("&Photos and videos"),
-				crate::i18n::tr("Send photos and videos"),
-			)
-			.append_item(
-				ATTACH_AUDIO_ID,
-				crate::i18n::tr("&Audio"),
-				crate::i18n::tr("Send audio files to play in the chat"),
-			)
-			.append_item(
-				ATTACH_CONTACT_ID,
-				crate::i18n::tr("&Contact"),
-				crate::i18n::tr("Attach a contact from your WhatsApp contacts"),
-			)
-			.append_item(ATTACH_POLL_ID, crate::i18n::tr("P&oll"), crate::i18n::tr("Create a poll or a quiz"))
-			.append_item(
-				ATTACH_EVENT_ID,
-				crate::i18n::tr("&Event"),
-				crate::i18n::tr("Create an event people can answer"),
-			)
-			.append_item(
-				ATTACH_STICKER_ID,
-				crate::i18n::tr("&Sticker"),
-				crate::i18n::tr("Send a favorite, recent or WhatsApp sticker, or a sticker file"),
-			)
-			.build();
-		let tx_menu = tx_attach.clone();
-		popup_menu.on_selected(move |menu_evt| {
-			let id = menu_evt.get_id();
-			let cmd = match id {
-				ATTACH_DOCUMENT_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Document)),
-				ATTACH_MEDIA_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Media)),
-				ATTACH_AUDIO_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Audio)),
-				ATTACH_CONTACT_ID => Some(UiCommand::PrepareAttachContact),
-				ATTACH_POLL_ID => Some(UiCommand::OpenPollDialog),
-				ATTACH_EVENT_ID => Some(UiCommand::OpenEventDialog),
-				ATTACH_STICKER_ID => Some(UiCommand::OpenEmojiPanel { stickers: true }),
-				_ => None,
-			};
-			if let Some(cmd) = cmd {
-				let _ = tx_menu.send(cmd);
-			}
-		});
-		attach_btn_menu.popup_menu(&mut popup_menu, None);
-		popup_menu.destroy_menu();
-	});
+	parts.conversations_parts.add_attachment_btn.on_click(move |_| show_attach_menu(attach_btn_menu, &tx_attach));
 
 	let tx_speed = ui_tx.clone();
 	parts.conversations_parts.audio_speed_btn.on_click(move |_| {
