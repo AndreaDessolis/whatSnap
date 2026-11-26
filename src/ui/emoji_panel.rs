@@ -31,6 +31,30 @@ fn parse_emoji() -> (Vec<&'static str>, Vec<Emoji>) {
 	(groups, emoji)
 }
 
+/// Emoji for what is typed after ":" in the message box, like WA Web's
+/// suggestions: names with a word starting with the query first, then
+/// names that only contain it. At most `limit`.
+pub(crate) fn suggest(query: &str, limit: usize) -> Vec<(&'static str, &'static str)> {
+	let query = query.replace('_', " ").to_lowercase();
+	let (_, all) = parse_emoji();
+	let starts = |name: &str| {
+		let name = name.to_lowercase();
+		name.starts_with(&query) || name.split_whitespace().any(|w| w.starts_with(&query))
+	};
+	let mut found: Vec<(&'static str, &'static str)> =
+		all.iter().filter(|e| starts(e.name)).map(|e| (e.emoji, e.name)).collect();
+	if found.len() < limit {
+		found.extend(
+			all.iter()
+				.filter(|e| !starts(e.name) && emoji_matches(e.name, &query))
+				.map(|e| (e.emoji, e.name)),
+		);
+	}
+	found.dedup_by_key(|(emoji, _)| *emoji);
+	found.truncate(limit);
+	found
+}
+
 fn emoji_matches(name: &str, query: &str) -> bool {
 	let name = name.to_lowercase();
 	query.split_whitespace().all(|word| name.contains(word))
@@ -402,6 +426,26 @@ pub fn show_emoji_panel(
 	emoji_search.on_text_changed(move |_| p.show_emoji());
 	let p = panel.clone();
 	emoji_search.on_text_enter(move |_| p.pick_emoji());
+	// Down Arrow goes on to the results, as from a search box with
+	// suggestions.
+	let p = panel.clone();
+	emoji_search.on_key_down(move |event| {
+		if let WindowEventData::Keyboard(ref key) = event
+			&& crate::ui::keys::is_down(key.get_key_code())
+			&& !key.control_down()
+			&& !key.alt_down()
+			&& !key.shift_down()
+			&& p.emoji_list.get_count() > 0
+		{
+			if p.emoji_list.get_selection().is_none() {
+				p.emoji_list.set_selection(0, true);
+			}
+			p.emoji_list.set_focus();
+			event.skip(false);
+			return;
+		}
+		event.skip(true);
+	});
 	let p = panel.clone();
 	emoji_group.on_selection_changed(move |_| {
 		if !p.emoji_search.get_value().trim().is_empty() {
