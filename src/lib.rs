@@ -692,6 +692,39 @@ impl ChatMessage {
 		lines
 	}
 
+	fn status_title(&self) -> &str {
+		match self.status.as_str() {
+			"pending" => i18n::tr("Pending"),
+			"uploading" => i18n::tr("Uploading"),
+			"failed" => i18n::tr("Failed to send"),
+			"sent" | "" => i18n::tr("Sent"),
+			"delivered" => i18n::tr("Delivered"),
+			"read" => i18n::tr("Read"),
+			"played" => i18n::tr("Played"),
+			other => other,
+		}
+	}
+
+	/// Only the ticks and the time of a message, without its text: "Read,
+	/// sent at 10:42 AM" for yours, "Received at 10:42 AM" for others',
+	/// with ", edited" when it was. What sighted people see at a glance.
+	pub fn status_summary(&self) -> String {
+		let time = LocalTime::from_unix(self.timestamp)
+			.filter(|_| self.timestamp > 0)
+			.map(|t| t.format(i18n::tr("%I:%M %p")))
+			.unwrap_or_default();
+		let mut text = match (self.from_me, time.is_empty()) {
+			(true, false) => i18n::tr_fmt("{}, sent at {}", &[&self.status_title(), &time]),
+			(true, true) => self.status_title().to_string(),
+			(false, false) => i18n::tr_fmt("Received at {}", &[&time]),
+			(false, true) => i18n::tr("Received").to_string(),
+		};
+		if self.is_edited {
+			text.push_str(i18n::tr(", edited"));
+		}
+		text
+	}
+
 	pub fn format_display(&self, _is_group: bool) -> String {
 		if self.is_date_divider || self.is_unread_divider {
 			return self.text.clone();
@@ -737,16 +770,7 @@ impl ChatMessage {
 			};
 		}
 
-		let status_title = match self.status.as_str() {
-			"pending" => i18n::tr("Pending"),
-			"uploading" => i18n::tr("Uploading"),
-			"failed" => i18n::tr("Failed to send"),
-			"sent" | "" => i18n::tr("Sent"),
-			"delivered" => i18n::tr("Delivered"),
-			"read" => i18n::tr("Read"),
-			"played" => i18n::tr("Played"),
-			other => other,
-		};
+		let status_title = self.status_title();
 
 		let body = strip_markdown_for_speech(&self.body_text());
 

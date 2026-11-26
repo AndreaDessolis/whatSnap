@@ -20,6 +20,7 @@ pub mod message_list {
 	pub const VIEW_TEXT: &str = "message_view_text";
 	pub const SPEED_DOWN: &str = "message_speed_down";
 	pub const SPEED_UP: &str = "message_speed_up";
+	pub const STATUS: &str = "message_status";
 }
 
 pub mod voice {
@@ -251,6 +252,13 @@ pub const ACTIONS: &[ActionDef] = &[
 		default: "Alt+Shift+N",
 	},
 	ActionDef { id: message_list::REPLY, menu_id: None, tab: 6, label: "Reply", default: "R" },
+	ActionDef {
+		id: message_list::STATUS,
+		menu_id: None,
+		tab: 6,
+		label: "Say only the status and time",
+		default: "T",
+	},
 	ActionDef { id: message_list::EDIT, menu_id: None, tab: 6, label: "Edit", default: "E" },
 	ActionDef { id: message_list::STAR, menu_id: None, tab: 6, label: "Star or unstar", default: "S" },
 	ActionDef { id: message_list::FORWARD, menu_id: None, tab: 6, label: "Forward", default: "F" },

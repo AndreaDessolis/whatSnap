@@ -6048,6 +6048,21 @@ pub fn bind_input_handlers(
 				} else {
 					event.skip(true);
 				}
+			} else if pressed(message_list::STATUS) {
+				let said = msgs_list_play.get_selection().and_then(|idx| {
+					let s = state_play.borrow();
+					match s.display_items.get(idx as usize)? {
+						whatsnap::DisplayItem::Single(m) if !m.is_date_divider && !m.is_unread_divider => {
+							Some(m.status_summary())
+						}
+						whatsnap::DisplayItem::Album { messages, .. } => messages.last().map(|m| m.status_summary()),
+						_ => None,
+					}
+				});
+				if let Some(said) = said {
+					crate::platform::announce::announce(msgs_announcer, &said);
+				}
+				event.skip(false);
 			} else if pressed(message_list::SEEK_BACK) {
 				if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
 					let _ = tx_close_list.send(UiCommand::SeekAudio(-1.0));
