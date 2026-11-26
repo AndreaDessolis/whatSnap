@@ -285,8 +285,19 @@ func attachmentFieldsFromDisplayText(mediaType, filename, text string) (caption 
 		if rest == filename {
 			return "", 0
 		}
-		if after, ok := strings.CutPrefix(rest, filename+": "); ok {
-			return after, 0
+		if after, ok := strings.CutPrefix(rest, filename); ok {
+			// Skip the " (45 KB, 3 pages)" details shown after the name.
+			if strings.HasPrefix(after, " (") {
+				if end := strings.Index(after, ")"); end != -1 {
+					after = after[end+1:]
+				}
+			}
+			if after == "" {
+				return "", 0
+			}
+			if caption, ok := strings.CutPrefix(after, ": "); ok {
+				return caption, 0
+			}
 		}
 	}
 	return rest, 0

@@ -68,6 +68,8 @@ func TestAttachmentFieldsFromDisplayText(t *testing.T) {
 		{"video", "", "[Video] clip", "clip", 0},
 		{"document", "report.pdf", "[Document] report.pdf: see page 2", "see page 2", 0},
 		{"document", "report.pdf", "[Document] report.pdf", "", 0},
+		{"document", "report.pdf", "[Document] report.pdf (45 KB, 3 pages): see page 2", "see page 2", 0},
+		{"document", "report.pdf", "[Document] report.pdf (45 KB)", "", 0},
 		{"audio", "song.mp3", "[Audio] (3:07)", "", 187},
 		{"sticker", "", "[Sticker]", "", 0},
 	}
@@ -76,7 +78,7 @@ func TestAttachmentFieldsFromDisplayText(t *testing.T) {
 		if caption != c.caption || seconds != c.seconds {
 			t.Errorf("%q: got (%q, %d), want (%q, %d)", c.text, caption, seconds, c.caption, c.seconds)
 		}
-		if c.mediaType != "sticker" {
+		if c.mediaType != "sticker" && !strings.Contains(c.text, " (") || c.mediaType == "audio" {
 			if back := attachmentDisplayText(c.mediaType, c.filename, caption, seconds); back != c.text {
 				t.Errorf("%q: round trip gave %q", c.text, back)
 			}

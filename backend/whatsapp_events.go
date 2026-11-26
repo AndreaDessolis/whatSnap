@@ -326,6 +326,11 @@ func (acc *Account) extractTextRaw(msg *waE2E.Message) string {
 		if title == "" {
 			title = msg.GetDocumentMessage().GetFileName()
 		}
+		if title != "" {
+			if details := documentDetails(msg.GetDocumentMessage()); details != "" {
+				title += " (" + details + ")"
+			}
+		}
 		if caption != "" {
 			if title != "" {
 				return "[Document] " + title + ": " + caption
@@ -3632,4 +3637,39 @@ func (acc *Account) applyPinChange(jid string, pinned bool, changedAt int64) {
 		acc.db.Exec(`UPDATE archive_actions SET archived = 0, changed_at = MAX(changed_at, ?) WHERE jid = ?`, changedAt, jid)
 	}
 	acc.broadcastChats()
+}
+
+// documentDetails is the size and, when the sender gave it, the page count
+// shown after a document's name, like WA Web's "45 KB · 3 pages".
+func documentDetails(m *waE2E.DocumentMessage) string {
+	var parts []string
+	if size := int64(m.GetFileLength()); size > 0 {
+		parts = append(parts, formatFileSize(size))
+	}
+	switch pages := m.GetPageCount(); {
+	case pages == 1:
+		parts = append(parts, "1 page")
+	case pages > 1:
+		parts = append(parts, fmt.Sprintf("%d pages", pages))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func formatFileSize(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	value, suffix := float64(n), ""
+	for _, s := range []string{"KB", "MB", "GB", "TB"} {
+		value /= unit
+		suffix = s
+		if value < unit {
+			break
+		}
+	}
+	if value >= 10 || suffix == "KB" {
+		return fmt.Sprintf("%.0f %s", value, suffix)
+	}
+	return fmt.Sprintf("%.1f %s", value, suffix)
 }

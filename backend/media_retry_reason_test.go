@@ -22,3 +22,11 @@ func TestMediaRetryFailureReason(t *testing.T) {
 		t.Error("a general error may pass")
 	}
 }
+
+func TestFormatFileSize(t *testing.T) {
+	for n, want := range map[int64]string{500: "500 B", 46080: "45 KB", 1572864: "1.5 MB", 47185920: "45 MB", 3221225472: "3.0 GB"} {
+		if got := formatFileSize(n); got != want {
+			t.Errorf("%d: got %q want %q", n, got, want)
+		}
+	}
+}
