@@ -101,6 +101,7 @@ type Account struct {
 	activeUploads          map[string]context.CancelFunc
 	retryWaitersMu         sync.Mutex
 	retryWaiters           map[string][]chan bool
+	mediaRetryFailures     sync.Map
 	outgoingChatStates     outgoingChatStates
 	pendingAutoOpens       sync.Map
 	desiredPresenceMu      sync.Mutex

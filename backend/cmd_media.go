@@ -31,11 +31,28 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// mediaNotOnPhoneMessage is the phone's permanent answer to a media retry
+// (WA Web's NOT_FOUND / DECRYPTION_ERROR, "MediaNotOnPhone").
+const mediaNotOnPhoneMessage = "Media is no longer on the sender's phone"
+
+// mediaRetryFailureReason says why a retry the phone answered didn't give a
+// file. A NOT_FOUND or DECRYPTION_ERROR means the phone no longer has it; a
+// general error may pass.
+func mediaRetryFailureReason(err error, result waMmsRetry.MediaRetryNotification_ResultType) string {
+	if errors.Is(err, whatsmeow.ErrMediaNotAvailableOnPhone) ||
+		(err == nil && (result == waMmsRetry.MediaRetryNotification_NOT_FOUND || result == waMmsRetry.MediaRetryNotification_DECRYPTION_ERROR)) {
+		return mediaNotOnPhoneMessage
+	}
+	return "Phone could not re-upload the expired media"
+}
+
 func friendlyMediaError(err error) string {
 	msg := err.Error()
 	switch {
 	case strings.Contains(msg, "hash of media ciphertext doesn't match"):
 		return "This media is no longer available. The sender's phone no longer has the original file to resend."
+	case strings.Contains(msg, mediaNotOnPhoneMessage):
+		return "This media is no longer available. It's no longer on the sender's phone."
 	case strings.Contains(msg, "Phone could not re-upload"):
 		return "This media is no longer available. The sender's phone couldn't resend it."
 	case strings.Contains(msg, "Timeout waiting for phone to re-upload"):
@@ -60,9 +77,9 @@ func (acc *Account) ensureMediaCached(messageID string) (path, mediaType, mimety
 			return cached, mediaType, mimetype, filename, nil
 		}
 	}
-	path, mt, mime, fn, dErr := acc.downloadMessageMediaToFile(context.Background(), messageID, nil)
+	path, mt, mime, fn, dErr := acc.downloadMessageMediaToFile(whatsmeow.WithMediaDownloadMode(context.Background(), true), messageID, nil)
 	if dErr != nil {
-		if strings.Contains(dErr.Error(), "403") || strings.Contains(dErr.Error(), "404") || strings.Contains(dErr.Error(), "410") {
+		if whatsmeow.IsMediaExpired(dErr) {
 			fmt.Printf("Requesting media retry (sync) for %s...\n", messageID)
 			retryErr := acc.requestMediaRetry(acc.ctx, messageID)
 			if retryErr != nil {
@@ -254,6 +271,7 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 		return
 	}
 	ctx, cancel := context.WithCancel(acc.ctx)
+	ctx = whatsmeow.WithMediaDownloadMode(ctx, !auto)
 	acc.activeDownloads[data.MessageID] = cancel
 	acc.activeDownloadsMu.Unlock()
 	failed := false
@@ -327,8 +345,8 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 			// A file whose bytes don't match its hash gets the same re-upload
 			// request as an expired one when the user asked for it (WA Web:
 			// "hash mismatch, requesting re-upload").
-			hashMismatch := errors.Is(err, whatsmeow.ErrInvalidMediaEncSHA256) || errors.Is(err, whatsmeow.ErrInvalidMediaSHA256)
-			if !auto && attempt == 0 && (hashMismatch || strings.Contains(err.Error(), "403") || strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "410")) {
+			hashMismatch := errors.Is(err, whatsmeow.ErrInvalidMediaEncSHA256) || errors.Is(err, whatsmeow.ErrInvalidMediaSHA256) || errors.Is(err, whatsmeow.ErrInvalidMediaHMAC)
+			if !auto && attempt == 0 && (hashMismatch || whatsmeow.IsMediaExpired(err)) {
 				failed = false
 				fmt.Printf("Requesting media retry for %s...\n", data.MessageID)
 				ch, removeWaiter := acc.addMediaRetryWaiter(data.MessageID)
@@ -352,7 +370,7 @@ func (acc *Account) downloadMedia(data MessageRefData, auto, wait bool) {
 							"message_id": data.MessageID,
 							"jid":        data.JID,
 							"auto":       auto,
-							"message":    "Phone could not re-upload the media",
+							"message":    acc.takeMediaRetryFailure(data.MessageID),
 						})
 						return
 					}
@@ -1676,14 +1694,16 @@ func (acc *Account) requestMediaRetry(ctx context.Context, messageID string) err
 		senderJID = chatJID
 	}
 
-	if chatJID.Server == "lid" {
-		if pn, err := acc.wa().Store.LIDs.GetPNForLID(ctx, chatJID); err == nil && !pn.IsEmpty() {
-			chatJID = pn
+	// WA Web addresses the request by LID (WAWebSendServerErrorReceiptJob):
+	// the chat's account LID when it has one, and the sender as stored.
+	if chatJID.Server == types.DefaultUserServer {
+		if lid, err := acc.wa().Store.LIDs.GetLIDForPN(ctx, chatJID); err == nil && !lid.IsEmpty() {
+			chatJID = lid
 		}
 	}
-	if senderJID.Server == "lid" {
-		if pn, err := acc.wa().Store.LIDs.GetPNForLID(ctx, senderJID); err == nil && !pn.IsEmpty() {
-			senderJID = pn
+	if senderJID.Server == types.DefaultUserServer {
+		if lid, err := acc.wa().Store.LIDs.GetLIDForPN(ctx, senderJID); err == nil && !lid.IsEmpty() {
+			senderJID = lid
 		}
 	}
 
@@ -1743,11 +1763,14 @@ func (acc *Account) handleMediaRetryEvent(evt *events.MediaRetry) {
 	retryData, err := whatsmeow.DecryptMediaRetryNotification(evt, mediaKey)
 	if err != nil || retryData.GetResult() != waMmsRetry.MediaRetryNotification_SUCCESS {
 		fmt.Printf("Failed to decrypt media retry or result not success for %s: %v\n", evt.MessageID, err)
+		reason := mediaRetryFailureReason(err, retryData.GetResult())
+		acc.mediaRetryFailures.Store(string(evt.MessageID), reason)
 		if !acc.notifyMediaRetryWaiters(string(evt.MessageID), false) {
+			acc.mediaRetryFailures.Delete(string(evt.MessageID))
 			acc.broadcastEvent("media_download_failed", map[string]interface{}{
 				"message_id": string(evt.MessageID),
 				"jid":        jidStr,
-				"message":    "Phone could not re-upload the expired media",
+				"message":    friendlyMediaError(errors.New(reason)),
 			})
 		}
 		return

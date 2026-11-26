@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 )
 
@@ -28,14 +29,14 @@ func (acc *Account) downloadMediaForExportSync(messageID string) (path string, o
 		}
 	}
 
-	ctx := acc.ctx
+	ctx := whatsmeow.WithMediaDownloadMode(acc.ctx, true)
 	for attempt := 0; attempt < 2; attempt++ {
 		p, _, _, _, err := acc.downloadMessageMediaToFile(ctx, messageID, nil)
 		if err == nil {
 			return p, true
 		}
 
-		expired := strings.Contains(err.Error(), "403") || strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "410")
+		expired := whatsmeow.IsMediaExpired(err)
 		if attempt != 0 || !expired {
 			return "", false
 		}

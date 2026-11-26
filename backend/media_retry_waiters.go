@@ -35,3 +35,12 @@ func (acc *Account) notifyMediaRetryWaiters(id string, success bool) bool {
 	}
 	return len(waiters) != 0
 }
+
+// takeMediaRetryFailure returns why the phone's answer to a media retry gave
+// no file, once.
+func (acc *Account) takeMediaRetryFailure(id string) string {
+	if reason, ok := acc.mediaRetryFailures.LoadAndDelete(id); ok {
+		return reason.(string)
+	}
+	return "Phone could not re-upload the media"
+}
