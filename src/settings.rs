@@ -55,6 +55,10 @@ pub struct Settings {
 	pub up_arrow_edits_last: bool,
 	/// How far the voice message keys go back and forward, in seconds.
 	pub voice_seek_seconds: u32,
+	/// What the window title says, see [`crate::template`].
+	pub window_title_template: String,
+	/// What each chat list row says, see [`crate::template`].
+	pub chat_list_template: String,
 	/// New messages in the open chat are read out. Chats can override it,
 	/// see [`whatsnap::ChatNotify::announce`].
 	pub announce_incoming: bool,
@@ -168,6 +172,8 @@ impl Default for Settings {
 			open_chat_in_message_box: false,
 			up_arrow_edits_last: true,
 			voice_seek_seconds: 5,
+			window_title_template: crate::template::DEFAULT_WINDOW_TITLE_TEMPLATE.to_string(),
+			chat_list_template: crate::template::DEFAULT_CHAT_TEMPLATE.to_string(),
 			announce_incoming: true,
 			announce_outgoing: false,
 			replace_text_with_emoji: true,

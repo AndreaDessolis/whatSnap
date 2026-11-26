@@ -9,6 +9,7 @@ mod keymap;
 mod media;
 mod platform;
 mod settings;
+mod template;
 mod types;
 mod ui;
 mod ui_commands;
@@ -250,6 +251,8 @@ struct AppState {
 	/// Each chat's last-message line as its row's label ends with it, so a
 	/// draft can take its place (see `message_display::chat_row_label`).
 	chat_preview_lines: std::collections::HashMap<String, String>,
+	/// Each chat row's template parts, so a draft row renders like the rest.
+	chat_row_parts: std::collections::HashMap<String, template::ChatRowParts>,
 	displayed_chat_labels: Vec<String>,
 	chat_row_art: std::collections::HashMap<String, crate::ui::chat_rows::RowArt>,
 	main_ui_shown: bool,
@@ -1079,6 +1082,7 @@ pub(crate) fn new_app_state(
 		number_lookup: NumberLookup::default(),
 		chat_search_keys: std::collections::HashMap::new(),
 		chat_preview_lines: std::collections::HashMap::new(),
+		chat_row_parts: std::collections::HashMap::new(),
 		displayed_chat_labels: Vec::new(),
 		chat_row_art: std::collections::HashMap::new(),
 		main_ui_shown: false,

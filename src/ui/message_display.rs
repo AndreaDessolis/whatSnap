@@ -281,6 +281,9 @@ pub(crate) fn shown_draft(s: &AppState, jid: &str) -> Option<String> {
 pub(crate) fn chat_row_label(s: &AppState, jid: &str) -> String {
 	let label = s.display_names.get(jid).or_else(|| s.contacts.get(jid)).map_or(jid, String::as_str);
 	let Some(draft) = shown_draft(s, jid) else { return label.to_string() };
+	if let Some(parts) = s.chat_row_parts.get(jid) {
+		return parts.render(&s.settings.chat_list_template, &format!("{}{draft}", crate::i18n::tr("Draft: ")));
+	}
 	let head = match s.chat_preview_lines.get(jid).filter(|p| !p.is_empty()) {
 		Some(preview) => label.strip_suffix(preview.as_str()).and_then(|h| h.strip_suffix(" | ")).unwrap_or(label),
 		None => label,

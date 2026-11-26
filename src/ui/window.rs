@@ -3139,6 +3139,16 @@ pub fn bind_input_handlers(
 				}
 			}
 		}
+		if let Some((field, name, error)) = settings_parts_ok.template_error() {
+			drop(s);
+			let msg = crate::i18n::tr_fmt("The {} has a mistake: {}", &[&crate::i18n::tr(name), &error]);
+			MessageDialog::builder(&settings_dialog_ok, &msg, crate::i18n::tr("Settings"))
+				.with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
+				.build()
+				.show_modal();
+			field.set_focus();
+			return;
+		}
 		if let Some(keymap) = pending_shortcuts.borrow_mut().take() {
 			keymap.apply(&frame_shortcuts_save);
 			shortcut_buttons_save.apply(&keymap);
@@ -3161,7 +3171,14 @@ pub fn bind_input_handlers(
 		s.settings.dual_stream_screen_share = dual_stream_check_ok.is_checked();
 		let old_theme = s.settings.theme;
 		let old_effective_id = crate::i18n::is_indonesian();
+		let old_templates = (s.settings.window_title_template.clone(), s.settings.chat_list_template.clone());
 		settings_parts_ok.read_chat_settings(&mut s.settings);
+		if old_templates.1 != s.settings.chat_list_template {
+			let _ = s.ws_tx.send(serde_json::json!({ "action": "get_chats" }).to_string());
+		}
+		if old_templates.0 != s.settings.window_title_template {
+			frame_shortcuts_save.set_title(&crate::ui_commands::accounts::title_text(&s));
+		}
 		crate::calls::audio::set_call_raw_audio(s.settings.call_raw_audio);
 		crate::calls::audio::set_call_stereo_send(s.settings.call_stereo);
 		let language_changed = crate::i18n::is_indonesian() != old_effective_id;

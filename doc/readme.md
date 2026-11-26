@@ -467,6 +467,67 @@ How accounts that aren't on screen alert you is set for each account in the Acco
 
 ### Personalization Tab
 - `Choose Theme`: System Default, Light, or Dark. System Default follows the light or dark mode of Windows.
+- `Choose Language`
+- `Window title template` and `Chat list template`. See Templates below.
+- `Reset Templates to Default`
+
+#### Templates
+Templates set what the window title and each row of the chat list say, and in what order. They use [Jinja2](https://jinja.palletsprojects.com/en/stable/templates/) syntax, like Fedra's.
+
+- Edit the `Window title template` and `Chat list template` fields.
+- To set both back to the built-in ones, select `Reset Templates to Default`.
+
+whatSnap renders the chat list template for each chat each time the list changes, and the window title template each time the title changes. If a template has a syntax error, `OK` says what it is and keeps Settings open. If you empty a field, it uses the built-in template.
+
+##### Available Variables
+
+| Variable | Value |
+|---|---|
+| `{{ name }}` | Name of the chat. Chat list template only. |
+| `{{ tags }}` | Tags of the chat, for example `[Pinned] [Muted]`, or empty. Chat list template only. |
+| `{{ unread }}` | For example `2 unread messages, 1 mention`, or empty. Chat list template only. |
+| `{{ time }}` | Time of the last message, for example `10:02 AM` or `Yesterday`, or empty. Chat list template only. |
+| `{{ message }}` | The last message, with `You:` or the sender's name in a group, or your draft as `Draft:` and its text, or empty. Chat list template only. |
+| `{{ app }}` | Name of the app, `whatSnap`. Window title template only. |
+| `{{ chat }}` | Name of the open chat, or empty. Window title template only. |
+| `{{ account }}` | Name of the account on screen when you use more than one, or empty. Window title template only. |
+| `{{ unread_elsewhere }}` | For example `3 unread chats in other accounts`, or empty. Window title template only. |
+
+##### Conditionals
+
+To show text only when a variable is not empty, use an `{% if %}` block:
+
+```
+{% if unread %}, {{ unread }}{% endif %}
+```
+
+##### Built-in Templates
+
+Chat list:
+
+```
+{{ name }}{% if tags %} {{ tags }}{% endif %}{% if unread %} | {{ unread }}{% endif %}{% if time %} | {{ time }}{% endif %}{% if message %} | {{ message }}{% endif %}
+```
+
+Window title:
+
+```
+{% if chat %}{{ chat }} - {% endif %}{% if account %}{{ account }} - {% endif %}{{ app }}{% if unread_elsewhere %} - {{ unread_elsewhere }}{% endif %}
+```
+
+##### Examples
+
+The chat name, then the last message, then the time:
+
+```
+{{ name }}{% if message %}, {{ message }}{% endif %}{% if time %}, {{ time }}{% endif %}{% if unread %}, {{ unread }}{% endif %}
+```
+
+A window title without the open chat:
+
+```
+{% if account %}{{ account }} - {% endif %}{{ app }}{% if unread_elsewhere %} - {{ unread_elsewhere }}{% endif %}
+```
 
 ### Profile Tab
 - `Change Profile Photo...` and `Remove Profile Photo...`

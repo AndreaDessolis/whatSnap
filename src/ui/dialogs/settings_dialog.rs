@@ -80,6 +80,8 @@ pub struct SettingsDialogParts {
 	pub open_in_message_box_check: CheckBox,
 	pub up_arrow_edits_check: CheckBox,
 	pub voice_seek_combo: ComboBox,
+	pub window_title_template_field: TextCtrl,
+	pub chat_list_template_field: TextCtrl,
 	pub replace_emoji_check: CheckBox,
 	pub emoji_help_btn: Button,
 	pub spell_check_check: CheckBox,
@@ -451,6 +453,31 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&personalization_sizer,
 		"Choose the language for whatSnap's interface. Changes take full effect after restarting whatSnap.",
 	);
+	personalization_sizer.add_spacer(12);
+	section_header(&personalization_panel, &personalization_sizer, "Templates");
+	let template_field = |label: &str| {
+		let text = StaticText::builder(&personalization_panel).with_label(&crate::i18n::tr_str(label)).build();
+		text.set_font(&theme::Fonts::body());
+		personalization_sizer.add(&text, 0, SizerFlag::Left | SizerFlag::Right | SizerFlag::Top, 12);
+		let field = TextCtrl::builder(&personalization_panel)
+			.with_style(dialog_look::field_style(TextCtrlStyle::Default))
+			.build();
+		dialog_look::add_field(&personalization_sizer, &field, Field::Line, 0);
+		field
+	};
+	let window_title_template_field = template_field("Window title template");
+	let chat_list_template_field = template_field("Chat list template");
+	let reset_templates_btn = setting_button(&personalization_panel, "Reset Templates to Default");
+	personalization_sizer.add(&reset_templates_btn, 0, SizerFlag::Left | SizerFlag::Top, 12);
+	setting_note(
+		&personalization_panel,
+		&personalization_sizer,
+		"Templates use Jinja syntax, like {{ name }} or {% if unread %}, {{ unread }}{% endif %}. The user manual lists every name you can use.",
+	);
+	reset_templates_btn.on_click(move |_| {
+		window_title_template_field.set_value(crate::template::DEFAULT_WINDOW_TITLE_TEMPLATE);
+		chat_list_template_field.set_value(crate::template::DEFAULT_CHAT_TEMPLATE);
+	});
 	personalization_panel.set_sizer(personalization_sizer, true);
 
 	// 6. Profile Panel
@@ -744,6 +771,8 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		open_in_message_box_check,
 		up_arrow_edits_check,
 		voice_seek_combo,
+		window_title_template_field,
+		chat_list_template_field,
 		replace_emoji_check,
 		emoji_help_btn,
 		spell_check_check,
@@ -1045,6 +1074,8 @@ impl SettingsDialogParts {
 		self.up_arrow_edits_check.set_value(settings.up_arrow_edits_last);
 		let seek = VOICE_SEEK_SECONDS.iter().position(|&s| s == settings.voice_seek_seconds);
 		self.voice_seek_combo.set_selection(seek.unwrap_or(1) as u32);
+		self.window_title_template_field.set_value(&settings.window_title_template);
+		self.chat_list_template_field.set_value(&settings.chat_list_template);
 		// Only offered when Windows Hello is set up now; a saved "on" stays
 		// on, so it isn't lost while the sign-in method is missing.
 		let hello = crate::platform::windows_hello::availability();
@@ -1062,6 +1093,17 @@ impl SettingsDialogParts {
 		let theme = serde_json::to_value(settings.theme).ok();
 		set_combo_from_value(&self.theme_combo, THEME_CHOICES, theme.as_ref().and_then(|v| v.as_str()).unwrap_or(""));
 		set_combo_from_value(&self.language_combo, crate::i18n::language_choices(), settings.language.as_str());
+	}
+
+	/// The first template that doesn't compile, with its field and the
+	/// error, so saving can say so instead of quietly using the default.
+	pub fn template_error(&self) -> Option<(TextCtrl, &'static str, String)> {
+		[
+			(self.window_title_template_field, "Window title template"),
+			(self.chat_list_template_field, "Chat list template"),
+		]
+		.into_iter()
+		.find_map(|(field, name)| crate::template::check(&field.get_value()).err().map(|e| (field, name, e)))
 	}
 
 	pub fn read_chat_settings(&self, settings: &mut crate::settings::Settings) {
@@ -1089,6 +1131,17 @@ impl SettingsDialogParts {
 			self.voice_seek_combo.get_selection().and_then(|i| VOICE_SEEK_SECONDS.get(i as usize).copied())
 		{
 			settings.voice_seek_seconds = seconds;
+		}
+		for (field, value, default) in [
+			(
+				self.window_title_template_field,
+				&mut settings.window_title_template,
+				crate::template::DEFAULT_WINDOW_TITLE_TEMPLATE,
+			),
+			(self.chat_list_template_field, &mut settings.chat_list_template, crate::template::DEFAULT_CHAT_TEMPLATE),
+		] {
+			let text = field.get_value();
+			*value = if text.trim().is_empty() { default.to_string() } else { text };
 		}
 		settings.chat_lock_hello = self.chat_lock_hello_check.is_checked();
 		settings.announce_incoming = self.announce_incoming_check.is_checked();
