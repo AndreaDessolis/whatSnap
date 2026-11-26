@@ -139,6 +139,8 @@ Type in the `Search or start a new chat` field to find chats, contacts and messa
 - With another filter, only the chats of that filter are searched, and the field is named after it, for example `Search unread chats`.
 - In the field, `Enter` opens the first result, and `Down Arrow` at the end of the text goes to the first result. `Up Arrow` on the first result goes back to the field. `Escape` clears the search, keeps the filter, and moves to the chat list. After you close a chat opened from a search, `Escape` on the chat list clears the search and shows the full list.
 
+When you type a phone number that is not one of your chats or contacts, whatSnap asks WhatsApp about it once you stop typing, like WA Web. If the number has WhatsApp, it shows under `Not in your contacts`, with the person's WhatsApp name when whatSnap knows it. Press `Enter` on it to open a chat. Otherwise the list says the number isn't on WhatsApp.
+
 When nothing is found, the list says "No chats, contacts or messages found". When a filter has no chats, the list says so, for example "No unread chats".
 
 The `Filters` box shows only some chats: All chats, Unread, Favorites, Groups, and your own chat lists. To make, rename, or delete chat lists, use `Chats -> Manage Lists...`. Your chat lists sync with your phone.
@@ -172,7 +174,11 @@ The open chat has these controls, in this order:
 - The message box, named `Type a message to` and the name of the chat (`Type a message to group` and its name for a group), so you know who you're writing to.
 - The `Add attachment`, `Send message`, and `Record voice message` buttons.
 
-Press `Alt+M` to go to the Messages list. Press `Alt+E` to go to the message box. Press `Alt+E` again to go back to where you were. Press `Alt+T` to hear the status of the chat, for example online, or typing. Press `Alt+L` to turn reading new messages aloud on or off for the open chat. Press `Alt+I` to open the information of the chat. Press `Escape` to close the chat.
+The buttons that have a shortcut say it after their name and role, like menu items, for example `Record voice message button Ctrl+Shift+R`, and show it in their tooltip. The window title starts with the name of the open chat.
+
+When you open a chat, you are on the Messages list. To start in the message box instead, like WA Web, turn on `Open chats in the message box instead of the message list` on the Chats tab of the settings. A chat opened from a search result or a link still goes to that message.
+
+Press `Alt+Shift+A` to call the open chat, or `Alt+Shift+V` for a video call. In a group with a call going on, both join it. Press `Alt+M` to go to the Messages list. Press `Alt+E` to go to the message box. Press `Alt+E` again to go back to where you were. Press `Alt+T` to hear the status of the chat, for example online, or typing. Press `Alt+L` to turn reading new messages aloud on or off for the open chat. Press `Alt+I` to open the information of the chat. Press `Escape` to close the chat.
 
 ### The Messages List
 The newest message is at the bottom. When you go up, whatSnap loads older messages. Date lines between the messages tell you when each day starts.
@@ -191,6 +197,7 @@ The newest message is at the bottom. When you go up, whatSnap loads older messag
 | `Left Arrow` two times | On a reply, go to the message that it replies to. |
 | `Right Arrow` | On a message that has replies, read the next reply to it. |
 | `Right Arrow` two times | Go to the next reply to the selected message. After going to a replied-to message with `Left Arrow` two times, this takes you back to the reply. |
+| `T` | Say only the status and the time of the message, for example "Read, sent at 10:42 AM". |
 | `R` | Reply. |
 | `E` | Edit your message. |
 | `S` | Star or unstar. |
@@ -202,13 +209,13 @@ The newest message is at the bottom. When you go up, whatSnap loads older messag
 | `Ctrl+Space` | Turn selection mode on or off. |
 | `Applications key` or `Shift+F10` | Open the actions menu of the message. |
 
-If `Typing a letter in the message list starts a message` is on in the settings, typing a letter, a digit, or a punctuation mark in the list moves you to the message box with that character. The letter keys of the list then need `Alt`: `Alt+R` replies, `Alt+F` forwards, `Alt+S` stars, `Alt+V` votes, and `Alt+J` goes back 5 seconds. `Alt+E` and `Alt+L` stay `Jump to Message Field` and `Read New Messages Aloud`, so to edit or go forward 5 seconds from the list, give those actions other keys in `Keyboard Shortcuts...`.
+If `Typing a letter in the message list starts a message` is on in the settings, typing a letter, a digit, or a punctuation mark in the list moves you to the message box with that character. The letter keys of the list then need `Alt`: `Alt+R` replies, `Alt+F` forwards, `Alt+S` stars, `Alt+V` votes, and `Alt+J` goes back. `Alt+E`, `Alt+L` and `Alt+T` stay `Jump to Message Field` and `Read New Messages Aloud`, so to edit, go forward or hear the status from the list, give those actions other keys in `Keyboard Shortcuts...`.
 
-While a voice message plays, `Left Arrow` and `J` go back 5 seconds, and `Right Arrow` and `L` go forward 5 seconds. When it is paused, these keys do nothing to it, so it stays paused. To change the speed, use the speed button. Its name is the current speed, for example `1.0x`.
+While a voice message plays, `Left Arrow` and `J` go back 5 seconds, and `Right Arrow` and `L` go forward 5 seconds. To go back and forward by another amount, from 2 seconds to 1 minute, use `Go back and forward in voice messages by` on the Chats tab of the settings. When it is paused, these keys do nothing to it, so it stays paused. To change the speed, press `[` for slower or `]` for faster, or use the speed button. Its name is the current speed, for example `1.0x`. Like WA Web, the speed you pick is kept for every voice message.
 
 To stop a voice message, press `Shift+Space`. The next time you play it, it starts from the beginning. When you close the chat or open another chat, the voice message stops too.
 
-The actions menu of a message has these items, when they apply to the message: `Copy`, `Reply`, `Forward...`, `Edit`, `Delete`, `React...`, `Star` or `Unstar`, `Retry send`, `Request again`, `Save voice message...`, `Message Info`, `Copy all photos`, `Copy Number`, `Message Number`, `Message Contact`, `View Contact...`, `Download Contact...`, and `Report...`. In a group, a submenu for the sender lets you message or call them. In a channel, a submenu lets you pin a post, or see who reacted or voted.
+The actions menu of a message has these items, when they apply to the message: `Copy`, `Copy Link`, `Reply`, `Forward...`, `Edit`, `Delete`, `React...`, `Reactions...`, `Star` or `Unstar`, `Retry send`, `Request again`, `Save voice message...`, `Message Info`, `Copy all photos`, `Copy Number`, `Message Number`, `Message Contact`, `View Contact...`, `Download Contact...`, and `Report...`. `Copy Link` copies a link in the message, and asks which one when there are several. `Reactions...` lists who reacted and with what, with the count of each emoji first. When you react, whatSnap says "Reacted with" and the emoji, or "Reaction removed". In a group, a submenu for the sender lets you message or call them. In a channel, a submenu lets you pin a post, or see who reacted or voted.
 
 ### Contact Cards
 When someone sends you a contact, the message reads `Contact:` and the name. Press `Enter` on it to open the `View contact` dialog. A message with several contacts opens a list of all of them, with each contact's name followed by its place in the list, for example `(2 of 3)`.
@@ -237,9 +244,11 @@ Type your message in the message box. If `Enter is send` is on in the settings, 
 New messages in the open chat are read aloud. To stop this for all chats, turn off `Read new messages aloud in the open chat` on the Notifications tab of the settings. To change it for one chat, use the notification settings of that chat, or press `Alt+L` in it. Messages you send yourself are not read, unless you turn on `Also read your own sent messages aloud`; they are then read once the message is sent.
 
 - To reply, press `R` on a message. The reply shows above the message box. To remove it, use `Remove quote`, or press `Escape`.
-- To edit, press `E` on your message. To stop editing, press `Escape`, or use `Cancel edit`.
+- To edit, press `E` on your message. In the message box, when it is empty, `Up Arrow` edits your last message, like WhatsApp on phones and Windows. Only your very last message can be edited this way, and only while WhatsApp still lets you edit it. To turn this off, use `Up Arrow in an empty message box edits your last message` on the Chats tab of the settings. To stop editing, press `Escape`, or use `Cancel edit`.
 - To mention someone in a group, type `@` and the first letters of their name.
-- `Alt+Shift+E` opens the emoji panel. `Alt+Shift+S` opens the stickers.
+- `Alt+Shift+E` opens the emoji panel. `Alt+Shift+S` opens the stickers. In the emoji panel, `Down Arrow` in the search field goes to the results.
+- To find an emoji while you type, like WA Web, type `:` and at least two letters of its name, for example `:smi`. A list of up to 10 emoji shows below the message box. Use `Up Arrow` and `Down Arrow` to choose, and `Enter` or `Tab` to put it in. `Escape` closes the list.
+- To format text like WA Web, select it and press `Ctrl+B` for bold, `Ctrl+I` for italic, `Ctrl+Shift+X` for strikethrough, or `Ctrl+Shift+I` for inline code. Press the same keys again to take the formatting off. With nothing selected, the keys put the two marks with the cursor between them. whatSnap writes WhatsApp's own marks, like `*bold*` and `_italic_`, which everyone sees formatted.
 
 ### Spell Checking
 whatSnap uses the spell checker of Windows. Press `F7` to select the next misspelled word and hear its suggestions. Press the Applications key on a misspelled word to see its suggestions, `Add to Dictionary`, and `Ignore`. To hear when you type a misspelled word, turn on `Say when a word you type is misspelled` in the settings.
@@ -248,7 +257,7 @@ whatSnap uses the spell checker of Windows. Press `F7` to select the next misspe
 When this setting is on, whatSnap changes some text into emoji as you type, for example `:-)` or `(y)`. Press `Backspace` immediately after to change it back. For the full list, use `Replace Text With Emoji: See Help...` on the Chats tab of the settings.
 
 ### Sending Files
-Press `Add attachment` to open a menu:
+Press `Add attachment`, or `Alt+A` like in WA Web, to open a menu:
 
 - `Document`: send any file as a document. Photos keep their full quality.
 - `Photos & videos`
@@ -345,7 +354,7 @@ The call window has these buttons:
 - `React...`
 - `End call`
 
-In the call window, `Ctrl+Shift+V` turns the camera on or off, `Ctrl+Shift+S` starts or stops sharing your screen, `Ctrl+Shift+M` mutes or unmutes your microphone, and `Ctrl+Shift+D` opens or closes the device settings. In a call with a business that has a phone menu, typing a digit, `*` or `#` in the call window presses that key on the menu. In Settings, Input & Output, `Mute microphone by default when placing or joining calls` starts every call muted, `Turn off all sound processing in calls` sends your microphone exactly as it is and plays the other person without enhancement (it takes effect right away, also during a call, and Cancel or Escape undoes it), `Send stereo in calls (experimental)` sends left and right apart while you share your screen's sound, or from a stereo microphone while all sound processing is off (only other whatSnap users hear it in stereo; WhatsApp's own apps play it in mono), and `Show frequent contacts in the Calls tab` hides or shows that list. When you share your screen with its sound, the sound is turned down while you talk, the way WhatsApp does it, so you are heard over it. In the main window, `Ctrl+M` mutes or unmutes your microphone, and `Ctrl+W` ends the call.
+In the call window, `Ctrl+Shift+V` turns the camera on or off, `Ctrl+Shift+S` starts or stops sharing your screen, `Ctrl+Shift+M` mutes or unmutes your microphone, and `Ctrl+Shift+D` opens or closes the device settings. In a call with a business that has a phone menu, typing a digit, `*` or `#` in the call window presses that key on the menu. In Settings, Input & Output, `Mute microphone by default when placing or joining calls` starts every call muted, `Turn off all sound processing in calls` sends your microphone exactly as it is and plays the other person without enhancement (it takes effect right away, also during a call, and Cancel or Escape undoes it), `Send stereo in calls (experimental)` sends left and right apart while you share your screen's sound, or from a stereo microphone while all sound processing is off (only other whatSnap users hear it in stereo; WhatsApp's own apps play it in mono), and `Show frequent contacts in the Calls tab` hides or shows that list. When you share your screen with its sound, the sound is turned down while you talk, the way WhatsApp does it, so you are heard over it. In the main window and in the call window, `Ctrl+M` mutes or unmutes your microphone, and `Ctrl+W` ends the call.
 
 In a group call, the People list shows who is in the call. Use `Mute` to ask the selected person to mute. When you can remove people from the call, a `Remove` button also shows. In a call from a call link that you made, `Approve new participants` makes people wait until you let them in. Use `Let in` and `Don't let in` for each one. You can also select your microphone, speaker, and camera in the call window.
 
@@ -429,6 +438,9 @@ Both buttons close the settings without saving them.
 - `Hide phone numbers in groups`: when someone in a group has no saved name and no WhatsApp profile name, whatSnap says `Unknown member` instead of reading their phone number. Messages, replies, the chat list and notifications all follow it. It is off by default. People with a profile name always show that name.
 - `Typing a letter in the message list starts a message`: the letter keys of the Messages list then need `Alt`.
 - `Keep my place in the message list instead of jumping to the newest message`: when you send or delete a message, the list stays where you were.
+- `Open chats in the message box instead of the message list`: off by default.
+- `Up Arrow in an empty message box edits your last message`: on by default.
+- `Go back and forward in voice messages by`: from 2 seconds to 1 minute. 5 seconds by default.
 - `Replace text with emoji as you type`, and `Replace Text With Emoji: See Help...` for the full list.
 - `Check spelling in the message box`
 - `Say when a word you type is misspelled`
@@ -524,6 +536,9 @@ You can't change these keys:
 | New Group | Chats | `Ctrl+Shift+N` |
 | Search | Chats | `Ctrl+/` |
 | Chat Info | Conversation | `Alt+I` |
+| Voice Call | Conversation | `Alt+Shift+A` |
+| Video Call | Conversation | `Alt+Shift+V` |
+| Add Attachment | Conversation | `Alt+A` |
 | Jump to Message Field | Conversation | `Alt+E` |
 | Jump to Messages List | Conversation | `Alt+M` |
 | Announce Chat Status | Conversation | `Alt+T` |
@@ -549,15 +564,18 @@ You can't change these keys:
 | End Call | Calls | `Ctrl+W` |
 | Answer Incoming Call | Calls, global | `Alt+Shift+Y` |
 | Reject Incoming Call | Calls, global | `Alt+Shift+N` |
+| Say only the status and time | Messages | `T` |
 | Reply | Messages | `R` |
 | Edit | Messages | `E` |
 | Star or unstar | Messages | `S` |
 | Forward | Messages | `F` |
 | Vote in poll | Messages | `V` |
 | Delete | Messages | `Delete` |
-| Voice message: back 5 seconds | Messages | `J` |
-| Voice message: forward 5 seconds | Messages | `L` |
+| Voice message: go back | Messages | `J` |
+| Voice message: go forward | Messages | `L` |
 | Voice message: stop | Messages | `Shift+Space` |
+| Voice message: slower | Messages | `[` |
+| Voice message: faster | Messages | `]` |
 | Selection mode on or off | Messages | `Ctrl+Space` |
 | View Message Text | Messages | `Shift+Enter` |
 
