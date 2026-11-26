@@ -2138,7 +2138,13 @@ msgstr ""
 msgid "Group sounds: play sounds for new group messages"
 msgstr ""
 
+msgid "Group video call"
+msgstr ""
+
 msgid "Group video call in"
+msgstr ""
+
+msgid "Group voice call"
 msgstr ""
 
 msgid "Group voice call in"
@@ -2231,13 +2237,25 @@ msgstr ""
 msgid "Incoming group call from"
 msgstr ""
 
+msgid "Incoming group video call"
+msgstr ""
+
 msgid "Incoming group video call from"
+msgstr ""
+
+msgid "Incoming group voice call"
 msgstr ""
 
 msgid "Incoming sounds: play a sound for new messages"
 msgstr ""
 
+msgid "Incoming video call"
+msgstr ""
+
 msgid "Incoming video call from"
+msgstr ""
+
+msgid "Incoming voice call"
 msgstr ""
 
 msgid "Incoming voice call from"
@@ -2735,6 +2753,18 @@ msgstr ""
 msgid "Missed call from {}."
 msgstr ""
 
+msgid "Missed group video call"
+msgstr ""
+
+msgid "Missed group voice call"
+msgstr ""
+
+msgid "Missed video call"
+msgstr ""
+
+msgid "Missed voice call"
+msgstr ""
+
 msgid "Misspelled: {}"
 msgstr ""
 
@@ -3158,13 +3188,25 @@ msgstr ""
 msgid "Outgoing group call in"
 msgstr ""
 
+msgid "Outgoing group video call"
+msgstr ""
+
 msgid "Outgoing group video call in"
+msgstr ""
+
+msgid "Outgoing group voice call"
 msgstr ""
 
 msgid "Outgoing sounds: play sounds for messages you send"
 msgstr ""
 
+msgid "Outgoing video call"
+msgstr ""
+
 msgid "Outgoing video call to"
+msgstr ""
+
+msgid "Outgoing voice call"
 msgstr ""
 
 msgid "Overview"
@@ -4817,6 +4859,18 @@ msgstr ""
 msgid "Unstar messages"
 msgstr ""
 
+msgid "Upcoming group video call"
+msgstr ""
+
+msgid "Upcoming group voice call"
+msgstr ""
+
+msgid "Upcoming video call"
+msgstr ""
+
+msgid "Upcoming voice call"
+msgstr ""
+
 msgid "Updates & Troubleshooting"
 msgstr ""
 
@@ -5537,7 +5591,19 @@ msgstr ""
 msgid "{} forwarded to {}."
 msgstr ""
 
+msgid "{} from {}"
+msgstr ""
+
+msgid "{} from {}, duration {}"
+msgstr ""
+
 msgid "{} groups in common"
+msgstr ""
+
+msgid "{} hour"
+msgstr ""
+
+msgid "{} hours"
 msgstr ""
 
 msgid "{} invited you to be an admin of the channel {}."
@@ -5588,6 +5654,12 @@ msgstr ""
 msgid "{} messages selected"
 msgstr ""
 
+msgid "{} minute"
+msgstr ""
+
+msgid "{} minutes"
+msgstr ""
+
 msgid "{} more channels."
 msgstr ""
 
@@ -5633,6 +5705,12 @@ msgstr ""
 msgid "{} removed from {}."
 msgstr ""
 
+msgid "{} second"
+msgstr ""
+
+msgid "{} seconds"
+msgstr ""
+
 msgid "{} shown, {}"
 msgstr ""
 
@@ -5649,6 +5727,12 @@ msgid "{} starred."
 msgstr ""
 
 msgid "{} stickers."
+msgstr ""
+
+msgid "{} to {}"
+msgstr ""
+
+msgid "{} to {}, duration {}"
 msgstr ""
 
 msgid "{} unblocked."
@@ -5711,13 +5795,34 @@ msgstr ""
 msgid "{}'s status updates unmuted."
 msgstr ""
 
+msgid "{}, abandoned"
+msgstr ""
+
+msgid "{}, answered on another device"
+msgstr ""
+
 msgid "{}, asked {}"
 msgstr ""
 
 msgid "{}, by {}"
 msgstr ""
 
+msgid "{}, cancelled"
+msgstr ""
+
+msgid "{}, declined"
+msgstr ""
+
+msgid "{}, declined on another device"
+msgstr ""
+
+msgid "{}, failed"
+msgstr ""
+
 msgid "{}, last seen {}"
+msgstr ""
+
+msgid "{}, no answer"
 msgstr ""
 
 msgid "{}, status {} of {}, posted {}. {}"
@@ -5726,7 +5831,13 @@ msgstr ""
 msgid "{}, tag: {}"
 msgstr ""
 
+msgid "{}, unavailable"
+msgstr ""
+
 msgid "{}, wants to join"
+msgstr ""
+
+msgid "{}, you declined"
 msgstr ""
 
 msgid "{}, {} of {}"

@@ -1095,78 +1095,7 @@ pub(crate) fn call_target_label(name: &str, phone: &str) -> String {
 }
 
 pub(crate) fn format_call_log_label(name: &str, text: &str, from_me: bool, timestamp: i64) -> String {
-	let call_desc = if crate::i18n::is_indonesian() {
-		if let Some(rest) = text.strip_prefix("Incoming ") {
-			if let Some((kind, dur)) = rest.split_once(", ") {
-				let kind_cap = if let Some(first) = kind.chars().next() {
-					format!("{}{}", first.to_uppercase(), &kind[first.len_utf8()..])
-				} else {
-					kind.to_string()
-				};
-				let kind_id = crate::i18n::translate_call_kind_text(&kind_cap);
-				let dur_id = crate::i18n::translate_call_kind_text(&format!(" {dur}")).trim_start().to_string();
-				format!("{kind_id} dari {name}, durasi {dur_id}")
-			} else {
-				let kind_cap = if let Some(first) = rest.chars().next() {
-					format!("{}{}", first.to_uppercase(), &rest[first.len_utf8()..])
-				} else {
-					rest.to_string()
-				};
-				let kind_id = crate::i18n::translate_call_kind_text(&kind_cap);
-				format!("{kind_id} masuk dari {name}")
-			}
-		} else if let Some(rest) = text.strip_prefix("Outgoing ") {
-			if let Some((kind, dur)) = rest.split_once(", ") {
-				let kind_cap = if let Some(first) = kind.chars().next() {
-					format!("{}{}", first.to_uppercase(), &kind[first.len_utf8()..])
-				} else {
-					kind.to_string()
-				};
-				let kind_id = crate::i18n::translate_call_kind_text(&kind_cap);
-				let dur_id = crate::i18n::translate_call_kind_text(&format!(" {dur}")).trim_start().to_string();
-				format!("{kind_id} keluar ke {name}, durasi {dur_id}")
-			} else {
-				let kind_cap = if let Some(first) = rest.chars().next() {
-					format!("{}{}", first.to_uppercase(), &rest[first.len_utf8()..])
-				} else {
-					rest.to_string()
-				};
-				let kind_id = crate::i18n::translate_call_kind_text(&kind_cap);
-				format!("{kind_id} keluar ke {name}")
-			}
-		} else if let Some(rest) = text.strip_prefix("Missed ") {
-			let kind_id = crate::i18n::translate_call_kind_text(&format!("Missed {rest}"));
-			format!("{kind_id} dari {name}")
-		} else {
-			let kind_id = crate::i18n::translate_call_kind_text(text);
-			let prep = if from_me { "ke" } else { "dari" };
-			format!("{kind_id} {prep} {name}")
-		}
-	} else if text.starts_with("Incoming ") {
-		let rest = &text["Incoming ".len()..];
-		if let Some((kind, dur)) = rest.split_once(", ") {
-			let kind_cap = if let Some(first) = kind.chars().next() {
-				format!("{}{}", first.to_uppercase(), &kind[first.len_utf8()..])
-			} else {
-				kind.to_string()
-			};
-			format!("{} from {}, duration {}", kind_cap, name, dur)
-		} else {
-			format!("Incoming {} from {}", rest, name)
-		}
-	} else if text.starts_with("Outgoing ") {
-		let rest = &text["Outgoing ".len()..];
-		if let Some((kind, dur)) = rest.split_once(", ") {
-			format!("Outgoing {} to {}, duration {}", kind, name, dur)
-		} else {
-			format!("Outgoing {} to {}", rest, name)
-		}
-	} else if text.starts_with("Missed ") {
-		format!("Missed {} from {}", &text["Missed ".len()..], name)
-	} else {
-		let prep = if from_me { "to" } else { "from" };
-		format!("{} {} {}", text, prep, name)
-	};
+	let call_desc = crate::calls::call_rows::call_log_description(text, name, from_me);
 
 	let time_str = if timestamp > 0 {
 		if let Some(local_dt) = whatsnap::LocalTime::from_unix(timestamp) {

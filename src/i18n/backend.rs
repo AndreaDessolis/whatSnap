@@ -233,52 +233,6 @@ pub fn translate_system_message(text: &str) -> String {
 	text.to_string()
 }
 
-pub fn translate_call_kind_text(text: &str) -> String {
-	if !crate::i18n::is_indonesian() {
-		return text.to_string();
-	}
-	let mut out = text.to_string();
-	let replacements = [
-		("Group video call", "Panggilan video grup"),
-		("Group voice call", "Panggilan suara grup"),
-		("Video call", "Panggilan video"),
-		("Voice call", "Panggilan suara"),
-		("Missed group video call", "Panggilan video grup tak terjawab"),
-		("Missed group voice call", "Panggilan suara grup tak terjawab"),
-		("Missed video call", "Panggilan video tak terjawab"),
-		("Missed voice call", "Panggilan suara tak terjawab"),
-		("Upcoming group video call", "Panggilan video grup mendatang"),
-		("Upcoming group voice call", "Panggilan suara grup mendatang"),
-		("Upcoming video call", "Panggilan video mendatang"),
-		("Upcoming voice call", "Panggilan suara mendatang"),
-		(", answered on another device", ", dijawab di perangkat lain"),
-		(", declined on another device", ", ditolak di perangkat lain"),
-		(", you declined", ", Anda menolak"),
-		(", cancelled", ", dibatalkan"),
-		(", declined", ", ditolak"),
-		(", unavailable", ", tidak tersedia"),
-		(", failed", ", gagal"),
-		(", no answer", ", tidak dijawab"),
-		(", abandoned", ", terputus"),
-	];
-	for (en, id) in replacements {
-		if out.contains(en) {
-			out = out.replace(en, id);
-		}
-	}
-	for (en, id) in [
-		("hours", "jam"),
-		("hour", "jam"),
-		("minutes", "menit"),
-		("minute", "menit"),
-		("seconds", "detik"),
-		("second", "detik"),
-	] {
-		out = out.replace(&format!(" {en}"), &format!(" {id}"));
-	}
-	out
-}
-
 pub fn translate_rich_message_text(text: &str) -> String {
 	if !crate::i18n::is_indonesian() {
 		return text.to_string();

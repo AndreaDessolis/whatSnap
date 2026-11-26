@@ -6607,3 +6607,108 @@ msgstr "mercoledì"
 msgid "{} at {}"
 msgstr "{} alle {}"
 
+msgid "Incoming group video call"
+msgstr "Videochiamata di gruppo in arrivo"
+
+msgid "Incoming group voice call"
+msgstr "Chiamata vocale di gruppo in arrivo"
+
+msgid "Incoming video call"
+msgstr "Videochiamata in arrivo"
+
+msgid "Incoming voice call"
+msgstr "Chiamata vocale in arrivo"
+
+msgid "Missed group video call"
+msgstr "Videochiamata di gruppo persa"
+
+msgid "Missed group voice call"
+msgstr "Chiamata vocale di gruppo persa"
+
+msgid "Missed video call"
+msgstr "Videochiamata persa"
+
+msgid "Missed voice call"
+msgstr "Chiamata vocale persa"
+
+msgid "Outgoing group video call"
+msgstr "Videochiamata di gruppo in uscita"
+
+msgid "Outgoing group voice call"
+msgstr "Chiamata vocale di gruppo in uscita"
+
+msgid "Outgoing video call"
+msgstr "Videochiamata in uscita"
+
+msgid "Outgoing voice call"
+msgstr "Chiamata vocale in uscita"
+
+msgid "Upcoming group video call"
+msgstr "Videochiamata di gruppo programmata"
+
+msgid "Upcoming group voice call"
+msgstr "Chiamata vocale di gruppo programmata"
+
+msgid "Upcoming video call"
+msgstr "Videochiamata programmata"
+
+msgid "Upcoming voice call"
+msgstr "Chiamata vocale programmata"
+
+msgid "{} from {}"
+msgstr "{} da {}"
+
+msgid "{} from {}, duration {}"
+msgstr "{} da {}, durata {}"
+
+msgid "{} hour"
+msgstr "{} ora"
+
+msgid "{} hours"
+msgstr "{} ore"
+
+msgid "{} minute"
+msgstr "{} minuto"
+
+msgid "{} minutes"
+msgstr "{} minuti"
+
+msgid "{} second"
+msgstr "{} secondo"
+
+msgid "{} seconds"
+msgstr "{} secondi"
+
+msgid "{} to {}"
+msgstr "{} a {}"
+
+msgid "{} to {}, duration {}"
+msgstr "{} a {}, durata {}"
+
+msgid "{}, abandoned"
+msgstr "{}, interrotta"
+
+msgid "{}, answered on another device"
+msgstr "{}, risposta su un altro dispositivo"
+
+msgid "{}, cancelled"
+msgstr "{}, annullata"
+
+msgid "{}, declined"
+msgstr "{}, rifiutata"
+
+msgid "{}, declined on another device"
+msgstr "{}, rifiutata su un altro dispositivo"
+
+msgid "{}, failed"
+msgstr "{}, non riuscita"
+
+msgid "{}, no answer"
+msgstr "{}, nessuna risposta"
+
+msgid "{}, unavailable"
+msgstr "{}, non disponibile"
+
+msgid "{}, you declined"
+msgstr "{}, rifiutata da te"
+

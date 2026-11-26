@@ -6607,3 +6607,108 @@ msgstr "Rabu"
 msgid "{} at {}"
 msgstr "{} pukul {}"
 
+msgid "Incoming group video call"
+msgstr "Panggilan video grup masuk"
+
+msgid "Incoming group voice call"
+msgstr "Panggilan suara grup masuk"
+
+msgid "Incoming video call"
+msgstr "Panggilan video masuk"
+
+msgid "Incoming voice call"
+msgstr "Panggilan suara masuk"
+
+msgid "Missed group video call"
+msgstr "Panggilan video grup tak terjawab"
+
+msgid "Missed group voice call"
+msgstr "Panggilan suara grup tak terjawab"
+
+msgid "Missed video call"
+msgstr "Panggilan video tak terjawab"
+
+msgid "Missed voice call"
+msgstr "Panggilan suara tak terjawab"
+
+msgid "Outgoing group video call"
+msgstr "Panggilan video grup keluar"
+
+msgid "Outgoing group voice call"
+msgstr "Panggilan suara grup keluar"
+
+msgid "Outgoing video call"
+msgstr "Panggilan video keluar"
+
+msgid "Outgoing voice call"
+msgstr "Panggilan suara keluar"
+
+msgid "Upcoming group video call"
+msgstr "Panggilan video grup mendatang"
+
+msgid "Upcoming group voice call"
+msgstr "Panggilan suara grup mendatang"
+
+msgid "Upcoming video call"
+msgstr "Panggilan video mendatang"
+
+msgid "Upcoming voice call"
+msgstr "Panggilan suara mendatang"
+
+msgid "{} from {}"
+msgstr "{} dari {}"
+
+msgid "{} from {}, duration {}"
+msgstr "{} dari {}, durasi {}"
+
+msgid "{} hour"
+msgstr "{} jam"
+
+msgid "{} hours"
+msgstr "{} jam"
+
+msgid "{} minute"
+msgstr "{} menit"
+
+msgid "{} minutes"
+msgstr "{} menit"
+
+msgid "{} second"
+msgstr "{} detik"
+
+msgid "{} seconds"
+msgstr "{} detik"
+
+msgid "{} to {}"
+msgstr "{} ke {}"
+
+msgid "{} to {}, duration {}"
+msgstr "{} ke {}, durasi {}"
+
+msgid "{}, abandoned"
+msgstr "{}, terputus"
+
+msgid "{}, answered on another device"
+msgstr "{}, dijawab di perangkat lain"
+
+msgid "{}, cancelled"
+msgstr "{}, dibatalkan"
+
+msgid "{}, declined"
+msgstr "{}, ditolak"
+
+msgid "{}, declined on another device"
+msgstr "{}, ditolak di perangkat lain"
+
+msgid "{}, failed"
+msgstr "{}, gagal"
+
+msgid "{}, no answer"
+msgstr "{}, tidak dijawab"
+
+msgid "{}, unavailable"
+msgstr "{}, tidak tersedia"
+
+msgid "{}, you declined"
+msgstr "{}, Anda menolak"
+
