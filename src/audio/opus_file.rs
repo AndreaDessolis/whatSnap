@@ -189,9 +189,9 @@ impl OpusFileSource {
 		let (offset, decoded_from) = resume.unwrap_or((headers_end, 0));
 		reader.seek(SeekFrom::Start(offset)).ok()?;
 		source.packets.pending.clear();
-		if decoded_from > 0 {
-			source.state.skipped = source.state.pre_skip;
-		}
+		// The pre-skip samples before `decoded_from` were never decoded, so
+		// only the rest of them is still to drop.
+		source.state.skipped = (decoded_from as usize).min(source.state.pre_skip);
 		let first = decoded_from.max(pre_skip);
 		let channels = source.state.channels.max(1);
 		let mut drop = (want.saturating_sub(first) as usize) * channels;
