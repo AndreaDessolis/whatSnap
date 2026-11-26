@@ -339,6 +339,10 @@ struct AppState {
 	call_ringback_on: bool,
 	call_ringtone_active: Option<String>,
 	call_reconnect_sink: Option<Player>,
+	/// A call ringing us while we're on another one (call waiting): its id
+	/// and what to say about it.
+	call_waiting: Option<(String, String)>,
+	call_waiting_sink: Option<Player>,
 	/// The one-off poor connection alert, kept until it has played.
 	call_alert_sink: Option<Player>,
 	call_hotkeys: Option<wx_utils::global_hotkeys::GlobalHotkeys>,
@@ -989,6 +993,8 @@ pub(crate) fn new_app_state(
 		call_ringback_on: false,
 		call_ringtone_active: None,
 		call_reconnect_sink: None,
+		call_waiting: None,
+		call_waiting_sink: None,
 		call_alert_sink: None,
 		call_hotkeys: None,
 		tray_hotkey: None,
@@ -1320,6 +1326,8 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::JoinGroupCall(call_id) => ui_commands::calls::join_group_call(state, parts, call_id),
 		UiCommand::AnswerCall => ui_commands::calls::answer_call(state, parts),
 		UiCommand::RejectCall => ui_commands::calls::reject_call(state, parts),
+		UiCommand::AnswerWaitingCall => ui_commands::calls::answer_waiting_call(state, parts),
+		UiCommand::DeclineWaitingCall => ui_commands::calls::decline_waiting_call(state, parts),
 		UiCommand::CallHotkey(hotkey) => ui_commands::calls::call_hotkey(state, parts, hotkey),
 		UiCommand::LeaveCall => ui_commands::calls::leave_call(state, parts),
 		UiCommand::ToggleCamera => ui_commands::calls::toggle_camera(state, parts),

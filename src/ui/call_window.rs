@@ -24,6 +24,10 @@ pub struct CallWindowParts {
 	pub accept_btn: Button,
 	pub reject_btn: Button,
 	pub dismiss_btn: Button,
+	/// Shown while another call is waiting: end this call and answer it, or
+	/// decline it and stay on this one.
+	pub waiting_answer_btn: Button,
+	pub waiting_decline_btn: Button,
 	pub mute_btn: Button,
 	pub camera_btn: Button,
 	pub screen_btn: Button,
@@ -211,6 +215,16 @@ pub fn build_call_window() -> CallWindowParts {
 	btn_sizer.add(&dismiss_btn, 1, SizerFlag::Expand | SizerFlag::Left, 5);
 	dismiss_btn.show(false);
 
+	let waiting_answer_btn = Button::builder(&btn_panel).with_label(crate::i18n::tr("End call and answer")).build();
+	theme::style_primary_button(&waiting_answer_btn);
+	btn_sizer.add(&waiting_answer_btn, 1, SizerFlag::Expand | SizerFlag::Right, 5);
+	waiting_answer_btn.show(false);
+
+	let waiting_decline_btn = Button::builder(&btn_panel).with_label(crate::i18n::tr("Decline waiting call")).build();
+	crate::ui::owner_draw::install_tile(&waiting_decline_btn, CALL_BG);
+	btn_sizer.add(&waiting_decline_btn, 1, SizerFlag::Expand | SizerFlag::Right, 5);
+	waiting_decline_btn.show(false);
+
 	let mute_btn = Button::builder(&btn_panel).with_label(crate::i18n::tr("Mute microphone")).build();
 	crate::ui::owner_draw::install_tile(&mute_btn, CALL_BG);
 	btn_sizer.add(&mute_btn, 1, SizerFlag::Expand | SizerFlag::Right, 5);
@@ -322,6 +336,8 @@ pub fn build_call_window() -> CallWindowParts {
 		accept_btn,
 		reject_btn,
 		dismiss_btn,
+		waiting_answer_btn,
+		waiting_decline_btn,
 		mute_btn,
 		camera_btn,
 		screen_btn,

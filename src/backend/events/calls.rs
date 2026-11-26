@@ -718,12 +718,93 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 			}
 		}
+		"call_waiting" => {
+			if let Some(data) = val.get("data")
+				&& let Some(call_id) = data.get("call_id").and_then(|c| c.as_str())
+			{
+				let mut s = state.borrow_mut();
+				call_log(parts, &s, "waiting", call_id);
+				if s.active_call_id.is_none() {
+					// The current call just ended; the backend makes this one ring.
+					return true;
+				}
+				let caller = data.get("caller").and_then(|c| c.as_str()).unwrap_or("Unknown");
+				let chat_jid = data.get("chat_jid").and_then(|j| j.as_str());
+				let (name, _) = crate::calls::helpers::resolve_call_peer_name_and_phone(
+					&s.contacts,
+					&s.all_contacts,
+					caller,
+					chat_jid,
+					data.get("caller_name").and_then(|n| n.as_str()),
+					data.get("caller_phone").and_then(|p| p.as_str()),
+				);
+				let name = if name == "Unknown" { crate::i18n::tr("Unknown").to_string() } else { name };
+				let is_group = data.get("is_group").and_then(|g| g.as_bool()).unwrap_or(false);
+				let is_video = data.get("is_video").and_then(|v| v.as_bool()).unwrap_or(false);
+				let group_name = data
+					.get("group_name")
+					.and_then(|n| n.as_str())
+					.filter(|n| !n.is_empty())
+					.map(|n| n.to_string())
+					.or_else(|| {
+						let group_jid = data.get("group_jid").and_then(|j| j.as_str())?;
+						s.display_names.get(group_jid).or_else(|| s.contacts.get(group_jid)).cloned()
+					});
+				let description = incoming_call_description(is_group, is_video, &name, group_name.as_deref());
+				s.call_waiting = Some((call_id.to_string(), description.clone()));
+				parts.call_parts.waiting_answer_btn.show(true);
+				parts.call_parts.waiting_decline_btn.show(true);
+				parts.call_parts.frame.layout();
+				if s.settings.call_ringtone {
+					crate::audio::start_call_waiting_tone(&mut s);
+				}
+				if s.call_hotkeys.is_none() {
+					let (call_hotkeys, _) = crate::calls::hotkeys::start(&s.ui_tx, &s.keymap);
+					s.call_hotkeys = call_hotkeys;
+				}
+				if s.settings.notifications_enabled && s.settings.call_notifications {
+					let mut body = description.clone();
+					if let Some(first) = body.get_mut(..1) {
+						first.make_ascii_uppercase();
+					}
+					show_toast_notification(crate::i18n::tr("Call waiting"), &body);
+				}
+				let chord = |id| s.keymap.global_chord(id).map(|c| c.to_shortcut_string()).unwrap_or_default();
+				let answer_key = chord(crate::keymap::incoming_call::ANSWER);
+				let decline_key = chord(crate::keymap::incoming_call::REJECT);
+				let msg = crate::i18n::tr_fmt(
+					"Call waiting: {}. {} ends this call and answers it, {} declines it.",
+					&[&description, &answer_key, &decline_key],
+				);
+				announce_call(parts, &msg, Priority::High);
+			}
+		}
+		"call_waiting_ended" => {
+			if let Some(data) = val.get("data")
+				&& let Some(call_id) = data.get("call_id").and_then(|c| c.as_str())
+			{
+				let mut s = state.borrow_mut();
+				call_log(parts, &s, "waiting ended", call_id);
+				let Some((waiting_id, description)) = s.call_waiting.clone() else { return true };
+				if waiting_id != call_id {
+					return true;
+				}
+				crate::ui_commands::calls::clear_waiting_call(&mut s, parts);
+				let msg = crate::i18n::tr_fmt("Missed {}.", &[&description]);
+				announce_call(parts, &msg, Priority::High);
+			}
+		}
 		"incoming_call" => {
+			let answer_now =
+				val.get("data").and_then(|d| d.get("answer_now")).and_then(|a| a.as_bool()).unwrap_or(false);
 			if let Some(data) = val.get("data") {
 				let caller = data.get("caller").and_then(|c| c.as_str()).unwrap_or("Unknown");
 				if let Some(call_id) = data.get("call_id").and_then(|c| c.as_str()) {
 					let mut s = state.borrow_mut();
 					call_log(parts, &s, "incoming", call_id);
+					if s.call_waiting.as_ref().is_some_and(|(id, _)| id == call_id) {
+						crate::ui_commands::calls::clear_waiting_call(&mut s, parts);
+					}
 					s.active_call_id = Some(call_id.to_string());
 					crate::ui_commands::calls::refresh_active_call_row(&mut s, parts);
 					s.call_answer_deadline = None;
@@ -863,9 +944,14 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 						};
 						show_toast_notification(crate::i18n::tr("Incoming call"), &toast_body);
 					}
-					announce_call(parts, &win_title, Priority::High);
+					if !answer_now {
+						announce_call(parts, &win_title, Priority::High);
+					}
 					call_log(parts, &s, "incoming shown", call_id);
 				}
+			}
+			if answer_now {
+				crate::ui_commands::calls::answer_call(state, parts);
 			}
 		}
 		"call_logs" => {

@@ -1836,6 +1836,14 @@ pub fn bind_input_handlers(
 	parts.call_parts.dismiss_btn.on_click(move |_| {
 		let _ = tx_dismiss.send(UiCommand::DismissIncomingCall);
 	});
+	let tx_waiting_answer = ui_tx.clone();
+	parts.call_parts.waiting_answer_btn.on_click(move |_| {
+		let _ = tx_waiting_answer.send(UiCommand::AnswerWaitingCall);
+	});
+	let tx_waiting_decline = ui_tx.clone();
+	parts.call_parts.waiting_decline_btn.on_click(move |_| {
+		let _ = tx_waiting_decline.send(UiCommand::DeclineWaitingCall);
+	});
 	let tx_callback = ui_tx.clone();
 	parts.call_parts.callback_btn.on_click(move |_| {
 		let _ = tx_callback.send(UiCommand::RedialCall);

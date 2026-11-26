@@ -506,6 +506,10 @@ func (acc *Account) dispatchCommand(conn net.Conn, cmd Command) {
 		acc.handleMuteCall(cmd.Data)
 	case "leave_call":
 		acc.handleLeaveCall(cmd.Data)
+	case "answer_waiting_call":
+		acc.handleAnswerWaitingCall(cmd.Data)
+	case "decline_waiting_call":
+		acc.handleDeclineWaitingCall(cmd.Data)
 	case "add_participant":
 		acc.handleAddParticipant(cmd.Data)
 	case "set_video":

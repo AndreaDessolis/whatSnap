@@ -355,6 +355,8 @@ When you call someone, the call window shows the name of the person you call and
 
 When a call comes in, the call window opens and whatSnap plays the ringtone. Press `Alt+Shift+Y` to answer, or `Alt+Shift+N` to decline. These two shortcuts work from all programs, but only while a call rings. If another program uses one of them, whatSnap tells you. `Dismiss` (or `Escape`) closes the call window and silences the ringtone, but the call keeps ringing: a bar at the top of the main window then offers `Open call window`, `Answer` and `Decline`. When a call ends, the call window stays with `Call back` and `Close`.
 
+If someone calls while you're already on a call, the call isn't declined: whatSnap says who is calling and plays the call waiting tone (two short beeps). The call window then shows `End call and answer` and `Decline waiting call`, and `Alt+Shift+Y` and `Alt+Shift+N` do the same. If your current call ends first, the waiting call rings as a normal call. If the caller gives up, whatSnap tells you that you missed it. Only one call can wait; a third caller hears that you're busy.
+
 The call window has these buttons:
 
 - `Mute microphone`

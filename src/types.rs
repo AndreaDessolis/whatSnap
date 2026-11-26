@@ -300,6 +300,8 @@ pub enum UiCommand {
 	JoinGroupCall(Option<String>),
 	AnswerCall,
 	RejectCall,
+	AnswerWaitingCall,
+	DeclineWaitingCall,
 	CallHotkey(crate::calls::hotkeys::CallHotkey),
 	MuteCall,
 	LeaveCall,
