@@ -14,6 +14,8 @@ permissions:
   contents: write
 jobs:
   build-windows:
+    # Forks of this repository don't run it (and don't email their owners failures).
+    if: github.repository_owner == 'aryanchoudharypro'
     # arm64 builds natively on GitHub's Windows arm64 runner; its packages are named -arm64.
     strategy:
       fail-fast: false
@@ -83,6 +85,7 @@ jobs:
 
   release:
     needs: [build-windows]
+    if: github.repository_owner == 'aryanchoudharypro'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository

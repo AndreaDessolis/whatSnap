@@ -10,6 +10,8 @@ permissions:
   actions: write
 jobs:
   update:
+    # Forks of this repository don't run it (and don't email their owners failures).
+    if: github.repository_owner == 'aryanchoudharypro'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository

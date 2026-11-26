@@ -18,6 +18,8 @@ permissions:
   contents: read
 jobs:
   build-windows:
+    # Forks of this repository don't run it (and don't email their owners failures).
+    if: github.repository_owner == 'aryanchoudharypro'
     # arm64 builds natively on GitHub's Windows arm64 runner; its packages are named -arm64.
     strategy:
       fail-fast: false
@@ -91,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     # The daily WhatsApp version job uses workflow_dispatch because its token's push
     # doesn't trigger workflows. Those builds must publish updates too.
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
+    if: github.repository_owner == 'aryanchoudharypro' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
     permissions:
       contents: write
     # Every run publishes to the same `latest` release, so two of them uploading at once
