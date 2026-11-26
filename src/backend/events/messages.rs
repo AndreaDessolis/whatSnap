@@ -1181,6 +1181,26 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 			}
 		}
+		"draft_synced" => {
+			if let Some(data) = val.get("data") {
+				let chat_jid = data.get("jid").and_then(|j| j.as_str()).unwrap_or("");
+				let text = data.get("text").and_then(|t| t.as_str()).unwrap_or("");
+				if chat_jid.is_empty() {
+					return true;
+				}
+				let mut s = state.borrow_mut();
+				// The open chat's box is what is being typed right now.
+				if s.selected_chat.as_deref() != Some(chat_jid) {
+					if text.is_empty() {
+						s.draft_messages.remove(chat_jid);
+					} else {
+						s.draft_messages.insert(chat_jid.to_string(), text.to_string());
+					}
+					s.draft_mentions.remove(chat_jid);
+					crate::ui::message_display::refresh_chat_rows(&mut s, parts);
+				}
+			}
+		}
 		"typing" => {
 			if let Some(data) = val.get("data") {
 				let chat_jid = data.get("chat_jid").or_else(|| data.get("jid")).and_then(|j| j.as_str()).unwrap_or("");

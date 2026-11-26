@@ -1230,6 +1230,9 @@ func (acc *Account) eventHandler(evt interface{}) {
 				if markedUnread == 1 && unread == 0 {
 					unread = 1
 				}
+				if draft := conv.GetDraft(); draft != nil {
+					acc.applyHistoryDraft(chatJID, draft.GetContent(), draft.GetEditTimestampMS())
+				}
 				mentions := conv.GetUnreadMentionCount()
 				if mentions > unread {
 					mentions = unread
@@ -1651,6 +1654,10 @@ func (acc *Account) eventHandler(evt interface{}) {
 			}
 		}
 		if crm := unwrappedMsg.GetConditionalRevealMessage(); crm != nil && acc.receiveConditionalReveal(v, crm) {
+			return
+		}
+		if pm := unwrappedMsg.GetProtocolMessage(); pm != nil && pm.GetType() == waE2E.ProtocolMessage_DRAFT_MESSAGE_SYNC {
+			acc.handleDraftSyncMessage(v, pm)
 			return
 		}
 		if pm := unwrappedMsg.GetProtocolMessage(); pm != nil && pm.GetType() == waE2E.ProtocolMessage_MESSAGE_UNSCHEDULE {
