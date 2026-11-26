@@ -145,11 +145,7 @@ pub(super) fn apply_chats(chats: Vec<ChatRow>, state: &Rc<RefCell<AppState>>, pa
 					let yesterday = today.add_days(-1);
 					let num_days_ago = today.days_since(msg_date);
 					if msg_date == today {
-						if crate::i18n::is_indonesian() {
-							local_dt.format("%H:%M")
-						} else {
-							local_dt.format("%I:%M %p")
-						}
+						local_dt.format(crate::i18n::tr("%I:%M %p"))
 					} else if msg_date == yesterday {
 						crate::i18n::tr("Yesterday").to_string()
 					} else if num_days_ago > 1 && num_days_ago < 7 {

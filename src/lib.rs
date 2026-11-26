@@ -116,10 +116,9 @@ pub fn format_date_divider_label(local_dt: LocalTime) -> String {
 		i18n::tr("Today").to_string()
 	} else if day == today.add_days(-1) {
 		i18n::tr("Yesterday").to_string()
-	} else if i18n::is_indonesian() {
-		local_dt.format("%A, %e %B %Y").replace("  ", " ")
 	} else {
-		local_dt.format("%A, %B %e, %Y")
+		// The order of day, month and year comes from the po file too.
+		local_dt.format(i18n::tr("%A, %B %e, %Y")).replace("  ", " ")
 	}
 }
 
@@ -140,26 +139,19 @@ pub fn day_name(local_dt: LocalTime, other: &str) -> String {
 /// "today at 9:05 PM", "yesterday at 9:05 PM" or "Mar 2 at 9:05 PM", for
 /// times read inside a sentence.
 pub fn day_and_time(local_dt: LocalTime) -> String {
-	if i18n::is_indonesian() {
-		let time = local_dt.format("%H:%M");
-		let day = day_name(local_dt, "%e %b");
-		return match day.as_str() {
-			"Hari ini" | "Kemarin" => format!("{} pukul {}", day.to_lowercase(), time),
-			_ => format!("{day} pukul {time}"),
-		};
-	}
-	let time = local_dt.format("%l:%M %p").trim().to_string();
-	let day = day_name(local_dt, "%b %e");
-	match day.as_str() {
-		"Today" | "Yesterday" => format!("{} at {}", day.to_lowercase(), time),
-		_ => format!("{day} at {time}"),
-	}
+	let time = local_dt.format(i18n::tr("%l:%M %p")).trim().to_string();
+	let day = day_name(local_dt, i18n::tr("%b %e"));
+	// "Today" and "Yesterday" sit inside the sentence, so they go lowercase.
+	let today = LocalTime::now().date();
+	let named_day = local_dt.date() == today || local_dt.date() == today.add_days(-1);
+	let day = if named_day { day.to_lowercase() } else { day };
+	i18n::tr_fmt("{} at {}", &[&day, &time])
 }
 
 /// Just the time for today, otherwise [`day_and_time`].
 pub fn time_or_day(local_dt: LocalTime) -> String {
 	if local_dt.date() == LocalTime::now().date() {
-		if i18n::is_indonesian() { local_dt.format("%H:%M") } else { local_dt.format("%I:%M %p") }
+		local_dt.format(i18n::tr("%I:%M %p"))
 	} else {
 		day_and_time(local_dt)
 	}
@@ -658,8 +650,7 @@ impl ChatMessage {
 		if self.timestamp > 0
 			&& let Some(local_datetime) = LocalTime::from_unix(self.timestamp)
 		{
-			formatted_time =
-				if i18n::is_indonesian() { local_datetime.format("%H:%M") } else { local_datetime.format("%I:%M %p") };
+			formatted_time = local_datetime.format(i18n::tr("%I:%M %p"));
 		}
 
 		let is_deleted = self.is_deleted
@@ -887,11 +878,7 @@ impl DisplayItem {
 			DisplayItem::Album { from_me, sender_name, sender_jid, timestamp, messages, .. } => {
 				let formatted_time = if *timestamp > 0 {
 					if let Some(local_dt) = LocalTime::from_unix(*timestamp) {
-						if i18n::is_indonesian() {
-							local_dt.format("%H:%M")
-						} else {
-							local_dt.format("%l:%M %p").trim().to_string()
-						}
+						local_dt.format(i18n::tr("%l:%M %p")).trim().to_string()
 					} else {
 						String::new()
 					}

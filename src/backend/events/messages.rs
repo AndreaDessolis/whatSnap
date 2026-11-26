@@ -811,11 +811,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 					let Some(dt) = whatsnap::LocalTime::from_unix(ts) else {
 						return String::new();
 					};
-					let time = if crate::i18n::is_indonesian() {
-						dt.format("%H:%M")
-					} else {
-						dt.format("%l:%M %p").trim().to_lowercase()
-					};
+					let time = dt.format(crate::i18n::tr("%l:%M %p")).trim().to_lowercase();
 					if dt.date() == whatsnap::LocalTime::now().date() { time } else { whatsnap::day_and_time(dt) }
 				};
 				let msg_id = data.get("id").and_then(|v| v.as_str()).unwrap_or("");

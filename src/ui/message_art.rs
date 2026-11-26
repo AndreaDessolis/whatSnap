@@ -87,7 +87,7 @@ pub(crate) fn ticks_for(status: &str) -> Ticks {
 
 fn short_time(ts: i64) -> String {
 	whatsnap::LocalTime::from_unix(ts)
-		.map(|t| if crate::i18n::is_indonesian() { t.format("%H:%M") } else { t.format("%l:%M %p").trim().to_string() })
+		.map(|t| t.format(crate::i18n::tr("%l:%M %p")).trim().to_string())
 		.unwrap_or_default()
 }
 

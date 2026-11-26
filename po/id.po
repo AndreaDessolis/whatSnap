@@ -6534,3 +6534,76 @@ msgstr "Ketik pesan ke {}"
 
 msgid "Type a message to group {}"
 msgstr "Ketik pesan ke grup {}"
+
+msgid "%A, %B %e, %Y"
+msgstr "%A, %e %B %Y"
+
+msgid "%I:%M %p"
+msgstr "%H:%M"
+
+msgid "%b %e"
+msgstr "%e %b"
+
+msgid "%l:%M %p"
+msgstr "%H:%M"
+
+msgid "April"
+msgstr "April"
+
+msgid "August"
+msgstr "Agustus"
+
+msgid "December"
+msgstr "Desember"
+
+msgid "February"
+msgstr "Februari"
+
+msgid "Friday"
+msgstr "Jumat"
+
+msgid "January"
+msgstr "Januari"
+
+msgid "July"
+msgstr "Juli"
+
+msgid "June"
+msgstr "Juni"
+
+msgid "March"
+msgstr "Maret"
+
+msgid "May"
+msgstr "Mei"
+
+msgid "Monday"
+msgstr "Senin"
+
+msgid "November"
+msgstr "November"
+
+msgid "October"
+msgstr "Oktober"
+
+msgid "Saturday"
+msgstr "Sabtu"
+
+msgid "September"
+msgstr "September"
+
+msgid "Sunday"
+msgstr "Minggu"
+
+msgid "Thursday"
+msgstr "Kamis"
+
+msgid "Tuesday"
+msgstr "Selasa"
+
+msgid "Wednesday"
+msgstr "Rabu"
+
+msgid "{} at {}"
+msgstr "{} pukul {}"
+

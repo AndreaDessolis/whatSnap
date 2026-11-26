@@ -6534,3 +6534,76 @@ msgstr "Scrivi un messaggio a {}"
 
 msgid "Type a message to group {}"
 msgstr "Scrivi un messaggio al gruppo {}"
+
+msgid "%A, %B %e, %Y"
+msgstr "%A %e %B %Y"
+
+msgid "%I:%M %p"
+msgstr "%H:%M"
+
+msgid "%b %e"
+msgstr "%e %b"
+
+msgid "%l:%M %p"
+msgstr "%H:%M"
+
+msgid "April"
+msgstr "aprile"
+
+msgid "August"
+msgstr "agosto"
+
+msgid "December"
+msgstr "dicembre"
+
+msgid "February"
+msgstr "febbraio"
+
+msgid "Friday"
+msgstr "venerdì"
+
+msgid "January"
+msgstr "gennaio"
+
+msgid "July"
+msgstr "luglio"
+
+msgid "June"
+msgstr "giugno"
+
+msgid "March"
+msgstr "marzo"
+
+msgid "May"
+msgstr "maggio"
+
+msgid "Monday"
+msgstr "lunedì"
+
+msgid "November"
+msgstr "novembre"
+
+msgid "October"
+msgstr "ottobre"
+
+msgid "Saturday"
+msgstr "sabato"
+
+msgid "September"
+msgstr "settembre"
+
+msgid "Sunday"
+msgstr "domenica"
+
+msgid "Thursday"
+msgstr "giovedì"
+
+msgid "Tuesday"
+msgstr "martedì"
+
+msgid "Wednesday"
+msgstr "mercoledì"
+
+msgid "{} at {}"
+msgstr "{} alle {}"
+

@@ -53,7 +53,19 @@ msgstr ""
 msgid " {} couldn't be."
 msgstr ""
 
+msgid "%A, %B %e, %Y"
+msgstr ""
+
+msgid "%I:%M %p"
+msgstr ""
+
+msgid "%b %e"
+msgstr ""
+
 msgid "%b %e, %Y"
+msgstr ""
+
+msgid "%l:%M %p"
 msgstr ""
 
 msgid "&Account"
@@ -776,6 +788,9 @@ msgstr ""
 msgid "Approved {}."
 msgstr ""
 
+msgid "April"
+msgstr ""
+
 msgid "Archive or unarchive chat"
 msgstr ""
 
@@ -828,6 +843,9 @@ msgid "Audio and video settings closed."
 msgstr ""
 
 msgid "Audio and video settings opened."
+msgstr ""
+
+msgid "August"
 msgstr ""
 
 msgid "Availability"
@@ -1586,6 +1604,9 @@ msgstr ""
 msgid "Deactivate community..."
 msgstr ""
 
+msgid "December"
+msgstr ""
+
 msgid "Decline"
 msgstr ""
 
@@ -1988,6 +2009,9 @@ msgstr ""
 msgid "Favorites"
 msgstr ""
 
+msgid "February"
+msgstr ""
+
 msgid "File"
 msgstr ""
 
@@ -2046,6 +2070,9 @@ msgid "Forward this message to contacts or groups"
 msgstr ""
 
 msgid "Frequent contacts"
+msgstr ""
+
+msgid "Friday"
 msgstr ""
 
 msgid "Fullscreen"
@@ -2264,6 +2291,9 @@ msgstr ""
 msgid "JSON files (*.json)|*.json|All files (*.*)|*.*"
 msgstr ""
 
+msgid "January"
+msgstr ""
+
 msgid "Join Call Link"
 msgstr ""
 
@@ -2301,6 +2331,12 @@ msgid "Joining call..."
 msgstr ""
 
 msgid "Joining group..."
+msgstr ""
+
+msgid "July"
+msgstr ""
+
+msgid "June"
 msgstr ""
 
 msgid "Keep"
@@ -2537,6 +2573,9 @@ msgstr ""
 msgid "Manage channel..."
 msgstr ""
 
+msgid "March"
+msgstr ""
+
 msgid "Mark as &read"
 msgstr ""
 
@@ -2550,6 +2589,9 @@ msgid "Mark chat as read or unread"
 msgstr ""
 
 msgid "Markdown file (*.md)|*.md"
+msgstr ""
+
+msgid "May"
 msgstr ""
 
 msgid "Maya Blue"
@@ -2700,6 +2742,9 @@ msgid "Mobile"
 msgstr ""
 
 msgid "Mona Lisa"
+msgstr ""
+
+msgid "Monday"
 msgstr ""
 
 msgid "Monte Carlo"
@@ -3002,10 +3047,16 @@ msgstr ""
 msgid "Notifications from {} unmuted."
 msgstr ""
 
+msgid "November"
+msgstr ""
+
 msgid "Number"
 msgstr ""
 
 msgid "OK"
+msgstr ""
+
+msgid "October"
 msgstr ""
 
 msgid "Only admins can add members"
@@ -3782,6 +3833,9 @@ msgstr ""
 msgid "Sale price"
 msgstr ""
 
+msgid "Saturday"
+msgstr ""
+
 msgid "Save"
 msgstr ""
 
@@ -4163,6 +4217,9 @@ msgstr ""
 msgid "Sent: {}"
 msgstr ""
 
+msgid "September"
+msgstr ""
+
 msgid "Set tag"
 msgstr ""
 
@@ -4436,6 +4493,9 @@ msgstr ""
 msgid "Sundance"
 msgstr ""
 
+msgid "Sunday"
+msgstr ""
+
 msgid "Surname"
 msgstr ""
 
@@ -4589,7 +4649,13 @@ msgstr ""
 msgid "This video's format can't be played here."
 msgstr ""
 
+msgid "Thursday"
+msgstr ""
+
 msgid "Today"
+msgstr ""
+
+msgid "Tuesday"
 msgstr ""
 
 msgid "Turn camera off"
@@ -4616,10 +4682,10 @@ msgstr ""
 msgid "Type a message"
 msgstr ""
 
-msgid "Type a message to schedule."
+msgid "Type a message to group {}"
 msgstr ""
 
-msgid "Type a message to group {}"
+msgid "Type a message to schedule."
 msgstr ""
 
 msgid "Type a message to {}"
@@ -4929,6 +4995,9 @@ msgid "Wasabi"
 msgstr ""
 
 msgid "Website"
+msgstr ""
+
+msgid "Wednesday"
 msgstr ""
 
 msgid "What kind of call?"
@@ -5432,6 +5501,9 @@ msgstr ""
 msgid "{} asking to join:"
 msgstr ""
 
+msgid "{} at {}"
+msgstr ""
+
 msgid "{} blocked."
 msgstr ""
 
@@ -5713,3 +5785,4 @@ msgstr ""
 
 msgid "{}{}. Reported by {}"
 msgstr ""
+

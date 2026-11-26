@@ -201,4 +201,15 @@ mod tests {
 		assert_eq!(po::translate_id("Send voice message"), Some("Kirim pesan suara"));
 		assert_eq!(po::translate_id("__untranslated_key__"), None);
 	}
+
+	#[test]
+	fn indonesian_dates_and_times_come_from_the_catalog() {
+		assert_eq!(po::translate_id("Monday"), Some("Senin"));
+		assert_eq!(po::translate_id("May"), Some("Mei"));
+		assert_eq!(po::translate_id("%I:%M %p"), Some("%H:%M"));
+		assert_eq!(po::translate_id("%l:%M %p"), Some("%H:%M"));
+		assert_eq!(po::translate_id("%b %e"), Some("%e %b"));
+		assert_eq!(po::translate_id("%A, %B %e, %Y"), Some("%A, %e %B %Y"));
+		assert_eq!(po::translate_id("{} at {}"), Some("{} pukul {}"));
+	}
 }
