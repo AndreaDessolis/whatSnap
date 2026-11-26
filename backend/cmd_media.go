@@ -208,6 +208,9 @@ func (acc *Account) downloadRawMediaToFile(ctx context.Context, messageID string
 			acc.broadcastEvent("message_updated", map[string]interface{}{"jid": jid, "message_id": messageID, "text": newText})
 		}
 	}
+	if doc := msg.GetDocumentMessage(); doc != nil && doc.GetPageCount() == 0 && isPDF(mimetype, filename) {
+		acc.addDownloadedPDFPages(messageID, doc, finalPath)
+	}
 	if filename != "" {
 		acc.db.Exec("UPDATE messages SET media_filename = ? WHERE id = ?", filename, messageID)
 	}
@@ -1001,6 +1004,9 @@ func (acc *Account) handleSendAttachment(conn net.Conn, raw json.RawMessage) {
 
 		viewOnce := data.ViewOnce && (data.Type == "image" || data.Type == "video") && jid.Server != types.NewsletterServer
 		displayText := attachmentDisplayText(data.Type, data.Filename, data.Caption, data.Duration)
+		if data.Type == "document" && localPath != "" && data.Filename != "" {
+			displayText = localDocumentText(localPath, data.Filename, data.Mimetype, data.Caption)
+		}
 		if data.Type == "sticker" && data.Path != "" {
 			st := &waE2E.StickerMessage{}
 			acc.labelStickerFromCache(st, data.Path)
@@ -1053,6 +1059,9 @@ func (acc *Account) handleSendAttachment(conn net.Conn, raw json.RawMessage) {
 
 func (acc *Account) sendUploadedAttachment(conn net.Conn, id string, jid types.JID, mediaType, path, mimetypeHint, filename, caption string, seconds int, thumbPNG []byte, gifPlayback bool, ctxInfo *waE2E.ContextInfo, quotedID, quotedText, quotedSender string) {
 	displayText := attachmentDisplayText(mediaType, filename, caption, seconds)
+	if mediaType == "document" && filename != "" {
+		displayText = localDocumentText(path, filename, mimetypeHint, caption)
+	}
 	viewOnce := (mediaType == "image" || mediaType == "video") && acc.viewOnceState(id) == viewOnceUnopened
 	if viewOnce {
 		displayText = viewOnceText(displayText)
@@ -1169,7 +1178,7 @@ func (acc *Account) sendUploadedAttachment(conn net.Conn, id string, jid types.J
 		mimetype = audioMimetype(mimetype, filename, header[:n])
 		if !phonePlayableAudio(mimetype) {
 			mediaType, waMediaType = "document", whatsmeow.MediaDocument
-			displayText = attachmentDisplayText(mediaType, filename, caption, seconds)
+			displayText = localDocumentText(path, filename, mimetype, caption)
 			acc.db.Exec(`UPDATE messages SET media_type = ? WHERE id = ?`, mediaType, id)
 		}
 	}
@@ -1331,7 +1340,7 @@ func (acc *Account) sendUploadedAttachment(conn net.Conn, id string, jid types.J
 		if caption != "" {
 			docMsg.Caption = proto.String(caption)
 		}
-		if mimetype == "application/pdf" || strings.EqualFold(filepath.Ext(filename), ".pdf") {
+		if isPDF(mimetype, filename) {
 			if pages := pdfPageCount(path); pages > 0 {
 				docMsg.PageCount = proto.Uint32(pages)
 			}
@@ -1894,4 +1903,26 @@ func (acc *Account) loadAutoDownloadFailed() {
 			acc.autoDownloadFailed[id] = true
 		}
 	}
+}
+
+// addDownloadedPDFPages adds the page count to a PDF the sender sent without
+// one, once its file is here, if the message still shows the plain text.
+func (acc *Account) addDownloadedPDFPages(messageID string, doc *waE2E.DocumentMessage, path string) {
+	pages := pdfPageCount(path)
+	if pages == 0 {
+		return
+	}
+	counted := proto.Clone(doc).(*waE2E.DocumentMessage)
+	counted.PageCount = proto.Uint32(pages)
+	var text, jid string
+	acc.db.QueryRow(`SELECT COALESCE(text, ''), COALESCE(jid, '') FROM messages WHERE id = ?`, messageID).Scan(&text, &jid)
+	if text != documentText(doc) && text != documentTextWithDetails(doc, "") {
+		return
+	}
+	newText := documentText(counted)
+	if newText == text {
+		return
+	}
+	acc.db.Exec("UPDATE messages SET text = ? WHERE id = ?", newText, messageID)
+	acc.broadcastEvent("message_updated", map[string]interface{}{"jid": jid, "message_id": messageID, "text": newText})
 }

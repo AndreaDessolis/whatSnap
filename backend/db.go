@@ -232,6 +232,7 @@ func (acc *Account) migrateDB() error {
 	acc.runOnce("backfill_album_messages_v1", acc.backfillAlbumMessages)
 	acc.runOnce("backfill_album_association_v1", acc.backfillAlbumAssociation)
 	acc.runOnce("backfill_media_sizes_v1", acc.backfillMediaSizes)
+	acc.runOnce("backfill_document_details_v1", acc.backfillDocumentDetails)
 	acc.runOnce("remove_key_distribution_stubs_v1", acc.removeKeyDistributionStubs)
 	acc.runOnce("tokenize_system_line_names_v1", acc.tokenizeBakedSystemLines)
 	acc.runOnce("clear_lid_fake_phones_v1", func() {
@@ -778,6 +779,41 @@ func (acc *Account) backfillMediaSizes() {
 	rows.Close()
 	for _, m := range fixed {
 		acc.db.Exec(`UPDATE messages SET media_size = ? WHERE id = ?`, m.size, m.id)
+	}
+}
+
+// backfillDocumentDetails adds the size and page count to documents stored
+// before their text carried them. Only rows still showing the plain
+// "[Document] name" text change.
+func (acc *Account) backfillDocumentDetails() {
+	rows, err := acc.db.Query(`SELECT id, COALESCE(text, ''), raw FROM messages
+		WHERE text LIKE '[Document]%' AND raw IS NOT NULL AND length(raw) > 0`)
+	if err != nil {
+		return
+	}
+	type update struct{ id, text string }
+	var updates []update
+	for rows.Next() {
+		var id, text string
+		var raw []byte
+		if rows.Scan(&id, &text, &raw) != nil {
+			continue
+		}
+		msg := &waE2E.Message{}
+		if proto.Unmarshal(raw, msg) != nil {
+			continue
+		}
+		doc := mediaCarrier(msg).GetDocumentMessage()
+		if doc == nil || text != documentTextWithDetails(doc, "") {
+			continue
+		}
+		if newText := documentText(doc); newText != text {
+			updates = append(updates, update{id, newText})
+		}
+	}
+	rows.Close()
+	for _, u := range updates {
+		acc.db.Exec(`UPDATE messages SET text = ? WHERE id = ?`, u.text, u.id)
 	}
 }
 

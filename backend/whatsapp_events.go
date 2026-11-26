@@ -3658,15 +3658,17 @@ func formatFileSize(n int64) string {
 // documentText is a document's message text: "[Document] name (size,
 // pages): caption".
 func documentText(doc *waE2E.DocumentMessage) string {
+	return documentTextWithDetails(doc, documentDetails(doc))
+}
+
+func documentTextWithDetails(doc *waE2E.DocumentMessage, details string) string {
 	caption := doc.GetCaption()
 	title := doc.GetTitle()
 	if title == "" {
 		title = doc.GetFileName()
 	}
-	if title != "" {
-		if details := documentDetails(doc); details != "" {
-			title += " (" + details + ")"
-		}
+	if title != "" && details != "" {
+		title += " (" + details + ")"
 	}
 	if caption != "" {
 		if title != "" {
@@ -3678,4 +3680,26 @@ func documentText(doc *waE2E.DocumentMessage) string {
 		return "[Document] " + title
 	}
 	return "[Document]"
+}
+
+// localDocumentText is the text of a document we're sending, with the size
+// and (for a PDF) page count read from the file before it uploads.
+func localDocumentText(path, filename, mimetype, caption string) string {
+	doc := &waE2E.DocumentMessage{FileName: proto.String(filename)}
+	if caption != "" {
+		doc.Caption = proto.String(caption)
+	}
+	if info, err := os.Stat(path); err == nil {
+		doc.FileLength = proto.Uint64(uint64(info.Size()))
+	}
+	if isPDF(mimetype, filename) {
+		if pages := pdfPageCount(path); pages > 0 {
+			doc.PageCount = proto.Uint32(pages)
+		}
+	}
+	return documentText(doc)
+}
+
+func isPDF(mimetype, filename string) bool {
+	return mimetype == "application/pdf" || strings.EqualFold(filepath.Ext(filename), ".pdf")
 }
