@@ -593,6 +593,47 @@ fn last_editable_message(s: &crate::AppState) -> Option<(String, String)> {
 	Some((last.id.clone(), last.edit_text()?.to_string()))
 }
 
+/// WA Web's formatting keys in the message box: Ctrl+B bold, Ctrl+I italic,
+/// Ctrl+Shift+X strikethrough and Ctrl+Shift+I inline code, as the
+/// WhatsApp markers they type, and the name to announce.
+fn format_key(code: Option<i32>, key: &wxdragon::event::KeyboardEvent) -> Option<(&'static str, &'static str)> {
+	if !key.control_down() || key.alt_down() {
+		return None;
+	}
+	match (key.shift_down(), code) {
+		(false, c) if keys::is_letter(c, 'B') => Some(("*", "Bold")),
+		(false, c) if keys::is_letter(c, 'I') => Some(("_", "Italic")),
+		(true, c) if keys::is_letter(c, 'X') => Some(("~", "Strikethrough")),
+		(true, c) if keys::is_letter(c, 'I') => Some(("`", "Inline code")),
+		_ => None,
+	}
+}
+
+/// Wraps the selection in `marker`, or unwraps it when it already is, or
+/// with nothing selected puts a pair of markers round the caret, the way WA
+/// Web's formatting toolbar does. Says what happened.
+fn toggle_format(field: &TextCtrl, marker: &str, name: &'static str) -> String {
+	let (from, to) = field.get_selection();
+	let selected = field.get_string_selection();
+	let width = marker.len() as i64;
+	if selected.is_empty() {
+		field.replace(from, from, &format!("{marker}{marker}"));
+		field.set_insertion_point(from + width);
+		return crate::i18n::tr(name).to_string();
+	}
+	let wrapped = selected.len() > 2 * marker.len() && selected.starts_with(marker) && selected.ends_with(marker);
+	if wrapped {
+		let inner = &selected[marker.len()..selected.len() - marker.len()];
+		field.replace(from, to, inner);
+		field.set_selection(from, to - 2 * width);
+		crate::i18n::tr_fmt("{} off", &[&crate::i18n::tr(name)])
+	} else {
+		field.replace(from, to, &format!("{marker}{selected}{marker}"));
+		field.set_selection(from + width, to + width);
+		crate::i18n::tr(name).to_string()
+	}
+}
+
 pub fn switch_login_view(parts: &WindowParts, view: LoginView) {
 	LoginControls::from_parts(parts).switch_view(view);
 }
@@ -4154,6 +4195,10 @@ pub fn bind_input_handlers(
 				&& let Some((message_id, text)) = last_editable_message(&state_field.borrow())
 			{
 				let _ = tx_send_field.send(UiCommand::BeginEditMessage { message_id, text });
+				event.skip(false);
+			} else if let Some((marker, name)) = format_key(code, key_event) {
+				let said = toggle_format(&conv_msg_field_esc, marker, name);
+				crate::platform::announce::announce(conv_parts_field.messages_announcer, &said);
 				event.skip(false);
 			} else if keys::is_letter(code, 'V') && key_event.control_down() {
 				let mut has_files = false;
