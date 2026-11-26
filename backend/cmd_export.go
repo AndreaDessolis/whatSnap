@@ -49,6 +49,7 @@ func (acc *Account) downloadMediaForExportSync(messageID string) (path string, o
 		select {
 		case success := <-ch:
 			if !success {
+				acc.takeMediaRetryFailure(messageID)
 				return "", false
 			}
 		case <-time.After(45 * time.Second):
