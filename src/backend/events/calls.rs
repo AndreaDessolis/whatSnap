@@ -557,6 +557,9 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 			{
 				let mut s = state.borrow_mut();
 				call_log(parts, &s, "ended", call_id);
+				if s.active_call_id.is_none() {
+					crate::audio::stop_call_reconnect_tone(&mut s);
+				}
 				if s.active_call_id.as_deref() == Some(call_id) {
 					let total_duration = if let Some(start) = s.call_connected_segment_start.take() {
 						s.call_connected_duration + start.elapsed()
@@ -685,6 +688,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				let mut s = state.borrow_mut();
 				if s.active_call_id.as_deref() == Some(call_id) {
 					s.active_call_id = None;
+					crate::audio::stop_call_reconnect_tone(&mut s);
 					crate::ui_commands::calls::refresh_active_call_row(&mut s, parts);
 					s.active_call_audio = None;
 					s.call_connected_segment_start = None;

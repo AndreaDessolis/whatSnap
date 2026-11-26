@@ -535,6 +535,7 @@ pub(crate) fn reject_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>
 		parts.call_parts.callback_btn.show(false);
 		parts.call_parts.close_btn.show(false);
 		s.active_call_id = None;
+		crate::audio::stop_call_reconnect_tone(&mut s);
 		refresh_active_call_row(&mut s, parts);
 		s.active_call_video_send = None;
 		s.call_video_port = None;
@@ -573,6 +574,8 @@ pub(crate) fn leave_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>)
 		s.call_participants.clear();
 		s.call_video = CallVideo::default();
 		s.call_answer_deadline = None;
+		s.call_is_reconnecting = false;
+		crate::audio::stop_call_reconnect_tone(&mut s);
 		stop_call_ringing_sound(&mut s);
 		play_call_fail_sound(&mut s);
 	} else if s.call_placing {
