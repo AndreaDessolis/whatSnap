@@ -985,21 +985,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 				let info_text = lines.join("\n");
 
-				let dlg = Dialog::builder(&parts.frame, crate::i18n::tr("Message Info"))
-					.with_style(DialogStyle::DefaultDialogStyle)
-					.build();
-				let sizer = BoxSizer::builder(Orientation::Vertical).build();
-				let txt = TextCtrl::builder(&dlg)
-					.with_value(&info_text)
-					.with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly | TextCtrlStyle::DontWrap)
-					.build();
-				sizer.add(&txt, 1, SizerFlag::Expand | SizerFlag::All, 10);
-				let ok_btn = Button::builder(&dlg).with_label(crate::i18n::tr("OK")).build();
-				sizer.add(&ok_btn, 0, SizerFlag::AlignCentre | SizerFlag::Bottom | SizerFlag::All, 8);
-				dlg.set_sizer_and_fit(sizer, true);
-				crate::ui::show_modeless_viewer(dlg, ok_btn);
-				txt.set_focus();
-				txt.set_selection(0, 0);
+				crate::ui::show_text_viewer(&parts.frame, crate::i18n::tr("Message Info"), &info_text);
 			}
 		}
 		"chat_media" => {

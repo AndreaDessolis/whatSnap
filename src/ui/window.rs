@@ -4962,6 +4962,8 @@ pub fn bind_input_handlers(
 			let download_media_id = 3018;
 			let open_media_id = 3019;
 			let save_media_id = 3020;
+			let copy_link_id = 3021;
+			let reactions_id = 3022;
 
 			let s = state_ctx.borrow();
 			let chat_jid = s.selected_chat.clone().unwrap_or_default();
@@ -5132,6 +5134,28 @@ pub fn bind_input_handlers(
 				crate::i18n::tr("&Copy	Ctrl+C"),
 				crate::i18n::tr("Copy message text or file to clipboard"),
 			);
+			let links = match display_item.as_ref() {
+				Some(whatsnap::DisplayItem::Single(m)) if !is_deleted => m.links(),
+				_ => Vec::new(),
+			};
+			if !links.is_empty() {
+				menu_builder = menu_builder.append_item(
+					copy_link_id,
+					crate::i18n::tr(if links.len() == 1 { "Copy &Link" } else { "Copy &Link..." }),
+					crate::i18n::tr("Copy a link in this message to the clipboard"),
+				);
+			}
+			let reaction_details = match display_item.as_ref() {
+				Some(whatsnap::DisplayItem::Single(m)) if !is_channel_chat => m.reaction_details(),
+				_ => Vec::new(),
+			};
+			if !reaction_details.is_empty() {
+				menu_builder = menu_builder.append_item(
+					reactions_id,
+					crate::i18n::tr("Reactio&ns..."),
+					crate::i18n::tr("See who reacted to this message, and with what"),
+				);
+			}
 			let can_reply = !is_deleted && (!is_channel_chat || can_post_in_channel);
 			if can_reply {
 				menu_builder =
@@ -5634,6 +5658,31 @@ pub fn bind_input_handlers(
 					}
 				} else if id == copy_id {
 					copy_for_menu.as_ref()();
+				} else if id == reactions_id {
+					crate::ui::show_text_viewer(
+						&parent_frame_clone,
+						crate::i18n::tr("Reactions"),
+						&reaction_details.join("\n"),
+					);
+				} else if id == copy_link_id {
+					let link = if links.len() == 1 {
+						links.first().cloned()
+					} else {
+						let choices: Vec<&str> = links.iter().map(String::as_str).collect();
+						let dialog = SingleChoiceDialog::builder(
+							&parent_frame_clone,
+							crate::i18n::tr("Select a link to copy:"),
+							crate::i18n::tr("Copy Link"),
+							&choices,
+						)
+						.build();
+						if dialog.show_modal() == wxdragon::id::ID_OK { dialog.get_string_selection() } else { None }
+					};
+					if let Some(link) = link
+						&& crate::copy_text(&link)
+					{
+						crate::platform::announce::announce(msgs_announcer_clone, crate::i18n::tr("Link copied."));
+					}
 				} else if id == retry_id {
 					let s = state_clone.borrow();
 					let msg_opt = s.display_items.get(idx as usize).and_then(|item| match item {
@@ -6610,27 +6659,7 @@ pub fn bind_input_handlers(
 								event.skip(false);
 								return;
 							}
-							let mut urls = Vec::new();
-							let text = &msg.text;
-							let mut start_idx = 0;
-							while let Some(idx) = text[start_idx..].find("http") {
-								let actual_idx = start_idx + idx;
-								if text[actual_idx..].starts_with("http://")
-									|| text[actual_idx..].starts_with("https://")
-								{
-									let space_idx = text[actual_idx..]
-										.find(|c: char| c.is_whitespace())
-										.unwrap_or(text.len() - actual_idx);
-									let mut clean_url = &text[actual_idx..actual_idx + space_idx];
-									while clean_url.ends_with(|c: char| c.is_ascii_punctuation()) {
-										clean_url = &clean_url[..clean_url.len() - 1];
-									}
-									urls.push(clean_url.to_string());
-									start_idx = actual_idx + space_idx;
-								} else {
-									start_idx = actual_idx + 4;
-								}
-							}
+							let urls = msg.links();
 
 							let open_url = |url: &str| {
 								if whatsnap::parse_whatsapp_link(url).is_some() {

@@ -496,13 +496,19 @@ pub(crate) fn request_message_resend(state: &Rc<RefCell<AppState>>, parts: &Rc<W
 
 pub(crate) fn react_to_message(
 	state: &Rc<RefCell<AppState>>,
-	_parts: &Rc<WindowParts>,
+	parts: &Rc<WindowParts>,
 	message_id: String,
 	sender_jid: String,
 	emoji: String,
 ) {
 	let s = state.borrow();
 	if let Some(ref jid) = s.selected_chat {
+		let said = if emoji.is_empty() {
+			crate::i18n::tr("Reaction removed.").to_string()
+		} else {
+			crate::i18n::tr_fmt("Reacted with {}.", &[&emoji])
+		};
+		crate::platform::announce::announce(parts.conversations_parts.messages_announcer, &said);
 		let payload = serde_json::json!({
 			"action": "react_message",
 			"data": {
