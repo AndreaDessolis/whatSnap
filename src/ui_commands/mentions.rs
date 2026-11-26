@@ -426,7 +426,7 @@ mod tests {
 	fn finds_the_emoji_name_being_typed() {
 		assert_eq!(find_emoji_query(":sm", 3), Some((0, "sm".into())));
 		assert_eq!(find_emoji_query("hi :thumbs_up", 13), Some((3, "thumbs_up".into())));
-		assert_eq!(find_emoji_query(":s", 2), Some((0, "s".into())).filter(|_| false));
+		assert_eq!(find_emoji_query(":s", 2), None);
 		assert_eq!(find_emoji_query("Note:ab", 7), None);
 		assert_eq!(find_emoji_query("at 10:30", 8), None);
 		assert_eq!(find_emoji_query(":ab cd", 6), None);

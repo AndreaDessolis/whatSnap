@@ -586,7 +586,8 @@ fn last_editable_message(s: &crate::AppState) -> Option<(String, String)> {
 	}
 	let in_channel = s.selected_chat.as_ref().is_some_and(|j| j.ends_with("@newsletter"));
 	let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
-	let last = s.messages.iter().filter(|m| m.from_me && !m.is_date_divider && !m.is_system()).max_by_key(|m| m.timestamp)?;
+	let last =
+		s.messages.iter().filter(|m| m.from_me && !m.is_date_divider && !m.is_system()).max_by_key(|m| m.timestamp)?;
 	if !last.is_editable(now, in_channel) {
 		return None;
 	}

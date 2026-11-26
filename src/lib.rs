@@ -677,7 +677,7 @@ impl ChatMessage {
 				None => counts.push((&r.emoji, 1)),
 			}
 		}
-		counts.sort_by(|a, b| b.1.cmp(&a.1));
+		counts.sort_by_key(|&(_, n)| std::cmp::Reverse(n));
 		let mut lines = Vec::new();
 		if active.is_empty() {
 			return lines;

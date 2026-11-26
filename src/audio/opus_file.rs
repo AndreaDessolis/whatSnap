@@ -175,8 +175,7 @@ impl OpusFileSource {
 		let mut resume = None;
 		let reader = &mut source.packets.reader;
 		let headers_end = reader.stream_position().ok()?;
-		loop {
-			let Some((granule, body_len)) = read_page_header(reader) else { break };
+		while let Some((granule, body_len)) = read_page_header(reader) {
 			if granule >= 0 && granule as u64 > resume_at {
 				break;
 			}

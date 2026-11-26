@@ -389,7 +389,8 @@ pub(crate) fn chat_tab_rows(s: &AppState) -> ChatTabRows {
 			rows.notice(&crate::i18n::tr_fmt("{} isn't on WhatsApp", &[&number]));
 		} else {
 			rows.notice(crate::i18n::tr("Not in your contacts"));
-			let label = if lookup.name.is_empty() || lookup.name == number || lookup.name.trim_start_matches('+') == phone {
+			let same_as_number = lookup.name == number || lookup.name.trim_start_matches('+') == phone;
+			let label = if lookup.name.is_empty() || same_as_number {
 				number
 			} else {
 				format!("{number}, ~{}", lookup.name)
