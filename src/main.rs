@@ -1274,6 +1274,7 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::AdmitCallPerson(admit) => ui_commands::call_extras::admit_selected(state, parts, admit),
 		UiCommand::MuteCallPerson => ui_commands::call_extras::act_on_person(state, parts, false),
 		UiCommand::RemoveCallPerson => ui_commands::call_extras::act_on_person(state, parts, true),
+		UiCommand::RingCallPerson => ui_commands::call_extras::ring_person(state, parts),
 		UiCommand::CallPersonSelected => ui_commands::call_extras::person_buttons(&state.borrow(), parts),
 		UiCommand::SetCallApproval(on) => ui_commands::call_extras::set_approval(state, parts, on),
 		UiCommand::DismissIncomingCall => ui_commands::calls::dismiss_incoming_call(state, parts),

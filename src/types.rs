@@ -160,6 +160,7 @@ pub enum UiCommand {
 	AdmitCallPerson(bool),
 	MuteCallPerson,
 	RemoveCallPerson,
+	RingCallPerson,
 	CallPersonSelected,
 	SetCallApproval(bool),
 	DismissIncomingCall,
@@ -662,4 +663,6 @@ pub(crate) struct CallParticipant {
 	pub(crate) jid: String,
 	pub(crate) name: String,
 	pub(crate) state: String,
+	/// Their microphone is off, from their last mute state in a group call.
+	pub(crate) muted: bool,
 }

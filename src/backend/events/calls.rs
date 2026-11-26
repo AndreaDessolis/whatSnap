@@ -1030,8 +1030,14 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				crate::ui_commands::chat_list::request_call_tab_data(&s);
 			}
 		}
-		"call_link_created" | "call_hand" | "call_reaction" | "call_waiting_room" | "call_action_done"
-		| "call_action_failed" | "call_muted_by" => {
+		"call_link_created"
+		| "call_hand"
+		| "call_reaction"
+		| "call_waiting_room"
+		| "call_action_done"
+		| "call_action_failed"
+		| "call_muted_by"
+		| "call_participant_muted" => {
 			if let Some(data) = val.get("data") {
 				crate::ui_commands::call_extras::on_event(state, parts, t, data);
 			}

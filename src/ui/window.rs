@@ -1921,6 +1921,10 @@ pub fn bind_input_handlers(
 	parts.call_parts.remove_person_btn.on_click(move |_| {
 		let _ = tx_remove_person.send(UiCommand::RemoveCallPerson);
 	});
+	let tx_ring_person = ui_tx.clone();
+	parts.call_parts.ring_person_btn.on_click(move |_| {
+		let _ = tx_ring_person.send(UiCommand::RingCallPerson);
+	});
 	let tx_let_in = ui_tx.clone();
 	parts.call_parts.let_in_btn.on_click(move |_| {
 		let _ = tx_let_in.send(UiCommand::AdmitCallPerson(true));

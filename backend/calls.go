@@ -297,6 +297,7 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 				"name":        acc.callJoinerName(p.JID, p.PN, p.PushName, p.Guest),
 				"state":       p.State,
 				"hand_raised": p.HandRaised,
+				"muted":       call.ParticipantMuted(p.JID.String()),
 			})
 		}
 		acc.broadcastEvent("call_participants", map[string]interface{}{

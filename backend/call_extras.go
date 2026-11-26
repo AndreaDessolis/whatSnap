@@ -55,6 +55,14 @@ func (acc *Account) attachCallExtras(call *meowcaller.Call) {
 		}
 		acc.broadcastEvent("call_muted_by", map[string]interface{}{"call_id": call.ID(), "name": name})
 	})
+	call.OnParticipantMuteState(func(user types.JID, muted bool) {
+		if acc.isOwnJID(user) {
+			return
+		}
+		acc.broadcastEvent("call_participant_muted", map[string]interface{}{
+			"call_id": call.ID(), "jid": user.String(), "muted": muted,
+		})
+	})
 	call.OnHandRaise(func(h meowcaller.HandRaiseState) {
 		if acc.isOwnJID(h.Participant) {
 			return
@@ -195,9 +203,28 @@ func (acc *Account) handleCallToggle(conn net.Conn, raw json.RawMessage, what st
 			}
 		}
 		if err != nil {
-			acc.sendEvent(conn, "call_action_failed", map[string]string{"call_id": data.CallID, "what": what, "message": err.Error()})
+			acc.sendEvent(conn, "call_action_failed", map[string]string{"call_id": data.CallID, "what": what, "message": acc.callActionError(what, data.JID, err)})
 			return
 		}
 		acc.sendEvent(conn, "call_action_done", map[string]interface{}{"call_id": data.CallID, "what": what, "on": data.On})
 	}()
+}
+
+// callActionError words a failed call action the way WA Web's toasts do.
+func (acc *Account) callActionError(what, jid string, err error) string {
+	if what != "mute_person" {
+		return err.Error()
+	}
+	name := "They"
+	if parsed, perr := types.ParseJID(jid); perr == nil {
+		name = acc.callPersonName(parsed, types.EmptyJID)
+	}
+	switch {
+	case errors.Is(err, meowcaller.ErrPeerAlreadyMuted):
+		return name + " is already muted."
+	case errors.Is(err, meowcaller.ErrMuteRequestPending):
+		return "You already asked " + name + " to mute."
+	}
+	log.Println("Mute request failed:", err)
+	return "Could not mute. Please try again."
 }
