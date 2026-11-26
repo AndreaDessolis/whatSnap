@@ -1850,9 +1850,22 @@ pub fn bind_input_handlers(
 	let tx_camera_key = ui_tx.clone();
 	let state_call_key = state.clone();
 	let keypad_announcer = parts.call_parts.announcer;
-	parts.call_parts.frame.on_key_down(move |event| {
+	parts.call_parts.frame.on_char_hook(move |event| {
 		if let WindowEventData::Keyboard(ref key_event) = event {
 			let key_code = key_event.get_key_code();
+			let keymap = state_call_key.borrow().keymap.clone();
+			let menu_command = if keymap.is_pressed("call_mute", key_event) {
+				Some(UiCommand::MuteCall)
+			} else if keymap.is_pressed("call_end", key_event) {
+				Some(UiCommand::LeaveCall)
+			} else {
+				None
+			};
+			if let Some(command) = menu_command {
+				let _ = tx_camera_key.send(command);
+				event.skip(false);
+				return;
+			}
 			if !key_event.control_down() && !key_event.alt_down() {
 				if let Some(tone) = keypad_tone(key_code, key_event.shift_down()) {
 					let s = state_call_key.borrow();
