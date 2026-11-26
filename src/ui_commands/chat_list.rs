@@ -892,6 +892,7 @@ pub(crate) fn close_conversation(state: &Rc<RefCell<AppState>>, parts: &Rc<Windo
 	// up on a later arrow key, once its chat is closed.
 	crate::ui_commands::voice::stop_voice_message(&mut s, parts);
 	s.selected_chat = None;
+	crate::ui_commands::accounts::apply_title(&s, parts);
 	crate::ui::window::refresh_menu_bar(&s, &parts.frame);
 	// Its unsent text now shows in the chat list as a draft.
 	crate::ui::message_display::refresh_chat_rows(&mut s, parts);

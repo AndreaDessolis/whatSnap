@@ -449,6 +449,7 @@ pub(crate) fn open_chat_for_jid(jid: &str, state: &Rc<RefCell<AppState>>, parts:
 
 	crate::ui::owner_draw::set_header_chat(jid);
 	parts.conversations_parts.conv_data_btn.set_label(&chat_status_label(&s, jid));
+	crate::ui_commands::accounts::apply_title(&s, parts);
 
 	parts.attachment_dialog.attachment_info_label.set_label("");
 	// The message list was already emptied by release_conversation_buffers
