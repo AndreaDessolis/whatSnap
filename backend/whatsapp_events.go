@@ -320,27 +320,8 @@ func (acc *Account) extractTextRaw(msg *waE2E.Message) string {
 		}
 		return "[Video Note]"
 	}
-	if msg.GetDocumentMessage() != nil {
-		caption := msg.GetDocumentMessage().GetCaption()
-		title := msg.GetDocumentMessage().GetTitle()
-		if title == "" {
-			title = msg.GetDocumentMessage().GetFileName()
-		}
-		if title != "" {
-			if details := documentDetails(msg.GetDocumentMessage()); details != "" {
-				title += " (" + details + ")"
-			}
-		}
-		if caption != "" {
-			if title != "" {
-				return "[Document] " + title + ": " + caption
-			}
-			return "[Document] " + caption
-		}
-		if title != "" {
-			return "[Document] " + title
-		}
-		return "[Document]"
+	if doc := msg.GetDocumentMessage(); doc != nil {
+		return documentText(doc)
 	}
 	if msg.GetAudioMessage() != nil {
 		audio := msg.GetAudioMessage()
@@ -3672,4 +3653,29 @@ func formatFileSize(n int64) string {
 		return fmt.Sprintf("%.0f %s", value, suffix)
 	}
 	return fmt.Sprintf("%.1f %s", value, suffix)
+}
+
+// documentText is a document's message text: "[Document] name (size,
+// pages): caption".
+func documentText(doc *waE2E.DocumentMessage) string {
+	caption := doc.GetCaption()
+	title := doc.GetTitle()
+	if title == "" {
+		title = doc.GetFileName()
+	}
+	if title != "" {
+		if details := documentDetails(doc); details != "" {
+			title += " (" + details + ")"
+		}
+	}
+	if caption != "" {
+		if title != "" {
+			return "[Document] " + title + ": " + caption
+		}
+		return "[Document] " + caption
+	}
+	if title != "" {
+		return "[Document] " + title
+	}
+	return "[Document]"
 }

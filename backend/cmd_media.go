@@ -1331,6 +1331,14 @@ func (acc *Account) sendUploadedAttachment(conn net.Conn, id string, jid types.J
 		if caption != "" {
 			docMsg.Caption = proto.String(caption)
 		}
+		if mimetype == "application/pdf" || strings.EqualFold(filepath.Ext(filename), ".pdf") {
+			if pages := pdfPageCount(path); pages > 0 {
+				docMsg.PageCount = proto.Uint32(pages)
+			}
+		}
+		if !viewOnce {
+			displayText = documentText(docMsg)
+		}
 		msg = &waE2E.Message{DocumentMessage: docMsg}
 	}
 	stampUploadedMedia(msg, uploaded)
