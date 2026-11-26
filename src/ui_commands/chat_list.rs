@@ -148,10 +148,48 @@ fn searches_all_messages(s: &AppState) -> bool {
 		&& crate::ui::message_display::chat_search_query(s).searches_messages()
 }
 
+/// The fewest digits worth asking WhatsApp about: shorter ones are part of
+/// a number still being typed.
+const MIN_LOOKUP_DIGITS: usize = 7;
+
+/// Asks WhatsApp whether the phone number typed in the search box has an
+/// account, once typing has paused, so a number that is no chat or contact
+/// still shows up, as in WA Web.
+fn lookup_typed_number(s: &mut AppState) {
+	let query = crate::ui::message_display::chat_search_query(s);
+	let digits = query.numeric.filter(|d| d.len() >= MIN_LOOKUP_DIGITS && s.active_tab == 0);
+	let Some(digits) = digits else {
+		s.number_lookup = crate::NumberLookup::default();
+		return;
+	};
+	if s.number_lookup.digits == digits {
+		return;
+	}
+	s.number_lookup = crate::NumberLookup { digits: digits.clone(), pending: true, ..Default::default() };
+	let payload =
+		serde_json::json!({ "action": "lookup_number", "data": { "phone": s.search_query.trim(), "digits": digits } });
+	let _ = s.ws_tx.send(payload.to_string());
+}
+
+/// WhatsApp's answer about a typed phone number came back.
+pub(crate) fn apply_number_lookup(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, data: &serde_json::Value) {
+	let field = |k: &str| data.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
+	let mut s = state.borrow_mut();
+	if !s.number_lookup.pending || s.number_lookup.digits != field("query") {
+		return;
+	}
+	s.number_lookup.pending = false;
+	s.number_lookup.jid = field("jid");
+	s.number_lookup.phone = field("phone");
+	s.number_lookup.name = field("name");
+	apply_chat_filter(&mut s, parts);
+}
+
 /// Searches every chat's messages for what's in the chat list's search box,
 /// once typing has paused, for the search results' Messages section.
 pub(crate) fn search_all_messages(state: &Rc<RefCell<AppState>>) {
 	let mut s = state.borrow_mut();
+	lookup_typed_number(&mut s);
 	if !searches_all_messages(&s) {
 		s.message_search = crate::MessageSearch::default();
 		return;

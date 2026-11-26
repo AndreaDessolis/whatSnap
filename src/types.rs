@@ -537,6 +537,19 @@ impl MessageHit {
 	}
 }
 
+/// What WhatsApp said about a phone number typed in the chat list's search,
+/// like WA Web's "Not in your contacts" result.
+#[derive(Default, Clone, Debug, PartialEq)]
+pub(crate) struct NumberLookup {
+	/// The digits asked about.
+	pub(crate) digits: String,
+	pub(crate) pending: bool,
+	/// The chat to open, when the number is on WhatsApp.
+	pub(crate) jid: String,
+	pub(crate) phone: String,
+	pub(crate) name: String,
+}
+
 /// The chat list search's message results: WA Web searches message text too,
 /// once the query is long enough, newest first and 30 at a time.
 #[derive(Default)]

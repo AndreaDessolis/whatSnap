@@ -227,6 +227,8 @@ func (acc *Account) dispatchCommand(conn net.Conn, cmd Command) {
 		acc.handleGetWaveforms(conn, cmd.Data)
 	case "check_contacts":
 		acc.handleCheckContacts(conn, cmd.Data)
+	case "lookup_number":
+		acc.handleLookupNumber(conn, cmd.Data)
 	case "delete_contact":
 		acc.handleDeleteContact(conn, cmd.Data)
 	case "get_user_info":

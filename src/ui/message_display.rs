@@ -379,6 +379,24 @@ pub(crate) fn chat_tab_rows(s: &AppState) -> ChatTabRows {
 			rows.push(&contact.jid, contact_label(contact), "");
 		}
 	}
+	// A typed number that is no chat or contact: WA Web's "Not in your
+	// contacts", or that it has no WhatsApp account.
+	let lookup = &s.number_lookup;
+	if chats.is_empty() && contacts.is_empty() && !lookup.pending && query.numeric.as_deref() == Some(&lookup.digits) {
+		let phone = if lookup.phone.is_empty() { lookup.digits.as_str() } else { lookup.phone.as_str() };
+		let number = whatsnap::phone::format_international(phone).unwrap_or_else(|| format!("+{phone}"));
+		if lookup.jid.is_empty() {
+			rows.notice(&crate::i18n::tr_fmt("{} isn't on WhatsApp", &[&number]));
+		} else {
+			rows.notice(crate::i18n::tr("Not in your contacts"));
+			let label = if lookup.name.is_empty() || lookup.name == number || lookup.name.trim_start_matches('+') == phone {
+				number
+			} else {
+				format!("{number}, ~{}", lookup.name)
+			};
+			rows.push(&lookup.jid, label, "");
+		}
+	}
 	if !hits.is_empty() {
 		rows.notice(crate::i18n::tr("Messages"));
 		for hit in &hits {

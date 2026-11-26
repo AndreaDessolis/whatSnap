@@ -1100,6 +1100,11 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 			}
 		}
+		"number_lookup" => {
+			if let Some(data) = val.get("data") {
+				crate::ui_commands::chat_list::apply_number_lookup(state, parts, data);
+			}
+		}
 		"search_results" => {
 			if let Some(data) = val.get("data") {
 				let response_jid = data.get("jid").and_then(|j| j.as_str()).unwrap_or("");
