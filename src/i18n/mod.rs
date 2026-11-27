@@ -215,6 +215,17 @@ mod tests {
 	}
 
 	#[test]
+	fn stock_dialogs_have_a_catalog_for_each_listed_language() {
+		for code in STOCK_DIALOG_LANGUAGES {
+			assert!(wxstd_catalog(code).is_some(), "{code}");
+			assert!(po::catalog_index(code).is_some(), "{code} has no po file");
+		}
+		assert!(wxstd_catalog("it_IT").is_some());
+		assert!(wxstd_catalog("id-ID").is_some());
+		assert!(wxstd_catalog("de").is_none());
+	}
+
+	#[test]
 	fn indonesian_locale_translates_core_strings() {
 		assert_eq!(po::translate_id("Chats"), Some("Chat"));
 		assert_eq!(po::translate_id("&Settings..."), Some("&Setelan..."));
@@ -233,16 +244,5 @@ mod tests {
 		assert_eq!(po::translate_id("%b %e"), Some("%e %b"));
 		assert_eq!(po::translate_id("%A, %B %e, %Y"), Some("%A, %e %B %Y"));
 		assert_eq!(po::translate_id("{} at {}"), Some("{} pukul {}"));
-	}
-
-	#[test]
-	fn stock_dialogs_have_a_catalog_for_each_listed_language() {
-		for code in STOCK_DIALOG_LANGUAGES {
-			assert!(wxstd_catalog(code).is_some(), "{code}");
-			assert!(po::catalog_index(code).is_some(), "{code} has no po file");
-		}
-		assert!(wxstd_catalog("it_IT").is_some());
-		assert!(wxstd_catalog("id-ID").is_some());
-		assert!(wxstd_catalog("de").is_none());
 	}
 }
