@@ -71,6 +71,9 @@ pub struct Settings {
 	/// report it in this box itself, so it's ours; off by default.
 	pub spell_check_announce: bool,
 	pub spell_language: String,
+	/// 24-hour clock as synced from the phone (WhatsApp's time_format app
+	/// state); None until the phone sends one, so the language decides.
+	pub clock_24h: Option<bool>,
 	pub notification_previews: bool,
 	pub reaction_notifications: bool,
 	pub theme: crate::ui::theme::ThemeChoice,
@@ -189,6 +192,7 @@ impl Default for Settings {
 			spell_check: true,
 			spell_check_announce: false,
 			spell_language: String::new(),
+			clock_24h: None,
 			notification_previews: true,
 			reaction_notifications: true,
 			theme: Default::default(),
@@ -243,7 +247,9 @@ impl Settings {
 			let inherited = obj.get("output_device_name").cloned().unwrap_or(serde_json::Value::Null);
 			obj.insert("call_output_device_name".to_string(), inherited);
 		}
-		serde_json::from_value(value).unwrap_or_default()
+		let settings: Self = serde_json::from_value(value).unwrap_or_default();
+		whatsnap::set_clock_24h(settings.clock_24h);
+		settings
 	}
 
 	/// Exports the settings to a pretty-printed JSON string.
@@ -437,6 +443,11 @@ impl Settings {
 
 	pub fn apply_synced(&mut self, name: &str, value: &serde_json::Value) -> bool {
 		use crate::ui::theme::ThemeChoice;
+		if name == "is24Hour" {
+			let Some(on) = value.as_bool() else { return false };
+			whatsnap::set_clock_24h(Some(on));
+			return self.clock_24h.replace(on) != Some(on);
+		}
 		let tone = match name {
 			"defaultNotificationToneId" => Some((&mut self.sounds_enabled, &mut self.message_tone)),
 			"groupDefaultNotificationToneId" => Some((&mut self.group_sounds, &mut self.group_tone)),

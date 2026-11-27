@@ -150,7 +150,7 @@ pub(super) fn apply_chats(chats: Vec<ChatRow>, state: &Rc<RefCell<AppState>>, pa
 					let yesterday = today.add_days(-1);
 					let num_days_ago = today.days_since(msg_date);
 					if msg_date == today {
-						local_dt.format(crate::i18n::tr("%I:%M %p"))
+						local_dt.format(whatsnap::clock_format())
 					} else if msg_date == yesterday {
 						crate::i18n::tr("Yesterday").to_string()
 					} else if num_days_ago > 1 && num_days_ago < 7 {

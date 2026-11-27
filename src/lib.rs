@@ -8,6 +8,29 @@ pub mod search;
 pub use local_time::{Date, LocalTime};
 pub use markdown::{StyledSpan, TextStyle, coalesce_spans, parse_markdown_spans, strip_markdown_for_speech};
 
+static CLOCK_24H: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// Follows the phone's 24-hour clock setting (WhatsApp's time_format app
+/// state, as WA Web's setIs24Hour); None leaves it to the language.
+pub fn set_clock_24h(on: Option<bool>) {
+	let v = match on {
+		None => 0,
+		Some(false) => 1,
+		Some(true) => 2,
+	};
+	CLOCK_24H.store(v, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// strftime pattern for a message time of day.
+pub fn clock_format() -> &'static str {
+	let localized = i18n::tr("%I:%M %p");
+	match CLOCK_24H.load(std::sync::atomic::Ordering::Relaxed) {
+		2 => "%H:%M",
+		1 if !localized.contains("%p") => "%I:%M %p",
+		_ => localized,
+	}
+}
+
 fn is_placeholder_name(name: &str) -> bool {
 	name.is_empty() || name == "[]"
 }
@@ -151,7 +174,7 @@ pub fn day_and_time(local_dt: LocalTime) -> String {
 /// Just the time for today, otherwise [`day_and_time`].
 pub fn time_or_day(local_dt: LocalTime) -> String {
 	if local_dt.date() == LocalTime::now().date() {
-		local_dt.format(i18n::tr("%I:%M %p"))
+		local_dt.format(clock_format())
 	} else {
 		day_and_time(local_dt)
 	}
@@ -711,7 +734,7 @@ impl ChatMessage {
 	pub fn status_summary(&self) -> String {
 		let time = LocalTime::from_unix(self.timestamp)
 			.filter(|_| self.timestamp > 0)
-			.map(|t| t.format(i18n::tr("%I:%M %p")))
+			.map(|t| t.format(clock_format()))
 			.unwrap_or_default();
 		let mut text = match (self.from_me, time.is_empty()) {
 			(true, false) => i18n::tr_fmt("{}, sent at {}", &[&self.status_title(), &time]),
@@ -737,7 +760,7 @@ impl ChatMessage {
 		if self.timestamp > 0
 			&& let Some(local_datetime) = LocalTime::from_unix(self.timestamp)
 		{
-			formatted_time = local_datetime.format(i18n::tr("%I:%M %p"));
+			formatted_time = local_datetime.format(clock_format());
 		}
 
 		let is_deleted = self.is_deleted

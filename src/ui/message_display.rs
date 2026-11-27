@@ -1218,7 +1218,7 @@ pub(crate) fn format_call_log_label(name: &str, text: &str, from_me: bool, times
 			let msg_date = local_dt.date();
 			let today = now_dt.date();
 			let yesterday = today.add_days(-1);
-			let time = local_dt.format(crate::i18n::tr("%I:%M %p"));
+			let time = local_dt.format(whatsnap::clock_format());
 			if msg_date == today {
 				format!("{} {}", crate::i18n::tr("Today"), time)
 			} else if msg_date == yesterday {
