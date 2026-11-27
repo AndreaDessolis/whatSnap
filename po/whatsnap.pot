@@ -722,6 +722,9 @@ msgstr ""
 msgid "All starred messages unstarred."
 msgstr ""
 
+msgid "All {}: {}"
+msgstr ""
+
 msgid "Allow guests"
 msgstr ""
 
@@ -759,6 +762,9 @@ msgid "Answer quiz"
 msgstr ""
 
 msgid "Answer sent. {}"
+msgstr ""
+
+msgid "Answering..."
 msgstr ""
 
 msgid "Anyone with WhatsApp can use this link to join your {} call."
@@ -881,16 +887,16 @@ msgstr ""
 msgid "Bittersweet"
 msgstr ""
 
-msgid "Block a contact..."
+msgid "Block"
 msgstr ""
 
-msgid "Block contact"
+msgid "Block a contact..."
 msgstr ""
 
 msgid "Block contact..."
 msgstr ""
 
-msgid "Block {}? They won't be able to call you or send you messages. They won't be told."
+msgid "Block {}?"
 msgstr ""
 
 msgid "Blocked Contacts"
@@ -1008,6 +1014,12 @@ msgid "Call log cleared."
 msgstr ""
 
 msgid "Call notifications: show notifications for incoming calls"
+msgstr ""
+
+msgid "Call waiting"
+msgstr ""
+
+msgid "Call waiting: {}. {} ends this call and answers it, {} declines it."
 msgstr ""
 
 msgid "Call with"
@@ -1436,7 +1448,19 @@ msgstr ""
 msgid "Copied: {}"
 msgstr ""
 
+msgid "Copy &Link"
+msgstr ""
+
+msgid "Copy &Link..."
+msgstr ""
+
+msgid "Copy Link"
+msgstr ""
+
 msgid "Copy Nu&mber"
+msgstr ""
+
+msgid "Copy a link in this message to the clipboard"
 msgstr ""
 
 msgid "Copy all p&hotos"
@@ -1611,6 +1635,9 @@ msgid "Decline"
 msgstr ""
 
 msgid "Decline call"
+msgstr ""
+
+msgid "Decline waiting call"
 msgstr ""
 
 msgid "Default"
@@ -1901,10 +1928,16 @@ msgstr ""
 msgid "Emoji and stickers"
 msgstr ""
 
+msgid "Emoji suggestions. {}"
+msgstr ""
+
 msgid "End"
 msgstr ""
 
 msgid "End call"
+msgstr ""
+
+msgid "End call and answer"
 msgstr ""
 
 msgid "End the active call"
@@ -2087,6 +2120,9 @@ msgstr ""
 msgid "Give the channel a name."
 msgstr ""
 
+msgid "Go back and forward in voice messages by"
+msgstr ""
+
 msgid "Go to Date"
 msgstr ""
 
@@ -2138,7 +2174,13 @@ msgstr ""
 msgid "Group sounds: play sounds for new group messages"
 msgstr ""
 
+msgid "Group video call"
+msgstr ""
+
 msgid "Group video call in"
+msgstr ""
+
+msgid "Group voice call"
 msgstr ""
 
 msgid "Group voice call in"
@@ -2231,13 +2273,25 @@ msgstr ""
 msgid "Incoming group call from"
 msgstr ""
 
+msgid "Incoming group video call"
+msgstr ""
+
 msgid "Incoming group video call from"
+msgstr ""
+
+msgid "Incoming group voice call"
 msgstr ""
 
 msgid "Incoming sounds: play a sound for new messages"
 msgstr ""
 
+msgid "Incoming video call"
+msgstr ""
+
 msgid "Incoming video call from"
+msgstr ""
+
+msgid "Incoming voice call"
 msgstr ""
 
 msgid "Incoming voice call from"
@@ -2468,6 +2522,12 @@ msgstr ""
 msgid "Location (optional)"
 msgstr ""
 
+msgid "Lock Chats Again When Idle For"
+msgstr ""
+
+msgid "Lock chats again when whatSnap is minimized or hidden"
+msgstr ""
+
 msgid "Lock or unlock chat"
 msgstr ""
 
@@ -2481,6 +2541,9 @@ msgid "Locked Chats"
 msgstr ""
 
 msgid "Locked chat {}."
+msgstr ""
+
+msgid "Locked chats available."
 msgstr ""
 
 msgid "Locked chats hidden."
@@ -2733,6 +2796,21 @@ msgid "Minute"
 msgstr ""
 
 msgid "Missed call from {}."
+msgstr ""
+
+msgid "Missed group video call"
+msgstr ""
+
+msgid "Missed group voice call"
+msgstr ""
+
+msgid "Missed video call"
+msgstr ""
+
+msgid "Missed voice call"
+msgstr ""
+
+msgid "Missed {}."
 msgstr ""
 
 msgid "Misspelled: {}"
@@ -3020,6 +3098,9 @@ msgstr ""
 msgid "Not available"
 msgstr ""
 
+msgid "Not in your contacts"
+msgstr ""
+
 msgid "Not set"
 msgstr ""
 
@@ -3045,6 +3126,9 @@ msgid "Notifications from {} muted{}."
 msgstr ""
 
 msgid "Notifications from {} unmuted."
+msgstr ""
+
+msgid "Notify about messages in locked chats while they are locked"
 msgstr ""
 
 msgid "November"
@@ -3113,6 +3197,9 @@ msgstr ""
 msgid "Open chat with {}?"
 msgstr ""
 
+msgid "Open chats in the message box instead of the message list"
+msgstr ""
+
 msgid "Open group"
 msgstr ""
 
@@ -3158,13 +3245,25 @@ msgstr ""
 msgid "Outgoing group call in"
 msgstr ""
 
+msgid "Outgoing group video call"
+msgstr ""
+
 msgid "Outgoing group video call in"
+msgstr ""
+
+msgid "Outgoing group voice call"
 msgstr ""
 
 msgid "Outgoing sounds: play sounds for messages you send"
 msgstr ""
 
+msgid "Outgoing video call"
+msgstr ""
+
 msgid "Outgoing video call to"
+msgstr ""
+
+msgid "Outgoing voice call"
 msgstr ""
 
 msgid "Overview"
@@ -3497,6 +3596,9 @@ msgstr ""
 msgid "React:"
 msgstr ""
 
+msgid "Reacted with {}."
+msgstr ""
+
 msgid "Reacted {}"
 msgstr ""
 
@@ -3506,6 +3608,9 @@ msgstr ""
 msgid "Reacted {}."
 msgstr ""
 
+msgid "Reactio&ns..."
+msgstr ""
+
 msgid "Reaction notifications: show notifications for reactions to your messages"
 msgstr ""
 
@@ -3513,6 +3618,9 @@ msgid "Reaction removed by {}"
 msgstr ""
 
 msgid "Reaction removed."
+msgstr ""
+
+msgid "Reactions"
 msgstr ""
 
 msgid "Read"
@@ -3534,6 +3642,12 @@ msgid "Read new messages aloud while this chat is open (Alt+L)"
 msgstr ""
 
 msgid "Read receipts: if turned off, you won't send or receive read receipts. They're always sent in groups."
+msgstr ""
+
+msgid "Received"
+msgstr ""
+
+msgid "Received at {}"
 msgstr ""
 
 msgid "Recent"
@@ -3734,6 +3848,9 @@ msgstr ""
 msgid "Report this message to WhatsApp? WhatsApp receives this message. {} won't be notified."
 msgstr ""
 
+msgid "Report to WhatsApp"
+msgstr ""
+
 msgid "Report to group &admins"
 msgstr ""
 
@@ -3765,6 +3882,9 @@ msgid "Requests"
 msgstr ""
 
 msgid "Res&ume"
+msgstr ""
+
+msgid "Reset Templates to Default"
 msgstr ""
 
 msgid "Reset link"
@@ -3816,6 +3936,12 @@ msgid "Retry sending this message"
 msgstr ""
 
 msgid "Retrying send..."
+msgstr ""
+
+msgid "Ring"
+msgstr ""
+
+msgid "Ring {}"
 msgstr ""
 
 msgid "Ringing"
@@ -3959,6 +4085,9 @@ msgstr ""
 msgid "Search in conversation"
 msgstr ""
 
+msgid "Search locked chats"
+msgstr ""
+
 msgid "Search members"
 msgstr ""
 
@@ -4013,6 +4142,9 @@ msgstr ""
 msgid "See who has seen:"
 msgstr ""
 
+msgid "See who reacted to this message, and with what"
+msgstr ""
+
 msgid "See who reacted to this post"
 msgstr ""
 
@@ -4023,6 +4155,9 @@ msgid "Select A&ll"
 msgstr ""
 
 msgid "Select a contact or call from the list first."
+msgstr ""
+
+msgid "Select a link to copy:"
 msgstr ""
 
 msgid "Select a link to open:"
@@ -4047,6 +4182,9 @@ msgid "Select messages"
 msgstr ""
 
 msgid "Select someone in the call first."
+msgstr ""
+
+msgid "Select someone who isn't in the call first."
 msgstr ""
 
 msgid "Select someone who wants to join first."
@@ -4523,6 +4661,12 @@ msgstr ""
 msgid "Tawny Port"
 msgstr ""
 
+msgid "Templates"
+msgstr ""
+
+msgid "Templates use Jinja syntax, like {{ name }} or {% if unread %}, {{ unread }}{% endif %}. The user manual lists every name you can use."
+msgstr ""
+
 msgid "Text"
 msgstr ""
 
@@ -4575,6 +4719,9 @@ msgid "The video couldn't be decoded. The file may be damaged."
 msgstr ""
 
 msgid "The video couldn't be played."
+msgstr ""
+
+msgid "The {} has a mistake: {}"
 msgstr ""
 
 msgid "Theme"
@@ -4638,6 +4785,9 @@ msgid "This message will not be sent. This action cannot be undone."
 msgstr ""
 
 msgid "This pack has no stickers."
+msgstr ""
+
+msgid "This person won't be able to message or call you. They won't know you blocked or reported them."
 msgstr ""
 
 msgid "This phone number is already linked in whatSnap as {}, so the new link is being removed."
@@ -4817,6 +4967,21 @@ msgstr ""
 msgid "Unstar messages"
 msgstr ""
 
+msgid "Up Arrow in an empty message box edits your last message"
+msgstr ""
+
+msgid "Upcoming group video call"
+msgstr ""
+
+msgid "Upcoming group voice call"
+msgstr ""
+
+msgid "Upcoming video call"
+msgstr ""
+
+msgid "Upcoming voice call"
+msgstr ""
+
 msgid "Updates & Troubleshooting"
 msgstr ""
 
@@ -4919,6 +5084,9 @@ msgstr ""
 msgid "Vivid Violet"
 msgstr ""
 
+msgid "Voice Messages"
+msgstr ""
+
 msgid "Voice call"
 msgstr ""
 
@@ -4982,6 +5150,9 @@ msgstr ""
 msgid "Votes: {}"
 msgstr ""
 
+msgid "Waiting call declined."
+msgstr ""
+
 msgid "Waiting for someone in the call to let you in."
 msgstr ""
 
@@ -5031,6 +5202,12 @@ msgid "WhatsApp hasn't turned on scheduling messages for your account."
 msgstr ""
 
 msgid "WhatsApp protects your conversations with end-to-end encryption. Turn this on to get notified when a contact's security code changes."
+msgstr ""
+
+msgid "WhatsApp receives the last message this business sent you."
+msgstr ""
+
+msgid "WhatsApp receives the last message this person sent you."
 msgstr ""
 
 msgid "WhatsApp sends these at the time shown, even when this computer is off."
@@ -5537,7 +5714,19 @@ msgstr ""
 msgid "{} forwarded to {}."
 msgstr ""
 
+msgid "{} from {}"
+msgstr ""
+
+msgid "{} from {}, duration {}"
+msgstr ""
+
 msgid "{} groups in common"
+msgstr ""
+
+msgid "{} hour"
+msgstr ""
+
+msgid "{} hours"
 msgstr ""
 
 msgid "{} invited you to be an admin of the channel {}."
@@ -5570,6 +5759,9 @@ msgstr ""
 msgid "{} is typing..."
 msgstr ""
 
+msgid "{} isn't on WhatsApp"
+msgstr ""
+
 msgid "{} kept."
 msgstr ""
 
@@ -5588,6 +5780,12 @@ msgstr ""
 msgid "{} messages selected"
 msgstr ""
 
+msgid "{} minute"
+msgstr ""
+
+msgid "{} minutes"
+msgstr ""
+
 msgid "{} more channels."
 msgstr ""
 
@@ -5601,6 +5799,9 @@ msgid "{} new messages"
 msgstr ""
 
 msgid "{} of {}"
+msgstr ""
+
+msgid "{} off"
 msgstr ""
 
 msgid "{} options"
@@ -5633,6 +5834,12 @@ msgstr ""
 msgid "{} removed from {}."
 msgstr ""
 
+msgid "{} second"
+msgstr ""
+
+msgid "{} seconds"
+msgstr ""
+
 msgid "{} shown, {}"
 msgstr ""
 
@@ -5649,6 +5856,12 @@ msgid "{} starred."
 msgstr ""
 
 msgid "{} stickers."
+msgstr ""
+
+msgid "{} to {}"
+msgstr ""
+
+msgid "{} to {}, duration {}"
 msgstr ""
 
 msgid "{} unblocked."
@@ -5693,6 +5906,9 @@ msgstr ""
 msgid "{} whatSnap will keep trying to reconnect."
 msgstr ""
 
+msgid "{} won't be able to message or call you."
+msgstr ""
+
 msgid "{} {} of {}{}"
 msgstr ""
 
@@ -5711,13 +5927,37 @@ msgstr ""
 msgid "{}'s status updates unmuted."
 msgstr ""
 
+msgid "{}, abandoned"
+msgstr ""
+
+msgid "{}, answered on another device"
+msgstr ""
+
 msgid "{}, asked {}"
 msgstr ""
 
 msgid "{}, by {}"
 msgstr ""
 
+msgid "{}, cancelled"
+msgstr ""
+
+msgid "{}, declined"
+msgstr ""
+
+msgid "{}, declined on another device"
+msgstr ""
+
+msgid "{}, failed"
+msgstr ""
+
 msgid "{}, last seen {}"
+msgstr ""
+
+msgid "{}, no answer"
+msgstr ""
+
+msgid "{}, sent at {}"
 msgstr ""
 
 msgid "{}, status {} of {}, posted {}. {}"
@@ -5726,7 +5966,13 @@ msgstr ""
 msgid "{}, tag: {}"
 msgstr ""
 
+msgid "{}, unavailable"
+msgstr ""
+
 msgid "{}, wants to join"
+msgstr ""
+
+msgid "{}, you declined"
 msgstr ""
 
 msgid "{}, {} of {}"

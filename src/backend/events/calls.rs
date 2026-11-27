@@ -620,7 +620,7 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 							Priority::High,
 						);
 					} else if summary.contains("on another device") {
-						let translated_summary = crate::i18n::translate_call_kind_text(summary);
+						let translated_summary = crate::calls::call_rows::translate_call_text(summary);
 						announce_call(parts, &format!("{translated_summary}."), Priority::High);
 					} else if was_incoming_ringing && !was_frame_shown {
 						let msg = crate::i18n::tr_fmt("Missed call from {}.", &[&peer_name_saved]);

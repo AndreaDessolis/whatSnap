@@ -6607,6 +6607,111 @@ msgstr "Rabu"
 msgid "{} at {}"
 msgstr "{} pukul {}"
 
+msgid "Incoming group video call"
+msgstr "Panggilan video grup masuk"
+
+msgid "Incoming group voice call"
+msgstr "Panggilan suara grup masuk"
+
+msgid "Incoming video call"
+msgstr "Panggilan video masuk"
+
+msgid "Incoming voice call"
+msgstr "Panggilan suara masuk"
+
+msgid "Missed group video call"
+msgstr "Panggilan video grup tak terjawab"
+
+msgid "Missed group voice call"
+msgstr "Panggilan suara grup tak terjawab"
+
+msgid "Missed video call"
+msgstr "Panggilan video tak terjawab"
+
+msgid "Missed voice call"
+msgstr "Panggilan suara tak terjawab"
+
+msgid "Outgoing group video call"
+msgstr "Panggilan video grup keluar"
+
+msgid "Outgoing group voice call"
+msgstr "Panggilan suara grup keluar"
+
+msgid "Outgoing video call"
+msgstr "Panggilan video keluar"
+
+msgid "Outgoing voice call"
+msgstr "Panggilan suara keluar"
+
+msgid "Upcoming group video call"
+msgstr "Panggilan video grup mendatang"
+
+msgid "Upcoming group voice call"
+msgstr "Panggilan suara grup mendatang"
+
+msgid "Upcoming video call"
+msgstr "Panggilan video mendatang"
+
+msgid "Upcoming voice call"
+msgstr "Panggilan suara mendatang"
+
+msgid "{} from {}"
+msgstr "{} dari {}"
+
+msgid "{} from {}, duration {}"
+msgstr "{} dari {}, durasi {}"
+
+msgid "{} hour"
+msgstr "{} jam"
+
+msgid "{} hours"
+msgstr "{} jam"
+
+msgid "{} minute"
+msgstr "{} menit"
+
+msgid "{} minutes"
+msgstr "{} menit"
+
+msgid "{} second"
+msgstr "{} detik"
+
+msgid "{} seconds"
+msgstr "{} detik"
+
+msgid "{} to {}"
+msgstr "{} ke {}"
+
+msgid "{} to {}, duration {}"
+msgstr "{} ke {}, durasi {}"
+
+msgid "{}, abandoned"
+msgstr "{}, terputus"
+
+msgid "{}, answered on another device"
+msgstr "{}, dijawab di perangkat lain"
+
+msgid "{}, cancelled"
+msgstr "{}, dibatalkan"
+
+msgid "{}, declined"
+msgstr "{}, ditolak"
+
+msgid "{}, declined on another device"
+msgstr "{}, ditolak di perangkat lain"
+
+msgid "{}, failed"
+msgstr "{}, gagal"
+
+msgid "{}, no answer"
+msgstr "{}, tidak dijawab"
+
+msgid "{}, unavailable"
+msgstr "{}, tidak tersedia"
+
+msgid "{}, you declined"
+msgstr "{}, Anda menolak"
+
 msgid "Lock Chats Again When Idle For"
 msgstr "Kunci chat lagi setelah tidak aktif selama"
 
@@ -6630,3 +6735,127 @@ msgstr "Kunci chat lagi saat whatSnap diminimalkan atau disembunyikan"
 
 msgid "Notify about messages in locked chats while they are locked"
 msgstr "Beri tahu pesan di chat terkunci selagi terkunci"
+
+msgid "All {}: {}"
+msgstr ""
+
+msgid "Answering..."
+msgstr ""
+
+msgid "Block"
+msgstr ""
+
+msgid "Block {}?"
+msgstr ""
+
+msgid "Call waiting"
+msgstr ""
+
+msgid "Call waiting: {}. {} ends this call and answers it, {} declines it."
+msgstr ""
+
+msgid "Copy &Link"
+msgstr ""
+
+msgid "Copy &Link..."
+msgstr ""
+
+msgid "Copy Link"
+msgstr ""
+
+msgid "Copy a link in this message to the clipboard"
+msgstr ""
+
+msgid "Decline waiting call"
+msgstr ""
+
+msgid "Emoji suggestions. {}"
+msgstr ""
+
+msgid "End call and answer"
+msgstr ""
+
+msgid "Go back and forward in voice messages by"
+msgstr ""
+
+msgid "Missed {}."
+msgstr ""
+
+msgid "Not in your contacts"
+msgstr ""
+
+msgid "Open chats in the message box instead of the message list"
+msgstr ""
+
+msgid "Reacted with {}."
+msgstr ""
+
+msgid "Reactio&ns..."
+msgstr ""
+
+msgid "Received"
+msgstr ""
+
+msgid "Received at {}"
+msgstr ""
+
+msgid "Report to WhatsApp"
+msgstr ""
+
+msgid "Reset Templates to Default"
+msgstr ""
+
+msgid "Ring"
+msgstr ""
+
+msgid "Ring {}"
+msgstr ""
+
+msgid "See who reacted to this message, and with what"
+msgstr ""
+
+msgid "Select a link to copy:"
+msgstr ""
+
+msgid "Select someone who isn't in the call first."
+msgstr ""
+
+msgid "Templates"
+msgstr ""
+
+msgid "Templates use Jinja syntax, like {{ name }} or {% if unread %}, {{ unread }}{% endif %}. The user manual lists every name you can use."
+msgstr ""
+
+msgid "The {} has a mistake: {}"
+msgstr ""
+
+msgid "This person won't be able to message or call you. They won't know you blocked or reported them."
+msgstr ""
+
+msgid "Up Arrow in an empty message box edits your last message"
+msgstr ""
+
+msgid "Voice Messages"
+msgstr ""
+
+msgid "Waiting call declined."
+msgstr ""
+
+msgid "WhatsApp receives the last message this business sent you."
+msgstr ""
+
+msgid "WhatsApp receives the last message this person sent you."
+msgstr ""
+
+msgid "{} isn't on WhatsApp"
+msgstr ""
+
+msgid "{} off"
+msgstr ""
+
+msgid "{} won't be able to message or call you."
+msgstr ""
+
+msgid "{}, sent at {}"
+msgstr ""
+

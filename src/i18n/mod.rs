@@ -7,9 +7,7 @@ use std::sync::{
 	atomic::{AtomicUsize, Ordering},
 };
 
-pub use backend::{
-	translate_backend_message, translate_call_kind_text, translate_rich_message_text, translate_system_message,
-};
+pub use backend::{translate_backend_message, translate_rich_message_text, translate_system_message};
 pub use countries::{translate_country_entry, translate_country_name};
 
 const PATOIS_ID_MO_DEFLATE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/patois_id.mo.deflate"));
@@ -211,5 +209,18 @@ mod tests {
 		assert_eq!(po::translate_id("%b %e"), Some("%e %b"));
 		assert_eq!(po::translate_id("%A, %B %e, %Y"), Some("%A, %e %B %Y"));
 		assert_eq!(po::translate_id("{} at {}"), Some("{} pukul {}"));
+	}
+
+	#[test]
+	fn indonesian_call_rows_come_from_the_catalog() {
+		assert_eq!(po::translate_id("Incoming voice call"), Some("Panggilan suara masuk"));
+		assert_eq!(po::translate_id("Outgoing group video call"), Some("Panggilan video grup keluar"));
+		assert_eq!(po::translate_id("Missed group voice call"), Some("Panggilan suara grup tak terjawab"));
+		assert_eq!(po::translate_id("Upcoming video call"), Some("Panggilan video mendatang"));
+		assert_eq!(po::translate_id("{}, you declined"), Some("{}, Anda menolak"));
+		assert_eq!(po::translate_id("{}, answered on another device"), Some("{}, dijawab di perangkat lain"));
+		assert_eq!(po::translate_id("{} minutes"), Some("{} menit"));
+		assert_eq!(po::translate_id("{} from {}, duration {}"), Some("{} dari {}, durasi {}"));
+		assert_eq!(po::translate_id("{} to {}"), Some("{} ke {}"));
 	}
 }

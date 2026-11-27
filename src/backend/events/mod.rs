@@ -43,40 +43,7 @@ use crate::{
 	},
 };
 
-pub(super) fn capitalize_first(text: &str) -> String {
-	let mut chars = text.chars();
-	let Some(first) = chars.next() else {
-		return String::new();
-	};
-	let mut out: String = first.to_uppercase().collect();
-	out.push_str(chars.as_str());
-	out
-}
-
-pub(super) fn translate_call_text(text: &str) -> String {
-	if !crate::i18n::is_indonesian() {
-		return text.to_string();
-	}
-	if let Some(rest) = text.strip_prefix("Incoming ") {
-		if let Some((kind, suffix)) = rest.split_once(", ") {
-			let kind_id = crate::i18n::translate_call_kind_text(&capitalize_first(kind));
-			let suffix_id = crate::i18n::translate_call_kind_text(&format!(", {suffix}"));
-			return format!("{kind_id} masuk{suffix_id}");
-		}
-		let kind_id = crate::i18n::translate_call_kind_text(&capitalize_first(rest));
-		return format!("{kind_id} masuk");
-	}
-	if let Some(rest) = text.strip_prefix("Outgoing ") {
-		if let Some((kind, suffix)) = rest.split_once(", ") {
-			let kind_id = crate::i18n::translate_call_kind_text(&capitalize_first(kind));
-			let suffix_id = crate::i18n::translate_call_kind_text(&format!(", {suffix}"));
-			return format!("{kind_id} keluar{suffix_id}");
-		}
-		let kind_id = crate::i18n::translate_call_kind_text(&capitalize_first(rest));
-		return format!("{kind_id} keluar");
-	}
-	crate::i18n::translate_call_kind_text(text)
-}
+pub(super) use crate::calls::call_rows::translate_call_text;
 
 pub(crate) fn format_conv_data_label(
 	chat_jid: &str,

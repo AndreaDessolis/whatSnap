@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod call_rows;
 pub mod helpers;
 pub mod hotkeys;
 pub mod opus_jitter;

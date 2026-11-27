@@ -6607,6 +6607,111 @@ msgstr "mercoledì"
 msgid "{} at {}"
 msgstr "{} alle {}"
 
+msgid "Incoming group video call"
+msgstr "Videochiamata di gruppo in arrivo"
+
+msgid "Incoming group voice call"
+msgstr "Chiamata vocale di gruppo in arrivo"
+
+msgid "Incoming video call"
+msgstr "Videochiamata in arrivo"
+
+msgid "Incoming voice call"
+msgstr "Chiamata vocale in arrivo"
+
+msgid "Missed group video call"
+msgstr "Videochiamata di gruppo persa"
+
+msgid "Missed group voice call"
+msgstr "Chiamata vocale di gruppo persa"
+
+msgid "Missed video call"
+msgstr "Videochiamata persa"
+
+msgid "Missed voice call"
+msgstr "Chiamata vocale persa"
+
+msgid "Outgoing group video call"
+msgstr "Videochiamata di gruppo in uscita"
+
+msgid "Outgoing group voice call"
+msgstr "Chiamata vocale di gruppo in uscita"
+
+msgid "Outgoing video call"
+msgstr "Videochiamata in uscita"
+
+msgid "Outgoing voice call"
+msgstr "Chiamata vocale in uscita"
+
+msgid "Upcoming group video call"
+msgstr "Videochiamata di gruppo programmata"
+
+msgid "Upcoming group voice call"
+msgstr "Chiamata vocale di gruppo programmata"
+
+msgid "Upcoming video call"
+msgstr "Videochiamata programmata"
+
+msgid "Upcoming voice call"
+msgstr "Chiamata vocale programmata"
+
+msgid "{} from {}"
+msgstr "{} da {}"
+
+msgid "{} from {}, duration {}"
+msgstr "{} da {}, durata {}"
+
+msgid "{} hour"
+msgstr "{} ora"
+
+msgid "{} hours"
+msgstr "{} ore"
+
+msgid "{} minute"
+msgstr "{} minuto"
+
+msgid "{} minutes"
+msgstr "{} minuti"
+
+msgid "{} second"
+msgstr "{} secondo"
+
+msgid "{} seconds"
+msgstr "{} secondi"
+
+msgid "{} to {}"
+msgstr "{} a {}"
+
+msgid "{} to {}, duration {}"
+msgstr "{} a {}, durata {}"
+
+msgid "{}, abandoned"
+msgstr "{}, interrotta"
+
+msgid "{}, answered on another device"
+msgstr "{}, risposta su un altro dispositivo"
+
+msgid "{}, cancelled"
+msgstr "{}, annullata"
+
+msgid "{}, declined"
+msgstr "{}, rifiutata"
+
+msgid "{}, declined on another device"
+msgstr "{}, rifiutata su un altro dispositivo"
+
+msgid "{}, failed"
+msgstr "{}, non riuscita"
+
+msgid "{}, no answer"
+msgstr "{}, nessuna risposta"
+
+msgid "{}, unavailable"
+msgstr "{}, non disponibile"
+
+msgid "{}, you declined"
+msgstr "{}, rifiutata da te"
+
 msgid "Lock Chats Again When Idle For"
 msgstr "Blocca di nuovo le chat dopo un'inattività di"
 
@@ -6630,3 +6735,127 @@ msgstr "Blocca di nuovo le chat quando whatSnap è ridotto a icona o nascosto"
 
 msgid "Notify about messages in locked chats while they are locked"
 msgstr "Notifica i messaggi nelle chat bloccate mentre sono bloccate"
+
+msgid "All {}: {}"
+msgstr "Tutte {}: {}"
+
+msgid "Answering..."
+msgstr "Risposta in corso..."
+
+msgid "Block"
+msgstr "Blocca"
+
+msgid "Block {}?"
+msgstr "Bloccare {}?"
+
+msgid "Call waiting"
+msgstr "Chiamata in attesa"
+
+msgid "Call waiting: {}. {} ends this call and answers it, {} declines it."
+msgstr "Chiamata in attesa: {}. {} chiude questa chiamata e risponde, {} la rifiuta."
+
+msgid "Copy &Link"
+msgstr "Copia &link"
+
+msgid "Copy &Link..."
+msgstr "Copia &link..."
+
+msgid "Copy Link"
+msgstr "Copia link"
+
+msgid "Copy a link in this message to the clipboard"
+msgstr "Copia negli appunti un link di questo messaggio"
+
+msgid "Decline waiting call"
+msgstr "Rifiuta la chiamata in attesa"
+
+msgid "Emoji suggestions. {}"
+msgstr "Suggerimenti di emoji. {}"
+
+msgid "End call and answer"
+msgstr "Chiudi la chiamata e rispondi"
+
+msgid "Go back and forward in voice messages by"
+msgstr "Vai avanti e indietro nei messaggi vocali di"
+
+msgid "Missed {}."
+msgstr "Persa: {}."
+
+msgid "Not in your contacts"
+msgstr "Non è nei tuoi contatti"
+
+msgid "Open chats in the message box instead of the message list"
+msgstr "Apri le chat nella casella del messaggio invece che nell'elenco dei messaggi"
+
+msgid "Reacted with {}."
+msgstr "Hai reagito con {}."
+
+msgid "Reactio&ns..."
+msgstr "Rea&zioni..."
+
+msgid "Received"
+msgstr "Ricevuto"
+
+msgid "Received at {}"
+msgstr "Ricevuto alle {}"
+
+msgid "Report to WhatsApp"
+msgstr "Segnala a WhatsApp"
+
+msgid "Reset Templates to Default"
+msgstr "Ripristina i modelli predefiniti"
+
+msgid "Ring"
+msgstr "Fai squillare"
+
+msgid "Ring {}"
+msgstr "Fai squillare {}"
+
+msgid "See who reacted to this message, and with what"
+msgstr "Vedi chi ha reagito a questo messaggio e con cosa"
+
+msgid "Select a link to copy:"
+msgstr "Scegli un link da copiare:"
+
+msgid "Select someone who isn't in the call first."
+msgstr "Prima scegli qualcuno che non è nella chiamata."
+
+msgid "Templates"
+msgstr "Modelli"
+
+msgid "Templates use Jinja syntax, like {{ name }} or {% if unread %}, {{ unread }}{% endif %}. The user manual lists every name you can use."
+msgstr "I modelli usano la sintassi Jinja, come {{ name }} o {% if unread %}, {{ unread }}{% endif %}. Il manuale elenca tutti i nomi che puoi usare."
+
+msgid "The {} has a mistake: {}"
+msgstr "Errore in {}: {}"
+
+msgid "This person won't be able to message or call you. They won't know you blocked or reported them."
+msgstr "Questa persona non potrà più scriverti né chiamarti. Non saprà che l'hai bloccata o segnalata."
+
+msgid "Up Arrow in an empty message box edits your last message"
+msgstr "Freccia su nella casella del messaggio vuota modifica il tuo ultimo messaggio"
+
+msgid "Voice Messages"
+msgstr "Messaggi vocali"
+
+msgid "Waiting call declined."
+msgstr "Chiamata in attesa rifiutata."
+
+msgid "WhatsApp receives the last message this business sent you."
+msgstr "WhatsApp riceverà l'ultimo messaggio che questa attività ti ha inviato."
+
+msgid "WhatsApp receives the last message this person sent you."
+msgstr "WhatsApp riceverà l'ultimo messaggio che questa persona ti ha inviato."
+
+msgid "{} isn't on WhatsApp"
+msgstr "{} non è su WhatsApp"
+
+msgid "{} off"
+msgstr "{} disattivato"
+
+msgid "{} won't be able to message or call you."
+msgstr "{} non potrà più scriverti né chiamarti."
+
+msgid "{}, sent at {}"
+msgstr "{}, inviato alle {}"
+
