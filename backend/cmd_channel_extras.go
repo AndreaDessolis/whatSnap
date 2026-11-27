@@ -61,7 +61,8 @@ func (acc *Account) refreshServerFlags() {
 	acc.serverFlagsMu.Lock()
 	acc.serverFlags = props
 	acc.serverFlagsMu.Unlock()
-	log.Printf("Have %d server feature flags; channel pinning for admins: %v", len(props), acc.channelPinningEnabled())
+	log.Printf("Have %d server feature flags; channel pinning for admins: %v; scheduled_messages_sender_enabled (23845) = %s, offering scheduling: %v",
+		len(props), acc.channelPinningEnabled(), acc.scheduledFlagForLog(), acc.scheduledMessagesEnabled())
 	acc.broadcastEvent("server_flags", acc.serverFlagsPayload())
 	acc.logHybridServerFlags()
 }

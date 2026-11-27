@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -479,7 +480,24 @@ func (acc *Account) scheduledMessagesEnabled() bool {
 	if !ok {
 		return true
 	}
-	return value == "1" || value == "true"
+	return abPropOn(value)
+}
+
+// abPropOn reads a bool server flag like WA Web's
+// WAWebABPropsParseConfigValue, which also takes "True".
+func abPropOn(value string) bool {
+	return value == "1" || value == "True" || value == "true"
+}
+
+// scheduledFlagForLog is the raw scheduled_messages_sender_enabled value for
+// backend.log, so a missing Schedule option can be traced to the server.
+func (acc *Account) scheduledFlagForLog() string {
+	acc.serverFlagsMu.RLock()
+	defer acc.serverFlagsMu.RUnlock()
+	if value, ok := acc.serverFlags[whatsmeow.ABPropScheduledMessagesSenderEnabled]; ok {
+		return strconv.Quote(value)
+	}
+	return "not sent"
 }
 
 func (acc *Account) scheduledConfig() whatsmeow.ScheduledMessagesConfig {
@@ -608,7 +626,9 @@ func (acc *Account) handleScheduleMessage(conn net.Conn, raw json.RawMessage) {
 	if err := json.Unmarshal(raw, &data); err != nil {
 		return
 	}
-	fail := func(err error) { acc.scheduledResultWithText(conn, data.JID, "schedule", err, "", data.Text, data.Mentions) }
+	fail := func(err error) {
+		acc.scheduledResultWithText(conn, data.JID, "schedule", err, "", data.Text, data.Mentions)
+	}
 	if !acc.scheduledMessagesEnabled() {
 		fail(errors.New("WhatsApp hasn't turned on scheduling messages for your account yet."))
 		return
