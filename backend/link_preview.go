@@ -51,7 +51,15 @@ func (acc *Account) noteRelayAllCalls(act *waSyncAction.PrivacySettingRelayAllCa
 		return
 	}
 	acc.db.Exec(`INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)`, protectIPKey, boolToInt(act.GetIsEnabled()))
+	acc.applyProtectIP(act.GetIsEnabled())
 	acc.broadcastEvent("app_prefs", acc.appPrefsPayload())
+}
+
+// applyProtectIP tells the call engine, like WA Web's setHideMyIp.
+func (acc *Account) applyProtectIP(on bool) {
+	if acc.callClient != nil {
+		acc.callClient.SetProtectIP(on)
+	}
 }
 
 func (acc *Account) protectIPInCalls() bool {

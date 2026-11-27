@@ -65,6 +65,7 @@ func (acc *Account) handleSetAppPrefs(raw json.RawMessage) {
 				return
 			}
 			acc.db.Exec(`INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)`, protectIPKey, boolToInt(on))
+			acc.applyProtectIP(on)
 		}()
 	}
 	off, ok := data["link_previews_disabled"]

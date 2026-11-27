@@ -444,6 +444,8 @@ func (acc *Account) initCallClient() {
 	acc.wa().AddEventHandler(acc.noteOutgoingCallProgress)
 	acc.callClient = meowcaller.NewClient(acc.wa(), newCallDiagnosticsOptions()...)
 	acc.callClient.SetDualStreamScreenShare(dualStreamScreenShare.Load())
+	acc.callClient.SetProtectIP(acc.protectIPInCalls())
+	acc.callClient.SetCallerIsContact(acc.isSavedContact)
 	acc.watchJoinableCalls(acc.callClient)
 
 	acc.callClient.OnIncomingCall(func(call *meowcaller.Call) {
