@@ -6,10 +6,12 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/agnivade/levenshtein v1.2.1 h1:EHBY3UOn1gwdy/VbFwgo4cxecRznFk7fKWN1KOX7eoM=
 github.com/agnivade/levenshtein v1.2.1/go.mod h1:QVVI16kDrtSuwcpd0p1+xMC6Z/VfhtCyDIjcwga4/DU=
-github.com/aryanchoudharypro/meowcaller v0.0.0-20261119084222-24b0a90d3b4f h1:qCL34Xxldv5Flt5RiXk1LDTWQk2iHSZgmYSmLXj3Nbs=
-github.com/aryanchoudharypro/meowcaller v0.0.0-20261119084222-24b0a90d3b4f/go.mod h1:ej/lRFTqThVKmMexmVXwh54/J38jPWcxVXorbObggko=
-github.com/aryanchoudharypro/whatsmeow v0.0.0-20261126084910-c7f6f5bdebeb h1:K6fEThLkhy9WmpzFREHxnHax3WUxJruocJ8Zpbmuxlg=
-github.com/aryanchoudharypro/whatsmeow v0.0.0-20261126084910-c7f6f5bdebeb/go.mod h1:UKPKm+xfnWFYwiLWl+P23/D7gJhTdhmu4JxN21nV9vA=
+github.com/aryanchoudharypro/meowcaller v0.0.0-20261127092852-2da7809fedbf h1:S8eSs9rnUAhX45GTZBEfi2V/ZKJSL2lmnMtEayr+Mhc=
+github.com/aryanchoudharypro/meowcaller v0.0.0-20261127092852-2da7809fedbf/go.mod h1:ej/lRFTqThVKmMexmVXwh54/J38jPWcxVXorbObggko=
+github.com/aryanchoudharypro/whatsmeow v0.0.0-20261127140746-6b46d5c5a5c9 h1:1GaT6Yaj505qgYMzhZ/3ARxC6wWRlYS7avIe2wroKNo=
+github.com/aryanchoudharypro/whatsmeow v0.0.0-20261127140746-6b46d5c5a5c9/go.mod h1:UKPKm+xfnWFYwiLWl+P23/D7gJhTdhmu4JxN21nV9vA=
+github.com/aryanchoudharypro/whatsmeow v0.0.0-20261127142030-be0d074d4592 h1:xGfUSYL+2HSvFPwYoQxjVNp6vP3IEXtKKUqlIULXgFc=
+github.com/aryanchoudharypro/whatsmeow v0.0.0-20261127142030-be0d074d4592/go.mod h1:UKPKm+xfnWFYwiLWl+P23/D7gJhTdhmu4JxN21nV9vA=
 github.com/beeper/argo-go v1.1.2 h1:UQI2G8F+NLfGTOmTUI0254pGKx/HUU/etbUGTJv91Fs=
 github.com/beeper/argo-go v1.1.2/go.mod h1:M+LJAnyowKVQ6Rdj6XYGEn+qcVFkb3R/MUpqkGR0hM4=
 github.com/coder/websocket v1.8.15 h1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=

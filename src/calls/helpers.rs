@@ -28,7 +28,8 @@ pub(crate) fn parse_call_participants(data: &serde_json::Value) -> Vec<CallParti
 				.map(|n| n.to_string())
 				.unwrap_or_else(|| crate::ui::contact_picker::display_name_for_jid(&jid));
 			let state = p.get("state").and_then(|v| v.as_str()).unwrap_or("").to_string();
-			Some(CallParticipant { jid, name, state })
+			let muted = p.get("muted").and_then(|v| v.as_bool()).unwrap_or(false);
+			Some(CallParticipant { jid, name, state, muted })
 		})
 		.collect()
 }
@@ -608,7 +609,7 @@ mod call_participant_tests {
 	use super::*;
 
 	fn p(jid: &str, name: &str, state: &str) -> CallParticipant {
-		CallParticipant { jid: jid.into(), name: name.into(), state: state.into() }
+		CallParticipant { jid: jid.into(), name: name.into(), state: state.into(), muted: false }
 	}
 
 	#[test]

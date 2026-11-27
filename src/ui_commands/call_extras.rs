@@ -46,6 +46,8 @@ struct PersonRow {
 	label: String,
 	waiting: bool,
 	connected: bool,
+	ringable: bool,
+	muted: bool,
 }
 
 fn people_rows(s: &AppState) -> Vec<PersonRow> {
@@ -59,6 +61,8 @@ fn people_rows(s: &AppState) -> Vec<PersonRow> {
 			label: crate::i18n::tr_fmt("{}, wants to join", &[&p.name]),
 			waiting: true,
 			connected: false,
+			ringable: false,
+			muted: false,
 		})
 		.collect();
 	for p in &s.call_participants {
@@ -70,12 +74,21 @@ fn people_rows(s: &AppState) -> Vec<PersonRow> {
 			"" => crate::i18n::tr("joining"),
 			other => other,
 		};
+		let connected = p.state == "connected";
+		let muted = connected && p.muted;
+		let label = if muted {
+			format!("{}, {}, {}", p.name, state, crate::i18n::tr("muted"))
+		} else {
+			format!("{}, {}", p.name, state)
+		};
 		rows.push(PersonRow {
 			jid: p.jid.clone(),
 			name: p.name.clone(),
-			label: format!("{}, {}", p.name, state),
+			label,
 			waiting: false,
-			connected: p.state == "connected",
+			connected,
+			ringable: !connected && !p.state.is_empty() && !is_ringing_state(&p.state),
+			muted,
 		});
 	}
 	rows
@@ -118,13 +131,30 @@ fn people_rows_jid_at(label: Option<String>, rows: &[PersonRow]) -> Option<Strin
 	rows.iter().find(|r| r.label == label).map(|r| r.jid.clone())
 }
 
-fn selected_person(s: &AppState, parts: &WindowParts) -> Option<PersonRow> {
+fn selected_row(s: &AppState, parts: &WindowParts) -> Option<PersonRow> {
 	let rows = people_rows(s);
 	let list = &parts.call_parts.people_list;
 	let jid = list.get_selection().and_then(|i| people_rows_jid_at(list.get_string(i), &rows))?;
-	rows.into_iter().find(|r| r.jid == jid && r.connected)
+	rows.into_iter().find(|r| r.jid == jid && !r.waiting)
 }
 
+fn selected_person(s: &AppState, parts: &WindowParts) -> Option<PersonRow> {
+	selected_row(s, parts).filter(|r| r.connected)
+}
+
+/// Someone invited who isn't in the call and isn't ringing right now: WA Web
+/// puts a Ring button on them in the people list.
+fn ringable_person(s: &AppState, parts: &WindowParts) -> Option<PersonRow> {
+	if s.incoming_call_caller.is_some() {
+		return None;
+	}
+	selected_row(s, parts).filter(|r| r.ringable)
+}
+
+/// The buttons follow WA Web's people menu: anyone in a group call may ask
+/// someone to mute (greyed out once they're muted), only a call link's
+/// creator or admins may remove people, and anyone may ring someone who
+/// isn't in the call.
 pub(crate) fn person_buttons(s: &AppState, parts: &WindowParts) {
 	let c = &parts.call_parts;
 	let person = selected_person(s, parts);
@@ -140,8 +170,45 @@ pub(crate) fn person_buttons(s: &AppState, parts: &WindowParts) {
 		}
 	}
 	c.mute_person_btn.show(person.is_some());
+	c.mute_person_btn.enable(person.as_ref().is_some_and(|p| !p.muted));
 	c.remove_person_btn.show(person.is_some() && can_remove);
+	let ring = ringable_person(s, parts);
+	match &ring {
+		Some(p) => c.ring_person_btn.set_label(&crate::i18n::tr_fmt("Ring {}", &[&p.name])),
+		None => c.ring_person_btn.set_label(crate::i18n::tr("Ring")),
+	}
+	c.ring_person_btn.show(ring.is_some());
 	c.people_panel.layout();
+}
+
+pub(crate) fn ring_person(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
+	let s = state.borrow();
+	let Some(call_id) = s.active_call_id.clone() else { return };
+	let Some(person) = ringable_person(&s, parts) else {
+		drop(s);
+		announce_call(parts, crate::i18n::tr("Select someone who isn't in the call first."), Priority::High);
+		return;
+	};
+	send(&s, "ring_call_participant", serde_json::json!({ "call_id": call_id, "jid": person.jid }));
+	drop(s);
+	announce_call(parts, &crate::i18n::tr_fmt("Ringing {}.", &[&person.name]), Priority::High);
+}
+
+fn participant_muted(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, data: &serde_json::Value) {
+	let jid = text(data, "jid");
+	let muted = data.get("muted").and_then(|v| v.as_bool()).unwrap_or(false);
+	let user = jid.split(['@', ':']).next().unwrap_or("").to_string();
+	let mut s = state.borrow_mut();
+	let mut changed = false;
+	for p in s.call_participants.iter_mut() {
+		if p.jid.split(['@', ':']).next() == Some(user.as_str()) && p.muted != muted {
+			p.muted = muted;
+			changed = true;
+		}
+	}
+	if changed {
+		refresh_people(&s, parts);
+	}
 }
 
 pub(crate) fn act_on_person(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, remove: bool) {
@@ -324,6 +391,7 @@ pub(crate) fn on_event(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, t
 		}
 		"call_waiting_room" => waiting_room(state, parts, data),
 		"call_muted_by" => muted_by(state, parts, data),
+		"call_participant_muted" => participant_muted(state, parts, data),
 		"call_action_done" => match text(data, "what").as_str() {
 			"hand" => {
 				let mut s = state.borrow_mut();
@@ -385,7 +453,7 @@ fn waiting_room(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, data: &s
 	let waiting: Vec<CallParticipant> = users
 		.iter()
 		.filter(|u| !text(u, "jid").is_empty())
-		.map(|u| CallParticipant { jid: text(u, "jid"), name: text(u, "name"), state: text(u, "state") })
+		.map(|u| CallParticipant { jid: text(u, "jid"), name: text(u, "name"), state: text(u, "state"), muted: false })
 		.collect();
 	let arrived: Vec<String> = waiting
 		.iter()

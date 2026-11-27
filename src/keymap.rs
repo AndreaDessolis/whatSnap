@@ -20,6 +20,7 @@ pub mod message_list {
 	pub const VIEW_TEXT: &str = "message_view_text";
 	pub const SPEED_DOWN: &str = "message_speed_down";
 	pub const SPEED_UP: &str = "message_speed_up";
+	pub const STATUS: &str = "message_status";
 }
 
 pub mod voice {
@@ -29,6 +30,9 @@ pub mod voice {
 	pub const DISCARD: &str = "discard_voice_recording";
 	pub const SEND: &str = "send_voice_message";
 }
+
+/// Opens the menu of the `Add attachment` button, like WA Web's Alt+A.
+pub const ATTACH: &str = "attach";
 
 pub mod incoming_call {
 	pub const ANSWER: &str = "call_answer";
@@ -129,6 +133,20 @@ pub const ACTIONS: &[ActionDef] = &[
 	},
 	ActionDef { id: "chat_info", menu_id: Some(MENU_ID_CHAT_INFO), tab: 3, label: "Chat &Info", default: "Alt+I" },
 	ActionDef {
+		id: "voice_call",
+		menu_id: Some(MENU_ID_VOICE_CALL),
+		tab: 3,
+		label: "Voice Call",
+		default: "Alt+Shift+A",
+	},
+	ActionDef {
+		id: "video_call",
+		menu_id: Some(MENU_ID_VIDEO_CALL),
+		tab: 3,
+		label: "Video Call",
+		default: "Alt+Shift+V",
+	},
+	ActionDef {
 		id: "star_message",
 		menu_id: Some(MENU_ID_STAR_MESSAGE),
 		tab: 3,
@@ -149,6 +167,7 @@ pub const ACTIONS: &[ActionDef] = &[
 		label: "Scheduled Messa&ges...",
 		default: "Ctrl+Shift+K",
 	},
+	ActionDef { id: ATTACH, menu_id: None, tab: 3, label: "Add Attachment", default: "Alt+A" },
 	ActionDef { id: voice::START_RECORDING, menu_id: None, tab: 4, label: "Start Recording", default: "Ctrl+Shift+R" },
 	ActionDef { id: voice::PAUSE_RECORDING, menu_id: None, tab: 4, label: "Pause Recording", default: "Alt+P" },
 	ActionDef {
@@ -233,6 +252,13 @@ pub const ACTIONS: &[ActionDef] = &[
 		default: "Alt+Shift+N",
 	},
 	ActionDef { id: message_list::REPLY, menu_id: None, tab: 6, label: "Reply", default: "R" },
+	ActionDef {
+		id: message_list::STATUS,
+		menu_id: None,
+		tab: 6,
+		label: "Say only the status and time",
+		default: "T",
+	},
 	ActionDef { id: message_list::EDIT, menu_id: None, tab: 6, label: "Edit", default: "E" },
 	ActionDef { id: message_list::STAR, menu_id: None, tab: 6, label: "Star or unstar", default: "S" },
 	ActionDef { id: message_list::FORWARD, menu_id: None, tab: 6, label: "Forward", default: "F" },
@@ -242,14 +268,14 @@ pub const ACTIONS: &[ActionDef] = &[
 		id: message_list::SEEK_BACK,
 		menu_id: None,
 		tab: 6,
-		label: "Voice message: back 5 seconds",
+		label: "Voice message: go back",
 		default: "J",
 	},
 	ActionDef {
 		id: message_list::SEEK_FORWARD,
 		menu_id: None,
 		tab: 6,
-		label: "Voice message: forward 5 seconds",
+		label: "Voice message: go forward",
 		default: "L",
 	},
 	ActionDef {
@@ -307,6 +333,11 @@ impl Keymap {
 
 	pub fn global_chord(&self, id: &str) -> Option<KeyChord> {
 		ACTIONS.iter().position(|a| a.id == id).and_then(|action| self.chord_for(action))
+	}
+
+	/// The key of an action as menus write it, like `Alt+Shift+A`.
+	pub fn shortcut_text(&self, id: &str) -> Option<String> {
+		self.global_chord(id).map(|c| accelerator_text(&c))
 	}
 
 	pub fn chord_for(&self, action: usize) -> Option<KeyChord> {

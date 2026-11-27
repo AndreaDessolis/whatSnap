@@ -362,6 +362,29 @@ impl ChatMessage {
 	/// form suitable for building a `<digits>@s.whatsapp.net` JID). Runs are
 	/// validated against libphonenumber's metadata (see phone.rs) so things
 	/// like order numbers or dates don't false-positive.
+	/// The http and https links in the text, without trailing punctuation,
+	/// in order.
+	pub fn links(&self) -> Vec<String> {
+		let text = &self.text;
+		let mut urls = Vec::new();
+		let mut start = 0;
+		while let Some(found) = text[start..].find("http") {
+			let at = start + found;
+			let rest = &text[at..];
+			if !(rest.starts_with("http://") || rest.starts_with("https://")) {
+				start = at + 4;
+				continue;
+			}
+			let len = rest.find(char::is_whitespace).unwrap_or(rest.len());
+			let url = rest[..len].trim_end_matches(|c: char| c.is_ascii_punctuation());
+			if url.len() > "https://".len() {
+				urls.push(url.to_string());
+			}
+			start = at + len;
+		}
+		urls
+	}
+
 	pub fn first_phone_number(&self) -> Option<(String, String)> {
 		if self.text.starts_with('[') {
 			return None;
@@ -614,28 +637,92 @@ impl ChatMessage {
 	}
 
 	/// The ", X reacted with Y" suffix for `reactions` as read on this message.
+	fn reactor_label(&self, r: &ChatReaction) -> String {
+		let is_id = i18n::is_indonesian();
+		if r.reactor_name == "me" || r.reactor_name == "You" || r.reactor_jid == "me" {
+			if is_id { "Anda".to_string() } else { "You".to_string() }
+		} else if !is_placeholder_name(&r.reactor_name) && !r.reactor_name.contains('@') {
+			r.reactor_name.clone()
+		} else if !is_placeholder_name(&self.sender_name) && !self.sender_name.contains('@') && !self.from_me {
+			self.sender_name.clone()
+		} else if is_id {
+			"Kontak".to_string()
+		} else {
+			"Contact".to_string()
+		}
+	}
+
 	fn reactions_text(&self, reactions: &[ChatReaction]) -> String {
 		let is_id = i18n::is_indonesian();
 		let active: Vec<String> = reactions
 			.iter()
 			.filter(|r| !r.emoji.is_empty())
 			.map(|r| {
-				let name = if r.reactor_name == "me" || r.reactor_name == "You" || r.reactor_jid == "me" {
-					if is_id { "Anda".to_string() } else { "You".to_string() }
-				} else if !is_placeholder_name(&r.reactor_name) && !r.reactor_name.contains('@') {
-					r.reactor_name.clone()
-				} else if !is_placeholder_name(&self.sender_name) && !self.sender_name.contains('@') && !self.from_me {
-					self.sender_name.clone()
-				} else if is_id {
-					"Kontak".to_string()
-				} else {
-					"Contact".to_string()
-				};
+				let name = self.reactor_label(r);
 				if is_id { format!("{name} bereaksi {}", r.emoji) } else { format!("{name} reacted with {}", r.emoji) }
 			})
 			.collect();
 
 		if !active.is_empty() { format!(", {}", active.join(", ")) } else { String::new() }
+	}
+
+	/// Who reacted with what, like WA's reaction list: a line per emoji with
+	/// its count, most used first, then each person and their emoji.
+	pub fn reaction_details(&self) -> Vec<String> {
+		let active: Vec<&ChatReaction> = self.reactions.iter().filter(|r| !r.emoji.is_empty()).collect();
+		let mut counts: Vec<(&str, usize)> = Vec::new();
+		for r in &active {
+			match counts.iter_mut().find(|(e, _)| *e == r.emoji) {
+				Some((_, n)) => *n += 1,
+				None => counts.push((&r.emoji, 1)),
+			}
+		}
+		counts.sort_by_key(|&(_, n)| std::cmp::Reverse(n));
+		let mut lines = Vec::new();
+		if active.is_empty() {
+			return lines;
+		}
+		let summary: Vec<String> = counts.iter().map(|(e, n)| format!("{e} {n}")).collect();
+		lines.push(i18n::tr_fmt("All {}: {}", &[&active.len(), &summary.join(", ")]));
+		for (emoji, _) in &counts {
+			for r in active.iter().filter(|r| r.emoji == *emoji) {
+				lines.push(format!("{} {}", self.reactor_label(r), r.emoji));
+			}
+		}
+		lines
+	}
+
+	fn status_title(&self) -> &str {
+		match self.status.as_str() {
+			"pending" => i18n::tr("Pending"),
+			"uploading" => i18n::tr("Uploading"),
+			"failed" => i18n::tr("Failed to send"),
+			"sent" | "" => i18n::tr("Sent"),
+			"delivered" => i18n::tr("Delivered"),
+			"read" => i18n::tr("Read"),
+			"played" => i18n::tr("Played"),
+			other => other,
+		}
+	}
+
+	/// Only the ticks and the time of a message, without its text: "Read,
+	/// sent at 10:42 AM" for yours, "Received at 10:42 AM" for others',
+	/// with ", edited" when it was. What sighted people see at a glance.
+	pub fn status_summary(&self) -> String {
+		let time = LocalTime::from_unix(self.timestamp)
+			.filter(|_| self.timestamp > 0)
+			.map(|t| t.format(i18n::tr("%I:%M %p")))
+			.unwrap_or_default();
+		let mut text = match (self.from_me, time.is_empty()) {
+			(true, false) => i18n::tr_fmt("{}, sent at {}", &[&self.status_title(), &time]),
+			(true, true) => self.status_title().to_string(),
+			(false, false) => i18n::tr_fmt("Received at {}", &[&time]),
+			(false, true) => i18n::tr("Received").to_string(),
+		};
+		if self.is_edited {
+			text.push_str(i18n::tr(", edited"));
+		}
+		text
 	}
 
 	pub fn format_display(&self, _is_group: bool) -> String {
@@ -683,16 +770,7 @@ impl ChatMessage {
 			};
 		}
 
-		let status_title = match self.status.as_str() {
-			"pending" => i18n::tr("Pending"),
-			"uploading" => i18n::tr("Uploading"),
-			"failed" => i18n::tr("Failed to send"),
-			"sent" | "" => i18n::tr("Sent"),
-			"delivered" => i18n::tr("Delivered"),
-			"read" => i18n::tr("Read"),
-			"played" => i18n::tr("Played"),
-			other => other,
-		};
+		let status_title = self.status_title();
 
 		let body = strip_markdown_for_speech(&self.body_text());
 
@@ -1213,11 +1291,11 @@ pub fn find_album_target(items: &[DisplayItem], msg: &ChatMessage) -> Option<usi
 	}
 	for (idx, item) in items.iter().enumerate().rev() {
 		let Some(last) = item.messages().last() else { continue };
-		if msg.timestamp - last.timestamp > ALBUM_MAX_GAP_SECS {
-			return None;
-		}
 		if same_album(last, msg) {
-			return Some(idx);
+			if msg.timestamp - last.timestamp <= ALBUM_MAX_GAP_SECS {
+				return Some(idx);
+			}
+			return None;
 		}
 	}
 	None

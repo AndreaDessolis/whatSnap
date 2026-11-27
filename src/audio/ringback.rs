@@ -222,6 +222,31 @@ pub(crate) fn busy_tone() -> SamplesBuffer {
 	SamplesBuffer::new(NonZero::new(1).unwrap(), NonZero::new(SAMPLE_RATE).unwrap(), samples)
 }
 
+/// WhatsApp's call waiting tone (kToneTypeIncomingPendingCall): two short
+/// beeps every few seconds. Cadence 150/50/150/3000 ms from the VoIP wasm's
+/// tone descriptor; the 600 Hz pitch is our reading of it.
+pub(crate) fn call_waiting_tone() -> SamplesBuffer {
+	const FREQ: f32 = 600.0;
+	const CADENCE_MS: [usize; 4] = [150, 50, 150, 3000];
+	let rate = SAMPLE_RATE as f32;
+	let fade = (FADE_SECS * rate) as usize;
+	let mut samples = Vec::with_capacity(CADENCE_MS.iter().sum::<usize>() * SAMPLE_RATE as usize / 1000);
+	for (i, ms) in CADENCE_MS.into_iter().enumerate() {
+		let n = ms * SAMPLE_RATE as usize / 1000;
+		if i % 2 == 1 {
+			samples.extend(std::iter::repeat_n(0.0, n));
+			continue;
+		}
+		for k in 0..n {
+			let t = k as f32 / rate;
+			let edge = k.min(n - 1 - k);
+			let env = if edge < fade { edge as f32 / fade as f32 } else { 1.0 };
+			samples.push((std::f32::consts::TAU * FREQ * t).sin() * env * LEVEL);
+		}
+	}
+	SamplesBuffer::new(NonZero::new(1).unwrap(), NonZero::new(SAMPLE_RATE).unwrap(), samples)
+}
+
 pub(crate) fn reconnect_tone() -> SamplesBuffer {
 	const FREQ: f32 = 480.0;
 	const CADENCE_MS: [usize; 4] = [200, 200, 200, 3000];

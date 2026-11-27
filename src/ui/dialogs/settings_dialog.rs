@@ -32,6 +32,15 @@ pub const ABOUT_DURATION_CHOICES: &[(&str, &str)] = &[
 	("24 Hours", "86400"),
 ];
 
+pub const CHAT_LOCK_AUTO_LOCK_CHOICES: &[(&str, &str)] = &[
+	("Never", "0"),
+	("1 Minute", "1"),
+	("5 Minutes", "5"),
+	("15 Minutes", "15"),
+	("30 Minutes", "30"),
+	("1 Hour", "60"),
+];
+
 pub const CHAT_LOCK_HELLO_LABEL: &str =
 	"Unlock locked chats with Windows Hello (fingerprint, face or PIN) instead of the secret code";
 
@@ -77,6 +86,11 @@ pub struct SettingsDialogParts {
 	pub hide_phone_numbers_check: CheckBox,
 	pub type_to_compose_check: CheckBox,
 	pub keep_list_position_check: CheckBox,
+	pub open_in_message_box_check: CheckBox,
+	pub up_arrow_edits_check: CheckBox,
+	pub voice_seek_combo: ComboBox,
+	pub window_title_template_field: TextCtrl,
+	pub chat_list_template_field: TextCtrl,
 	pub replace_emoji_check: CheckBox,
 	pub emoji_help_btn: Button,
 	pub spell_check_check: CheckBox,
@@ -152,6 +166,9 @@ pub struct SettingsDialogParts {
 
 	pub lock_panel: Panel,
 	pub chat_lock_hello_check: CheckBox,
+	pub chat_lock_auto_lock_combo: ComboBox,
+	pub chat_lock_on_minimize_check: CheckBox,
+	pub chat_lock_notify_check: CheckBox,
 
 	pub backup_panel: Panel,
 	pub backup_btn: Button,
@@ -160,6 +177,16 @@ pub struct SettingsDialogParts {
 	pub ok_btn: Button,
 	pub cancel_btn: Button,
 }
+
+const VOICE_SEEK_SECONDS: [u32; 6] = [2, 5, 10, 15, 30, 60];
+const VOICE_SEEK_CHOICES: [(&str, &str); 6] = [
+	("2 seconds", "2"),
+	("5 seconds", "5"),
+	("10 seconds", "10"),
+	("15 seconds", "15"),
+	("30 seconds", "30"),
+	("1 minute", "60"),
+];
 
 fn visibility_combo(panel: &Panel, sizer: &BoxSizer, label: &str, choices: &[(&'static str, &str)]) -> ComboBox {
 	let text = StaticText::builder(panel).with_label(&crate::i18n::tr_str(label)).build();
@@ -330,10 +357,29 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&chats_sizer,
 		"Keep my place in the message list instead of jumping to the newest message",
 	);
+	let open_in_message_box_check = setting_switch(
+		&chats_panel,
+		&chats_sizer,
+		"Open chats in the message box instead of the message list",
+	);
+	let up_arrow_edits_check = setting_switch(
+		&chats_panel,
+		&chats_sizer,
+		"Up Arrow in an empty message box edits your last message",
+	);
 	let replace_emoji_check =
 		setting_switch(&chats_panel, &chats_sizer, "Replace text with emoji as you type, like :-) or (y)");
 	let emoji_help_btn = setting_button(&chats_panel, "Replace Text With Emoji: See Help...");
 	chats_sizer.add(&emoji_help_btn, 0, SizerFlag::Left | SizerFlag::Top, 10);
+
+	chats_sizer.add_spacer(10);
+	section_header(&chats_panel, &chats_sizer, "Voice Messages");
+	let voice_seek_combo = visibility_combo(
+		&chats_panel,
+		&chats_sizer,
+		"Go back and forward in voice messages by",
+		&VOICE_SEEK_CHOICES,
+	);
 
 	chats_sizer.add_spacer(10);
 	section_header(&chats_panel, &chats_sizer, "Spelling");
@@ -419,6 +465,31 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&personalization_sizer,
 		"Choose the language for whatSnap's interface. Changes take full effect after restarting whatSnap.",
 	);
+	personalization_sizer.add_spacer(12);
+	section_header(&personalization_panel, &personalization_sizer, "Templates");
+	let template_field = |label: &str| {
+		let text = StaticText::builder(&personalization_panel).with_label(&crate::i18n::tr_str(label)).build();
+		text.set_font(&theme::Fonts::body());
+		personalization_sizer.add(&text, 0, SizerFlag::Left | SizerFlag::Right | SizerFlag::Top, 12);
+		let field = TextCtrl::builder(&personalization_panel)
+			.with_style(dialog_look::field_style(TextCtrlStyle::Default))
+			.build();
+		dialog_look::add_field(&personalization_sizer, &field, Field::Line, 0);
+		field
+	};
+	let window_title_template_field = template_field("Window title template");
+	let chat_list_template_field = template_field("Chat list template");
+	let reset_templates_btn = setting_button(&personalization_panel, "Reset Templates to Default");
+	personalization_sizer.add(&reset_templates_btn, 0, SizerFlag::Left | SizerFlag::Top, 12);
+	setting_note(
+		&personalization_panel,
+		&personalization_sizer,
+		"Templates use Jinja syntax, like {{ name }} or {% if unread %}, {{ unread }}{% endif %}. The user manual lists every name you can use.",
+	);
+	reset_templates_btn.on_click(move |_| {
+		window_title_template_field.set_value(crate::template::DEFAULT_WINDOW_TITLE_TEMPLATE);
+		chat_list_template_field.set_value(crate::template::DEFAULT_CHAT_TEMPLATE);
+	});
 	personalization_panel.set_sizer(personalization_sizer, true);
 
 	// 6. Profile Panel
@@ -634,6 +705,16 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&lock_sizer,
 		"Allows unlocking hidden and locked chats using your Windows Hello biometric or PIN credentials.",
 	);
+	let chat_lock_auto_lock_combo = visibility_combo(
+		&lock_panel,
+		&lock_sizer,
+		"Lock Chats Again When Idle For",
+		CHAT_LOCK_AUTO_LOCK_CHOICES,
+	);
+	let chat_lock_on_minimize_check =
+		setting_switch(&lock_panel, &lock_sizer, "Lock chats again when whatSnap is minimized or hidden");
+	let chat_lock_notify_check =
+		setting_switch(&lock_panel, &lock_sizer, "Notify about messages in locked chats while they are locked");
 	lock_panel.set_sizer(lock_sizer, true);
 
 	// 11. Backup and Restore Panel
@@ -709,6 +790,11 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		hide_phone_numbers_check,
 		type_to_compose_check,
 		keep_list_position_check,
+		open_in_message_box_check,
+		up_arrow_edits_check,
+		voice_seek_combo,
+		window_title_template_field,
+		chat_list_template_field,
 		replace_emoji_check,
 		emoji_help_btn,
 		spell_check_check,
@@ -787,6 +873,9 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		dual_stream_screen_share_check,
 		lock_panel,
 		chat_lock_hello_check,
+		chat_lock_auto_lock_combo,
+		chat_lock_on_minimize_check,
+		chat_lock_notify_check,
 		backup_panel,
 		backup_btn,
 		restore_btn,
@@ -1006,11 +1095,24 @@ impl SettingsDialogParts {
 		self.enter_is_send_check.set_value(settings.enter_is_send);
 		self.type_to_compose_check.set_value(settings.type_to_compose);
 		self.keep_list_position_check.set_value(settings.keep_list_position);
+		self.open_in_message_box_check.set_value(settings.open_chat_in_message_box);
+		self.up_arrow_edits_check.set_value(settings.up_arrow_edits_last);
+		let seek = VOICE_SEEK_SECONDS.iter().position(|&s| s == settings.voice_seek_seconds);
+		self.voice_seek_combo.set_selection(seek.unwrap_or(1) as u32);
+		self.window_title_template_field.set_value(&settings.window_title_template);
+		self.chat_list_template_field.set_value(&settings.chat_list_template);
 		// Only offered when Windows Hello is set up now; a saved "on" stays
 		// on, so it isn't lost while the sign-in method is missing.
 		let hello = crate::platform::windows_hello::availability();
 		self.chat_lock_hello_check.enable(hello == crate::platform::windows_hello::Availability::Ready);
 		self.chat_lock_hello_check.set_value(settings.chat_lock_hello);
+		set_combo_from_value(
+			&self.chat_lock_auto_lock_combo,
+			CHAT_LOCK_AUTO_LOCK_CHOICES,
+			&settings.chat_lock_auto_lock_mins.to_string(),
+		);
+		self.chat_lock_on_minimize_check.set_value(settings.chat_lock_on_minimize);
+		self.chat_lock_notify_check.set_value(settings.chat_lock_notify);
 		self.announce_incoming_check.set_value(settings.announce_incoming);
 		self.announce_outgoing_check.set_value(settings.announce_outgoing);
 		self.replace_emoji_check.set_value(settings.replace_text_with_emoji);
@@ -1023,6 +1125,17 @@ impl SettingsDialogParts {
 		let theme = serde_json::to_value(settings.theme).ok();
 		set_combo_from_value(&self.theme_combo, THEME_CHOICES, theme.as_ref().and_then(|v| v.as_str()).unwrap_or(""));
 		set_combo_from_value(&self.language_combo, crate::i18n::language_choices(), settings.language.as_str());
+	}
+
+	/// The first template that doesn't compile, with its field and the
+	/// error, so saving can say so instead of quietly using the default.
+	pub fn template_error(&self) -> Option<(TextCtrl, &'static str, String)> {
+		[
+			(self.window_title_template_field, "Window title template"),
+			(self.chat_list_template_field, "Chat list template"),
+		]
+		.into_iter()
+		.find_map(|(field, name)| crate::template::check(&field.get_value()).err().map(|e| (field, name, e)))
 	}
 
 	pub fn read_chat_settings(&self, settings: &mut crate::settings::Settings) {
@@ -1044,7 +1157,33 @@ impl SettingsDialogParts {
 		settings.enter_is_send = self.enter_is_send_check.is_checked();
 		settings.type_to_compose = self.type_to_compose_check.is_checked();
 		settings.keep_list_position = self.keep_list_position_check.is_checked();
+		settings.open_chat_in_message_box = self.open_in_message_box_check.is_checked();
+		settings.up_arrow_edits_last = self.up_arrow_edits_check.is_checked();
+		if let Some(seconds) =
+			self.voice_seek_combo.get_selection().and_then(|i| VOICE_SEEK_SECONDS.get(i as usize).copied())
+		{
+			settings.voice_seek_seconds = seconds;
+		}
+		for (field, value, default) in [
+			(
+				self.window_title_template_field,
+				&mut settings.window_title_template,
+				crate::template::DEFAULT_WINDOW_TITLE_TEMPLATE,
+			),
+			(self.chat_list_template_field, &mut settings.chat_list_template, crate::template::DEFAULT_CHAT_TEMPLATE),
+		] {
+			let text = field.get_value();
+			*value = if text.trim().is_empty() { default.to_string() } else { text };
+		}
 		settings.chat_lock_hello = self.chat_lock_hello_check.is_checked();
+		settings.chat_lock_auto_lock_mins = self
+			.chat_lock_auto_lock_combo
+			.get_selection()
+			.and_then(|i| CHAT_LOCK_AUTO_LOCK_CHOICES.get(i as usize))
+			.and_then(|(_, v)| v.parse().ok())
+			.unwrap_or(0);
+		settings.chat_lock_on_minimize = self.chat_lock_on_minimize_check.is_checked();
+		settings.chat_lock_notify = self.chat_lock_notify_check.is_checked();
 		settings.announce_incoming = self.announce_incoming_check.is_checked();
 		settings.announce_outgoing = self.announce_outgoing_check.is_checked();
 		settings.status_auto_advance = self.status_auto_advance_check.is_checked();

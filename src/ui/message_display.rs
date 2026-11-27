@@ -228,6 +228,9 @@ impl ChatTabRows {
 /// What the chat list's search box is called, as WA Web's placeholder says
 /// it for each filter.
 fn chat_search_label(s: &AppState) -> &'static str {
+	if s.chats_unlocked && s.active_tab == 0 {
+		return crate::i18n::tr("Search locked chats");
+	}
 	if s.active_tab != 0 || s.chats_unlocked {
 		return crate::i18n::tr("Search chats");
 	}
@@ -281,6 +284,9 @@ pub(crate) fn shown_draft(s: &AppState, jid: &str) -> Option<String> {
 pub(crate) fn chat_row_label(s: &AppState, jid: &str) -> String {
 	let label = s.display_names.get(jid).or_else(|| s.contacts.get(jid)).map_or(jid, String::as_str);
 	let Some(draft) = shown_draft(s, jid) else { return label.to_string() };
+	if let Some(parts) = s.chat_row_parts.get(jid) {
+		return parts.render(&s.settings.chat_list_template, &format!("{}{draft}", crate::i18n::tr("Draft: ")));
+	}
 	let head = match s.chat_preview_lines.get(jid).filter(|p| !p.is_empty()) {
 		Some(preview) => label.strip_suffix(preview.as_str()).and_then(|h| h.strip_suffix(" | ")).unwrap_or(label),
 		None => label,
@@ -379,6 +385,25 @@ pub(crate) fn chat_tab_rows(s: &AppState) -> ChatTabRows {
 			rows.push(&contact.jid, contact_label(contact), "");
 		}
 	}
+	// A typed number that is no chat or contact: WA Web's "Not in your
+	// contacts", or that it has no WhatsApp account.
+	let lookup = &s.number_lookup;
+	if chats.is_empty() && contacts.is_empty() && !lookup.pending && query.numeric.as_deref() == Some(&lookup.digits) {
+		let phone = if lookup.phone.is_empty() { lookup.digits.as_str() } else { lookup.phone.as_str() };
+		let number = whatsnap::phone::format_international(phone).unwrap_or_else(|| format!("+{phone}"));
+		if lookup.jid.is_empty() {
+			rows.notice(&crate::i18n::tr_fmt("{} isn't on WhatsApp", &[&number]));
+		} else {
+			rows.notice(crate::i18n::tr("Not in your contacts"));
+			let same_as_number = lookup.name == number || lookup.name.trim_start_matches('+') == phone;
+			let label = if lookup.name.is_empty() || same_as_number {
+				number
+			} else {
+				format!("{number}, ~{}", lookup.name)
+			};
+			rows.push(&lookup.jid, label, "");
+		}
+	}
 	if !hits.is_empty() {
 		rows.notice(crate::i18n::tr("Messages"));
 		for hit in &hits {
@@ -463,12 +488,23 @@ pub(crate) fn refresh_chat_rows(s: &mut AppState, parts: &crate::ui::window::Win
 pub(crate) fn apply_chat_filter(s: &mut AppState, parts: &crate::ui::window::WindowParts) {
 	crate::ui::window::refresh_menu_bar(s, &parts.frame);
 	crate::platform::tray::refresh_nav_unread_labels(s, parts);
-	let show_locked_btn = s.active_tab == 0 && !s.locked_jids.is_empty();
+	// With WA's "Hide locked chats" on, the button shows only once the
+	// secret code is typed in the search box (or the chats are open).
+	let show_locked_btn = s.active_tab == 0
+		&& !s.locked_jids.is_empty()
+		&& (!s.chat_lock_hidden || s.chats_unlocked || s.chat_lock_search_unlocked);
 	let show_filter = s.active_tab == 0 && !s.chats_unlocked;
 	let conv = &parts.conversations_parts;
 	let btn_label = crate::i18n::tr(if s.chats_unlocked { "Hide Locked Chats" } else { "Locked Chats" });
 	if conv.locked_chats_btn.get_label() != btn_label {
 		conv.locked_chats_btn.set_label(btn_label);
+	}
+	if s.active_tab == 0 {
+		let heading = crate::i18n::tr(if s.chats_unlocked { "Locked Chats" } else { "Chats" });
+		if conv.conversations_label.get_label() != heading {
+			conv.conversations_label.set_label(heading);
+			conv.panel.layout();
+		}
 	}
 	if matches!(s.active_tab, 0 | 3 | 4 | 5) {
 		let search_label = chat_search_label(s);

@@ -9,6 +9,7 @@ mod keymap;
 mod media;
 mod platform;
 mod settings;
+mod template;
 mod types;
 mod ui;
 mod ui_commands;
@@ -147,6 +148,19 @@ struct AppState {
 	archived_jids: std::collections::HashSet<String>,
 	locked_jids: std::collections::HashSet<String>,
 	chats_unlocked: bool,
+	/// WA's "Hide locked chats": the Locked Chats button stays hidden until
+	/// the secret code is typed in the chat list's search box.
+	chat_lock_hidden: bool,
+	/// Whether a secret code is set on the phone; None until the backend says.
+	chat_lock_has_code: Option<bool>,
+	/// The search box holds the secret code, so the hidden button shows.
+	chat_lock_search_unlocked: bool,
+	/// Numbers the search box's secret code checks, so a late answer for
+	/// older text is ignored.
+	chat_lock_search_seq: u64,
+	/// Last key press while the locked chats were shown, for locking them
+	/// again after a while.
+	chat_lock_last_activity: std::time::Instant,
 	pending_locked_chat: Option<String>,
 	community_jids: std::collections::HashSet<String>,
 	chat_parents: std::collections::HashMap<String, String>,
@@ -245,10 +259,13 @@ struct AppState {
 	/// parallel to filtered_chats; empty for chats, contacts and headings.
 	filtered_message_ids: Vec<String>,
 	message_search: MessageSearch,
+	number_lookup: NumberLookup,
 	chat_search_keys: std::collections::HashMap<String, ChatSearchKeys>,
 	/// Each chat's last-message line as its row's label ends with it, so a
 	/// draft can take its place (see `message_display::chat_row_label`).
 	chat_preview_lines: std::collections::HashMap<String, String>,
+	/// Each chat row's template parts, so a draft row renders like the rest.
+	chat_row_parts: std::collections::HashMap<String, template::ChatRowParts>,
 	displayed_chat_labels: Vec<String>,
 	chat_row_art: std::collections::HashMap<String, crate::ui::chat_rows::RowArt>,
 	main_ui_shown: bool,
@@ -322,6 +339,10 @@ struct AppState {
 	call_ringback_on: bool,
 	call_ringtone_active: Option<String>,
 	call_reconnect_sink: Option<Player>,
+	/// A call ringing us while we're on another one (call waiting): its id
+	/// and what to say about it.
+	call_waiting: Option<(String, String)>,
+	call_waiting_sink: Option<Player>,
 	/// The one-off poor connection alert, kept until it has played.
 	call_alert_sink: Option<Player>,
 	call_hotkeys: Option<wx_utils::global_hotkeys::GlobalHotkeys>,
@@ -918,6 +939,11 @@ pub(crate) fn new_app_state(
 		archived_jids: std::collections::HashSet::new(),
 		locked_jids: std::collections::HashSet::new(),
 		chats_unlocked: false,
+		chat_lock_hidden: false,
+		chat_lock_has_code: None,
+		chat_lock_search_unlocked: false,
+		chat_lock_search_seq: 0,
+		chat_lock_last_activity: std::time::Instant::now(),
 		pending_locked_chat: None,
 		community_jids: std::collections::HashSet::new(),
 		chat_parents: std::collections::HashMap::new(),
@@ -967,6 +993,8 @@ pub(crate) fn new_app_state(
 		call_ringback_on: false,
 		call_ringtone_active: None,
 		call_reconnect_sink: None,
+		call_waiting: None,
+		call_waiting_sink: None,
 		call_alert_sink: None,
 		call_hotkeys: None,
 		tray_hotkey: None,
@@ -1075,8 +1103,10 @@ pub(crate) fn new_app_state(
 		search_query: String::new(),
 		filtered_message_ids: Vec::new(),
 		message_search: MessageSearch::default(),
+		number_lookup: NumberLookup::default(),
 		chat_search_keys: std::collections::HashMap::new(),
 		chat_preview_lines: std::collections::HashMap::new(),
+		chat_row_parts: std::collections::HashMap::new(),
 		displayed_chat_labels: Vec::new(),
 		chat_row_art: std::collections::HashMap::new(),
 		main_ui_shown: false,
@@ -1244,6 +1274,7 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::AdmitCallPerson(admit) => ui_commands::call_extras::admit_selected(state, parts, admit),
 		UiCommand::MuteCallPerson => ui_commands::call_extras::act_on_person(state, parts, false),
 		UiCommand::RemoveCallPerson => ui_commands::call_extras::act_on_person(state, parts, true),
+		UiCommand::RingCallPerson => ui_commands::call_extras::ring_person(state, parts),
 		UiCommand::CallPersonSelected => ui_commands::call_extras::person_buttons(&state.borrow(), parts),
 		UiCommand::SetCallApproval(on) => ui_commands::call_extras::set_approval(state, parts, on),
 		UiCommand::DismissIncomingCall => ui_commands::calls::dismiss_incoming_call(state, parts),
@@ -1296,6 +1327,8 @@ pub(crate) fn handle_ui_command(cmd: UiCommand, state: &Rc<RefCell<AppState>>, p
 		UiCommand::JoinGroupCall(call_id) => ui_commands::calls::join_group_call(state, parts, call_id),
 		UiCommand::AnswerCall => ui_commands::calls::answer_call(state, parts),
 		UiCommand::RejectCall => ui_commands::calls::reject_call(state, parts),
+		UiCommand::AnswerWaitingCall => ui_commands::calls::answer_waiting_call(state, parts),
+		UiCommand::DeclineWaitingCall => ui_commands::calls::decline_waiting_call(state, parts),
 		UiCommand::CallHotkey(hotkey) => ui_commands::calls::call_hotkey(state, parts, hotkey),
 		UiCommand::LeaveCall => ui_commands::calls::leave_call(state, parts),
 		UiCommand::ToggleCamera => ui_commands::calls::toggle_camera(state, parts),

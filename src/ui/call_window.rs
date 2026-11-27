@@ -24,6 +24,10 @@ pub struct CallWindowParts {
 	pub accept_btn: Button,
 	pub reject_btn: Button,
 	pub dismiss_btn: Button,
+	/// Shown while another call is waiting: end this call and answer it, or
+	/// decline it and stay on this one.
+	pub waiting_answer_btn: Button,
+	pub waiting_decline_btn: Button,
 	pub mute_btn: Button,
 	pub camera_btn: Button,
 	pub screen_btn: Button,
@@ -46,6 +50,7 @@ pub struct CallWindowParts {
 	pub people_list: ListBox,
 	pub mute_person_btn: Button,
 	pub remove_person_btn: Button,
+	pub ring_person_btn: Button,
 	pub let_in_btn: Button,
 	pub keep_out_btn: Button,
 	pub approval_check: CheckBox,
@@ -211,6 +216,16 @@ pub fn build_call_window() -> CallWindowParts {
 	btn_sizer.add(&dismiss_btn, 1, SizerFlag::Expand | SizerFlag::Left, 5);
 	dismiss_btn.show(false);
 
+	let waiting_answer_btn = Button::builder(&btn_panel).with_label(crate::i18n::tr("End call and answer")).build();
+	theme::style_primary_button(&waiting_answer_btn);
+	btn_sizer.add(&waiting_answer_btn, 1, SizerFlag::Expand | SizerFlag::Right, 5);
+	waiting_answer_btn.show(false);
+
+	let waiting_decline_btn = Button::builder(&btn_panel).with_label(crate::i18n::tr("Decline waiting call")).build();
+	crate::ui::owner_draw::install_tile(&waiting_decline_btn, CALL_BG);
+	btn_sizer.add(&waiting_decline_btn, 1, SizerFlag::Expand | SizerFlag::Right, 5);
+	waiting_decline_btn.show(false);
+
 	let mute_btn = Button::builder(&btn_panel).with_label(crate::i18n::tr("Mute microphone")).build();
 	crate::ui::owner_draw::install_tile(&mute_btn, CALL_BG);
 	btn_sizer.add(&mute_btn, 1, SizerFlag::Expand | SizerFlag::Right, 5);
@@ -289,10 +304,13 @@ pub fn build_call_window() -> CallWindowParts {
 	let mute_person_btn = Button::builder(&people_panel).with_label(crate::i18n::tr("Mute")).build();
 	person_sizer.add(&mute_person_btn, 0, SizerFlag::Right, 5);
 	let remove_person_btn = Button::builder(&people_panel).with_label(crate::i18n::tr("Remove")).build();
-	person_sizer.add(&remove_person_btn, 0, SizerFlag::empty(), 0);
+	person_sizer.add(&remove_person_btn, 0, SizerFlag::Right, 5);
+	let ring_person_btn = Button::builder(&people_panel).with_label(crate::i18n::tr("Ring")).build();
+	person_sizer.add(&ring_person_btn, 0, SizerFlag::empty(), 0);
 	people_sizer.add_sizer(&person_sizer, 0, SizerFlag::All, 4);
 	mute_person_btn.show(false);
 	remove_person_btn.show(false);
+	ring_person_btn.show(false);
 	let admit_sizer = BoxSizer::builder(Orientation::Horizontal).build();
 	let let_in_btn = Button::builder(&people_panel).with_label(crate::i18n::tr("Let in")).build();
 	admit_sizer.add(&let_in_btn, 0, SizerFlag::Right, 5);
@@ -322,6 +340,8 @@ pub fn build_call_window() -> CallWindowParts {
 		accept_btn,
 		reject_btn,
 		dismiss_btn,
+		waiting_answer_btn,
+		waiting_decline_btn,
 		mute_btn,
 		camera_btn,
 		screen_btn,
@@ -342,6 +362,7 @@ pub fn build_call_window() -> CallWindowParts {
 		people_list,
 		mute_person_btn,
 		remove_person_btn,
+		ring_person_btn,
 		let_in_btn,
 		keep_out_btn,
 		approval_check,

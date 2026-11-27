@@ -396,6 +396,28 @@ pub(crate) fn play_call_poor_connection_tone(state: &mut AppState) {
 	state.call_alert_sink = Some(sink);
 }
 
+pub(crate) fn start_call_waiting_tone(state: &mut AppState) {
+	use rodio::Source;
+	if state.call_waiting_sink.is_some() {
+		return;
+	}
+	ensure_call_audio_stream(state);
+	let Some(ref stream_handle) = state.call_audio_out.stream else {
+		eprintln!("[AUDIO] No audio stream available");
+		return;
+	};
+	let sink = Player::connect_new(stream_handle.mixer());
+	sink.append(crate::audio::ringback::call_waiting_tone().repeat_infinite());
+	sink.play();
+	state.call_waiting_sink = Some(sink);
+}
+
+pub(crate) fn stop_call_waiting_tone(state: &mut AppState) {
+	if let Some(sink) = state.call_waiting_sink.take() {
+		sink.pause();
+	}
+}
+
 pub(crate) fn stop_call_reconnect_tone(state: &mut AppState) {
 	if let Some(sink) = state.call_reconnect_sink.take() {
 		sink.pause();

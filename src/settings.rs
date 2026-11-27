@@ -47,6 +47,18 @@ pub struct Settings {
 	/// Leaving the message list or sending doesn't jump it to the newest
 	/// message; it stays where the user was.
 	pub keep_list_position: bool,
+	/// Opening a chat puts the focus in the message box, like WA Web, not
+	/// on the message list.
+	pub open_chat_in_message_box: bool,
+	/// Up Arrow in an empty message box edits your last message, like
+	/// WhatsApp on phones and Windows.
+	pub up_arrow_edits_last: bool,
+	/// How far the voice message keys go back and forward, in seconds.
+	pub voice_seek_seconds: u32,
+	/// What the window title says, see [`crate::template`].
+	pub window_title_template: String,
+	/// What each chat list row says, see [`crate::template`].
+	pub chat_list_template: String,
 	/// New messages in the open chat are read out. Chats can override it,
 	/// see [`whatsnap::ChatNotify::announce`].
 	pub announce_incoming: bool,
@@ -100,6 +112,12 @@ pub struct Settings {
 	/// The one-time "unlock your chats faster" offer has been made, so it is
 	/// not shown again whatever the answer was.
 	pub chat_lock_hello_offered: bool,
+	/// Minutes without a key press before shown locked chats lock again; 0 never.
+	pub chat_lock_auto_lock_mins: u32,
+	/// Lock shown locked chats when whatSnap is minimized or hidden to the tray.
+	pub chat_lock_on_minimize: bool,
+	/// Sound and notifications for locked chats while they are locked; off is silent.
+	pub chat_lock_notify: bool,
 }
 
 pub const TAB_NAMES: [&str; 7] =
@@ -157,6 +175,11 @@ impl Default for Settings {
 			enter_is_send: true,
 			type_to_compose: false,
 			keep_list_position: false,
+			open_chat_in_message_box: false,
+			up_arrow_edits_last: true,
+			voice_seek_seconds: 5,
+			window_title_template: crate::template::DEFAULT_WINDOW_TITLE_TEMPLATE.to_string(),
+			chat_list_template: crate::template::DEFAULT_CHAT_TEMPLATE.to_string(),
 			announce_incoming: true,
 			announce_outgoing: false,
 			replace_text_with_emoji: true,
@@ -185,6 +208,9 @@ impl Default for Settings {
 			chat_notifications: std::collections::HashMap::new(),
 			chat_lock_hello: false,
 			chat_lock_hello_offered: false,
+			chat_lock_auto_lock_mins: 0,
+			chat_lock_on_minimize: false,
+			chat_lock_notify: true,
 		}
 	}
 }

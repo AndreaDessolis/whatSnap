@@ -1274,7 +1274,15 @@ func upsertContactCacheRowWith(ex sqlExecer, jid, name, phone string, isBusiness
 			END,
 			phone = COALESCE(NULLIF(excluded.phone, ''), contacts_cache.phone),
 			is_business = MAX(COALESCE(contacts_cache.is_business, 0), excluded.is_business),
-			updated_at = excluded.updated_at`,
+			updated_at = excluded.updated_at
+		WHERE (CASE
+				WHEN (excluded.name = '' OR excluded.name LIKE '+%')
+					AND COALESCE(contacts_cache.name, '') != '' AND contacts_cache.name NOT LIKE '+%'
+				THEN contacts_cache.name
+				ELSE excluded.name
+			END) IS NOT contacts_cache.name
+			OR COALESCE(NULLIF(excluded.phone, ''), contacts_cache.phone) IS NOT contacts_cache.phone
+			OR MAX(COALESCE(contacts_cache.is_business, 0), excluded.is_business) IS NOT contacts_cache.is_business`,
 		jid, name, phone, isBusiness, time.Now().Unix())
 	return err
 }
@@ -1327,6 +1335,15 @@ func (acc *Account) resolveDisplayName(jid types.JID) string {
 	// below, showing a bogus number for a JID that was never a phone number.
 	if jid.Server == types.BotServer && (jid.User == types.NewMetaAIJID.User || jid.User == types.TeeMetaAIJID.User) {
 		return "Meta AI"
+	}
+	if jid.Server == types.GroupServer {
+		var name string
+		if acc.db != nil {
+			acc.db.QueryRow(`SELECT COALESCE(name, '') FROM chats WHERE jid = ?`, jid.String()).Scan(&name)
+		}
+		if name != "" {
+			return name
+		}
 	}
 	if jid.Server == types.NewsletterServer {
 		var name string
@@ -1423,6 +1440,28 @@ func (acc *Account) removeOrphanedDeviceRows() {
 func (acc *Account) saveChatLockSecretCode(b []byte) error {
 	_, err := acc.db.Exec(`INSERT INTO app_settings (key, value) VALUES ('chat_lock_secret_code', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, b)
 	return err
+}
+
+func (acc *Account) clearChatLockSecretCode() error {
+	_, err := acc.db.Exec(`DELETE FROM app_settings WHERE key = 'chat_lock_secret_code'`)
+	return err
+}
+
+func (acc *Account) saveChatLockHide(hide bool) error {
+	v := "0"
+	if hide {
+		v = "1"
+	}
+	_, err := acc.db.Exec(`INSERT INTO app_settings (key, value) VALUES ('chat_lock_hide', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, []byte(v))
+	return err
+}
+
+func (acc *Account) getChatLockHide() bool {
+	var b []byte
+	if err := acc.db.QueryRow(`SELECT value FROM app_settings WHERE key = 'chat_lock_hide'`).Scan(&b); err != nil {
+		return false
+	}
+	return string(b) == "1"
 }
 
 func (acc *Account) getChatLockSecretCode() ([]byte, error) {

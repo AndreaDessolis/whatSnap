@@ -465,6 +465,176 @@ impl LoginControls {
 	}
 }
 
+/// The menu of the `Add attachment` button, also opened by its shortcut.
+fn show_attach_menu(button: Button, tx: &UiCommandSender) {
+	const ATTACH_DOCUMENT_ID: i32 = 4201;
+	const ATTACH_CONTACT_ID: i32 = 4202;
+	const ATTACH_MEDIA_ID: i32 = 4203;
+	const ATTACH_AUDIO_ID: i32 = 4204;
+	const ATTACH_POLL_ID: i32 = 4205;
+	const ATTACH_EVENT_ID: i32 = 4206;
+	const ATTACH_STICKER_ID: i32 = 4207;
+	let mut popup_menu = Menu::builder()
+		.append_item(
+			ATTACH_DOCUMENT_ID,
+			crate::i18n::tr("&Document"),
+			crate::i18n::tr("Send any file as a document, photos at full quality"),
+		)
+		.append_item(
+			ATTACH_MEDIA_ID,
+			crate::i18n::tr("&Photos and videos"),
+			crate::i18n::tr("Send photos and videos"),
+		)
+		.append_item(
+			ATTACH_AUDIO_ID,
+			crate::i18n::tr("&Audio"),
+			crate::i18n::tr("Send audio files to play in the chat"),
+		)
+		.append_item(
+			ATTACH_CONTACT_ID,
+			crate::i18n::tr("&Contact"),
+			crate::i18n::tr("Attach a contact from your WhatsApp contacts"),
+		)
+		.append_item(ATTACH_POLL_ID, crate::i18n::tr("P&oll"), crate::i18n::tr("Create a poll or a quiz"))
+		.append_item(
+			ATTACH_EVENT_ID,
+			crate::i18n::tr("&Event"),
+			crate::i18n::tr("Create an event people can answer"),
+		)
+		.append_item(
+			ATTACH_STICKER_ID,
+			crate::i18n::tr("&Sticker"),
+			crate::i18n::tr("Send a favorite, recent or WhatsApp sticker, or a sticker file"),
+		)
+		.build();
+	let tx_menu = tx.clone();
+	popup_menu.on_selected(move |menu_evt| {
+		let id = menu_evt.get_id();
+		let cmd = match id {
+			ATTACH_DOCUMENT_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Document)),
+			ATTACH_MEDIA_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Media)),
+			ATTACH_AUDIO_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Audio)),
+			ATTACH_CONTACT_ID => Some(UiCommand::PrepareAttachContact),
+			ATTACH_POLL_ID => Some(UiCommand::OpenPollDialog),
+			ATTACH_EVENT_ID => Some(UiCommand::OpenEventDialog),
+			ATTACH_STICKER_ID => Some(UiCommand::OpenEmojiPanel { stickers: true }),
+			_ => None,
+		};
+		if let Some(cmd) = cmd {
+			let _ = tx_menu.send(cmd);
+		}
+	});
+	button.popup_menu(&mut popup_menu, None);
+	popup_menu.destroy_menu();
+}
+
+/// The buttons that have a shortcut. Like a menu item's accelerator, the
+/// key is the button's keyboard shortcut property, so a screen reader says
+/// it after the role ("Call button Alt+Shift+A") while the name stays the
+/// plain label. The tooltip shows it too, like WA Web's.
+#[derive(Clone, Copy)]
+pub(crate) struct ShortcutButtons([(Button, &'static str, &'static str); 6]);
+
+/// Answers only the keyboard shortcut; everything else falls back to the
+/// button's own accessible object.
+#[cfg(target_os = "windows")]
+struct ShortcutAccessible(String);
+
+#[cfg(target_os = "windows")]
+impl wxdragon::accessible::AccessibleImpl for ShortcutAccessible {
+	fn get_keyboard_shortcut(&self, child_id: i32) -> (wxdragon::accessible::AccStatus, Option<String>) {
+		if child_id != 0 || self.0.is_empty() {
+			return (wxdragon::accessible::AccStatus::NotImplemented, None);
+		}
+		(wxdragon::accessible::AccStatus::Ok, Some(self.0.clone()))
+	}
+}
+
+impl ShortcutButtons {
+	pub(crate) fn new(c: &crate::ui::conversations::ConversationsPanelParts) -> Self {
+		Self([
+			(c.search_in_conv_btn, "Search in conversation", "search_in_chat"),
+			(c.place_call_btn, "Call", "voice_call"),
+			(c.place_video_call_btn, "Video call", "video_call"),
+			(c.emoji_btn, "Emoji and stickers", "emoji_panel"),
+			(c.add_attachment_btn, "Add attachment", crate::keymap::ATTACH),
+			(c.record_voice_btn, "Record voice message", voice::START_RECORDING),
+		])
+	}
+
+	pub(crate) fn apply(&self, keymap: &crate::keymap::Keymap) {
+		for (button, label, id) in self.0 {
+			let label = crate::i18n::tr(label);
+			let key = keymap.shortcut_text(id);
+			button.set_label(label);
+			button.set_tooltip(&match &key {
+				Some(key) => format!("{label} ({key})"),
+				None => label.to_string(),
+			});
+			#[cfg(target_os = "windows")]
+			button.set_accessible(wxdragon::Accessible::new(&button, ShortcutAccessible(key.unwrap_or_default())));
+		}
+	}
+}
+
+/// Your newest message in the open chat, when it can still be edited and Up
+/// Arrow is set to edit it: like WhatsApp on phones and Windows, only the
+/// very last one you sent, never an older one.
+fn last_editable_message(s: &crate::AppState) -> Option<(String, String)> {
+	if !s.settings.up_arrow_edits_last {
+		return None;
+	}
+	let in_channel = s.selected_chat.as_ref().is_some_and(|j| j.ends_with("@newsletter"));
+	let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+	let last =
+		s.messages.iter().filter(|m| m.from_me && !m.is_date_divider && !m.is_system()).max_by_key(|m| m.timestamp)?;
+	if !last.is_editable(now, in_channel) {
+		return None;
+	}
+	Some((last.id.clone(), last.edit_text()?.to_string()))
+}
+
+/// WA Web's formatting keys in the message box: Ctrl+B bold, Ctrl+I italic,
+/// Ctrl+Shift+X strikethrough and Ctrl+Shift+I inline code, as the
+/// WhatsApp markers they type, and the name to announce.
+fn format_key(code: Option<i32>, key: &wxdragon::event::KeyboardEvent) -> Option<(&'static str, &'static str)> {
+	if !key.control_down() || key.alt_down() {
+		return None;
+	}
+	match (key.shift_down(), code) {
+		(false, c) if keys::is_letter(c, 'B') => Some(("*", "Bold")),
+		(false, c) if keys::is_letter(c, 'I') => Some(("_", "Italic")),
+		(true, c) if keys::is_letter(c, 'X') => Some(("~", "Strikethrough")),
+		(true, c) if keys::is_letter(c, 'I') => Some(("`", "Inline code")),
+		_ => None,
+	}
+}
+
+/// Wraps the selection in `marker`, or unwraps it when it already is, or
+/// with nothing selected puts a pair of markers round the caret, the way WA
+/// Web's formatting toolbar does. Says what happened.
+fn toggle_format(field: &TextCtrl, marker: &str, name: &'static str) -> String {
+	let (from, to) = field.get_selection();
+	let selected = field.get_string_selection();
+	let width = marker.len() as i64;
+	if selected.is_empty() {
+		field.replace(from, from, &format!("{marker}{marker}"));
+		field.set_insertion_point(from + width);
+		return crate::i18n::tr(name).to_string();
+	}
+	let wrapped = selected.len() > 2 * marker.len() && selected.starts_with(marker) && selected.ends_with(marker);
+	if wrapped {
+		let inner = &selected[marker.len()..selected.len() - marker.len()];
+		field.replace(from, to, inner);
+		field.set_selection(from, to - 2 * width);
+		crate::i18n::tr_fmt("{} off", &[&crate::i18n::tr(name)])
+	} else {
+		field.replace(from, to, &format!("{marker}{selected}{marker}"));
+		field.set_selection(from + width, to + width);
+		crate::i18n::tr(name).to_string()
+	}
+}
+
 pub fn switch_login_view(parts: &WindowParts, view: LoginView) {
 	LoginControls::from_parts(parts).switch_view(view);
 }
@@ -515,9 +685,13 @@ pub const MENU_ID_BUSINESS_CATALOG: i32 = 6060;
 pub const MENU_ID_GO_TO_DATE: i32 = 6062;
 pub const MENU_ID_SCHEDULE_MESSAGE: i32 = 6064;
 pub const MENU_ID_SCHEDULED_MESSAGES: i32 = 6065;
+pub const MENU_ID_VOICE_CALL: i32 = 6066;
+pub const MENU_ID_VIDEO_CALL: i32 = 6067;
 
-const CONVERSATION_MENU_IDS: [i32; 24] = [
+const CONVERSATION_MENU_IDS: [i32; 26] = [
 	MENU_ID_CHAT_INFO,
+	MENU_ID_VOICE_CALL,
+	MENU_ID_VIDEO_CALL,
 	MENU_ID_GO_TO_DATE,
 	MENU_ID_BUSINESS_CATALOG,
 	MENU_ID_SCHEDULE_MESSAGE,
@@ -660,8 +834,10 @@ enum ConversationEntry {
 
 use ConversationEntry::{Item, Separator};
 
-const CONVERSATION_MENU: [ConversationEntry; 29] = [
+const CONVERSATION_MENU: [ConversationEntry; 31] = [
 	Item(MENU_ID_CHAT_INFO, None, "Open info for the open chat"),
+	Item(MENU_ID_VOICE_CALL, None, "Start a voice call with the open chat, or join its group call"),
+	Item(MENU_ID_VIDEO_CALL, None, "Start a video call with the open chat, or join its group call"),
 	Item(MENU_ID_FOCUS_MESSAGE_FIELD, None, "Move focus to the message box, or back to where you were"),
 	Item(MENU_ID_FOCUS_MESSAGES_LIST, None, "Move focus to the messages list"),
 	Item(MENU_ID_ANNOUNCE_STATUS, None, "Say the open chat's status: online, typing and so on"),
@@ -718,6 +894,7 @@ fn conversation_item_applies(s: &crate::AppState, jid: &str, id: i32) -> bool {
 		}
 		MENU_ID_BUSINESS_CATALOG => is_person && s.business_jids.contains(jid),
 		MENU_ID_BLOCK_CHAT => is_person,
+		MENU_ID_VOICE_CALL | MENU_ID_VIDEO_CALL => crate::ui_commands::calls::can_call(s, jid),
 		MENU_ID_PINNED_MESSAGES => !is_broadcast,
 		MENU_ID_DISAPPEARING | MENU_ID_STAR_MESSAGE => !is_channel,
 		MENU_ID_REPORT_CHAT | MENU_ID_CHAT_PRIVACY => !is_channel && !is_broadcast,
@@ -1659,6 +1836,14 @@ pub fn bind_input_handlers(
 	parts.call_parts.dismiss_btn.on_click(move |_| {
 		let _ = tx_dismiss.send(UiCommand::DismissIncomingCall);
 	});
+	let tx_waiting_answer = ui_tx.clone();
+	parts.call_parts.waiting_answer_btn.on_click(move |_| {
+		let _ = tx_waiting_answer.send(UiCommand::AnswerWaitingCall);
+	});
+	let tx_waiting_decline = ui_tx.clone();
+	parts.call_parts.waiting_decline_btn.on_click(move |_| {
+		let _ = tx_waiting_decline.send(UiCommand::DeclineWaitingCall);
+	});
 	let tx_callback = ui_tx.clone();
 	parts.call_parts.callback_btn.on_click(move |_| {
 		let _ = tx_callback.send(UiCommand::RedialCall);
@@ -1735,6 +1920,10 @@ pub fn bind_input_handlers(
 	let tx_remove_person = ui_tx.clone();
 	parts.call_parts.remove_person_btn.on_click(move |_| {
 		let _ = tx_remove_person.send(UiCommand::RemoveCallPerson);
+	});
+	let tx_ring_person = ui_tx.clone();
+	parts.call_parts.ring_person_btn.on_click(move |_| {
+		let _ = tx_ring_person.send(UiCommand::RingCallPerson);
 	});
 	let tx_let_in = ui_tx.clone();
 	parts.call_parts.let_in_btn.on_click(move |_| {
@@ -1850,9 +2039,22 @@ pub fn bind_input_handlers(
 	let tx_camera_key = ui_tx.clone();
 	let state_call_key = state.clone();
 	let keypad_announcer = parts.call_parts.announcer;
-	parts.call_parts.frame.on_key_down(move |event| {
+	parts.call_parts.frame.on_char_hook(move |event| {
 		if let WindowEventData::Keyboard(ref key_event) = event {
 			let key_code = key_event.get_key_code();
+			let keymap = state_call_key.borrow().keymap.clone();
+			let menu_command = if keymap.is_pressed("call_mute", key_event) {
+				Some(UiCommand::MuteCall)
+			} else if keymap.is_pressed("call_end", key_event) {
+				Some(UiCommand::LeaveCall)
+			} else {
+				None
+			};
+			if let Some(command) = menu_command {
+				let _ = tx_camera_key.send(command);
+				event.skip(false);
+				return;
+			}
 			if !key_event.control_down() && !key_event.alt_down() {
 				if let Some(tone) = keypad_tone(key_code, key_event.shift_down()) {
 					let s = state_call_key.borrow();
@@ -1996,7 +2198,7 @@ pub fn bind_input_handlers(
 				tray_icon.set_icon(&tray_bitmap, whatsnap::TRAY_APP_NAME);
 				let unread = whatsnap::unread_notification_total(
 					&s.unread_counts,
-					&s.settings.quiet_chats(&s.muted_jids),
+					&crate::platform::tray::tray_quiet_chats(&s),
 					&s.archived_jids,
 					&s.settings.archived_alert_levels,
 				);
@@ -2094,6 +2296,7 @@ pub fn bind_input_handlers(
 
 	let keymap = Rc::new(crate::keymap::Keymap::from_saved(&state.borrow().settings.shortcuts));
 	keymap.apply(&parts.frame);
+	ShortcutButtons::new(&parts.conversations_parts).apply(&keymap);
 	state.borrow_mut().keymap = keymap;
 	let pending_shortcuts: Rc<std::cell::RefCell<Option<crate::keymap::Keymap>>> = Rc::default();
 
@@ -2562,6 +2765,7 @@ pub fn bind_input_handlers(
 
 	let tx_voice_keys = ui_tx.clone();
 	let state_voice_keys = state.clone();
+	let attach_key_btn = parts.conversations_parts.add_attachment_btn;
 	parts.frame.on_char_hook(move |event| {
 		if let WindowEventData::Keyboard(ref key_event) = event {
 			let keymap = state_voice_keys.borrow().keymap.clone();
@@ -2575,6 +2779,14 @@ pub fn bind_input_handlers(
 				Some(UiCommand::DiscardVoiceMessage)
 			} else if keymap.is_pressed(voice::SEND, key_event) {
 				Some(UiCommand::SendVoiceMessage)
+			} else if keymap.is_pressed(crate::keymap::ATTACH, key_event) {
+				if attach_key_btn.is_shown() && attach_key_btn.is_enabled() {
+					attach_key_btn.set_focus();
+					show_attach_menu(attach_key_btn, &tx_voice_keys);
+					event.skip(false);
+					return;
+				}
+				None
 			} else {
 				None
 			};
@@ -2589,12 +2801,28 @@ pub fn bind_input_handlers(
 	});
 
 	let tx_call_menu = ui_tx.clone();
+	let state_call_menu = state.clone();
 	parts.frame.on_menu_selected(move |evt| {
 		let id = evt.get_id();
 		if id == MENU_ID_CALL_MUTE {
 			let _ = tx_call_menu.send(UiCommand::MuteCall);
 		} else if id == MENU_ID_CALL_END {
 			let _ = tx_call_menu.send(UiCommand::LeaveCall);
+		} else if id == MENU_ID_VOICE_CALL || id == MENU_ID_VIDEO_CALL {
+			let s = state_call_menu.borrow();
+			let Some(jid) = s.selected_chat.as_deref() else { return };
+			if !crate::ui_commands::calls::can_call(&s, jid) {
+				return;
+			}
+			let command = if crate::ui_commands::calls::joinable_call_for_chat(&s, jid).is_some() {
+				UiCommand::JoinGroupCall(None)
+			} else if id == MENU_ID_VIDEO_CALL {
+				UiCommand::PlaceVideoCall
+			} else {
+				UiCommand::PlaceCall
+			};
+			drop(s);
+			let _ = tx_call_menu.send(command);
 		} else if id == MENU_ID_CREATE_CALL_LINK {
 			let _ = tx_call_menu.send(UiCommand::CreateCallLink);
 		} else if id == MENU_ID_JOIN_CALL_LINK {
@@ -2720,6 +2948,7 @@ pub fn bind_input_handlers(
 	let state_restore = state.clone();
 	let pending_shortcuts_restore = pending_shortcuts.clone();
 	let frame_restore = parts.frame;
+	let shortcut_buttons_restore = ShortcutButtons::new(&parts.conversations_parts);
 	let tx_settings_restore = ui_tx.clone();
 	parts.settings_dialog.restore_btn.on_click(move |_| {
 		let chooser = FileDialog::builder(&settings_dialog_restore)
@@ -2779,6 +3008,7 @@ pub fn bind_input_handlers(
 
 		let keymap = crate::keymap::Keymap::from_saved(&s.settings.shortcuts);
 		keymap.apply(&frame_restore);
+		shortcut_buttons_restore.apply(&keymap);
 		s.keymap = std::rc::Rc::new(keymap);
 		pending_shortcuts_restore.borrow_mut().take();
 
@@ -2895,6 +3125,7 @@ pub fn bind_input_handlers(
 	let dual_stream_check_ok = parts.settings_dialog.dual_stream_screen_share_check;
 	let state_settings_save = state.clone();
 	let frame_shortcuts_save = parts.frame;
+	let shortcut_buttons_save = ShortcutButtons::new(&parts.conversations_parts);
 	let tx_settings_save = ui_tx.clone();
 	parts.settings_dialog.ok_btn.on_click(move |_| {
 		use crate::ui::dialogs::settings_dialog::*;
@@ -2920,8 +3151,19 @@ pub fn bind_input_handlers(
 				}
 			}
 		}
+		if let Some((field, name, error)) = settings_parts_ok.template_error() {
+			drop(s);
+			let msg = crate::i18n::tr_fmt("The {} has a mistake: {}", &[&crate::i18n::tr(name), &error]);
+			MessageDialog::builder(&settings_dialog_ok, &msg, crate::i18n::tr("Settings"))
+				.with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
+				.build()
+				.show_modal();
+			field.set_focus();
+			return;
+		}
 		if let Some(keymap) = pending_shortcuts.borrow_mut().take() {
 			keymap.apply(&frame_shortcuts_save);
+			shortcut_buttons_save.apply(&keymap);
 			s.settings.shortcuts = keymap.saved();
 			s.keymap = Rc::new(keymap);
 		}
@@ -2941,7 +3183,14 @@ pub fn bind_input_handlers(
 		s.settings.dual_stream_screen_share = dual_stream_check_ok.is_checked();
 		let old_theme = s.settings.theme;
 		let old_effective_id = crate::i18n::is_indonesian();
+		let old_templates = (s.settings.window_title_template.clone(), s.settings.chat_list_template.clone());
 		settings_parts_ok.read_chat_settings(&mut s.settings);
+		if old_templates.1 != s.settings.chat_list_template {
+			let _ = s.ws_tx.send(serde_json::json!({ "action": "get_chats" }).to_string());
+		}
+		if old_templates.0 != s.settings.window_title_template {
+			frame_shortcuts_save.set_title(&crate::ui_commands::accounts::title_text(&s));
+		}
 		crate::calls::audio::set_call_raw_audio(s.settings.call_raw_audio);
 		crate::calls::audio::set_call_stereo_send(s.settings.call_stereo);
 		let language_changed = crate::i18n::is_indonesian() != old_effective_id;
@@ -3967,6 +4216,20 @@ pub fn bind_input_handlers(
 			} else if keys::is_tab(code) && is_editing && !key_event.shift_down() {
 				cancel_edit_btn_field.set_focus();
 				event.skip(false);
+			} else if keys::is_up(code)
+				&& !is_editing
+				&& !key_event.control_down()
+				&& !key_event.alt_down()
+				&& !key_event.shift_down()
+				&& conv_msg_field_esc.get_value().is_empty()
+				&& let Some((message_id, text)) = last_editable_message(&state_field.borrow())
+			{
+				let _ = tx_send_field.send(UiCommand::BeginEditMessage { message_id, text });
+				event.skip(false);
+			} else if let Some((marker, name)) = format_key(code, key_event) {
+				let said = toggle_format(&conv_msg_field_esc, marker, name);
+				crate::platform::announce::announce(conv_parts_field.messages_announcer, &said);
+				event.skip(false);
 			} else if keys::is_letter(code, 'V') && key_event.control_down() {
 				let mut has_files = false;
 				if let Some(_locker) = Clipboard::get().locker() {
@@ -4012,6 +4275,11 @@ pub fn bind_input_handlers(
 	let chat_list_hook = parts.conversations_parts.conversations_list;
 	parts.frame.bind_internal(wxdragon::event::EventType::CHAR_HOOK, move |event| {
 		let data = WindowEventData::new(event);
+		if let Ok(mut s) = state_hook.try_borrow_mut()
+			&& s.chats_unlocked
+		{
+			s.chat_lock_last_activity = std::time::Instant::now();
+		}
 		if let WindowEventData::Keyboard(ref key_event) = data
 			&& keys::is_escape(key_event.get_key_code())
 		{
@@ -4027,11 +4295,6 @@ pub fn bind_input_handlers(
 					chat_search_hook.set_value("");
 				}
 				chat_list_hook.set_focus();
-				data.skip(false);
-				return;
-			}
-			if state_hook.borrow().chats_unlocked {
-				let _ = tx_escape_hook.send(UiCommand::CloseLockedChats);
 				data.skip(false);
 				return;
 			}
@@ -4067,9 +4330,38 @@ pub fn bind_input_handlers(
 				data.skip(false);
 				return;
 			}
+			// No chat open (an open locked chat closed first, back to the
+			// locked chats): Escape locks them again.
+			if state_hook.borrow().chats_unlocked {
+				let _ = tx_escape_hook.send(UiCommand::CloseLockedChats);
+				data.skip(false);
+				return;
+			}
 		}
 		data.skip(true);
 	});
+
+	// Shown locked chats lock again after the chosen time without a key press,
+	// or as soon as the window is minimized or hidden to the tray if chosen.
+	let chat_lock_timer = Box::leak(Box::new(Timer::new(&parts.frame)));
+	let tx_chat_lock_timer = ui_tx.clone();
+	let state_chat_lock_timer = state.clone();
+	let frame_chat_lock_timer = parts.frame;
+	chat_lock_timer.on_tick(move |_| {
+		let Ok(s) = state_chat_lock_timer.try_borrow() else { return };
+		if !s.chats_unlocked {
+			return;
+		}
+		let mins = s.settings.chat_lock_auto_lock_mins;
+		let idle = mins > 0
+			&& s.chat_lock_last_activity.elapsed() >= std::time::Duration::from_secs(u64::from(mins) * 60);
+		let minimized = s.settings.chat_lock_on_minimize && frame_chat_lock_timer.is_iconized();
+		if idle || minimized {
+			drop(s);
+			let _ = tx_chat_lock_timer.send(UiCommand::CloseLockedChats);
+		}
+	});
+	chat_lock_timer.start(1_000, false);
 
 	// Chats and contacts are matched as each key is typed; message text is
 	// searched once typing pauses, as WA Web debounces it (300 ms).
@@ -4097,10 +4389,16 @@ pub fn bind_input_handlers(
 		if let WindowEventData::Keyboard(ref key_event) = event {
 			let code = key_event.get_key_code();
 			let plain = !key_event.control_down() && !key_event.shift_down() && !key_event.alt_down();
-			let (active_tab, first_result) = {
+			let (active_tab, first_result, code_unlocked) = {
 				let s = state_conv_search.borrow();
-				(s.active_tab, s.filtered_chats.iter().position(|jid| !jid.is_empty()))
+				(s.active_tab, s.filtered_chats.iter().position(|jid| !jid.is_empty()), s.chat_lock_search_unlocked)
 			};
+			// The secret code is in the box: Enter opens the locked chats.
+			if keys::is_enter(code) && code_unlocked && active_tab == 0 {
+				let _ = tx_search_enter.send(UiCommand::PromptLockedChats);
+				event.skip(false);
+				return;
+			}
 			if keys::is_enter(code) && active_tab == 6 {
 				let _ = tx_search_enter.send(UiCommand::PlaceCall);
 				event.skip(false);
@@ -4774,6 +5072,8 @@ pub fn bind_input_handlers(
 			let download_media_id = 3018;
 			let open_media_id = 3019;
 			let save_media_id = 3020;
+			let copy_link_id = 3021;
+			let reactions_id = 3022;
 
 			let s = state_ctx.borrow();
 			let chat_jid = s.selected_chat.clone().unwrap_or_default();
@@ -4944,6 +5244,28 @@ pub fn bind_input_handlers(
 				crate::i18n::tr("&Copy	Ctrl+C"),
 				crate::i18n::tr("Copy message text or file to clipboard"),
 			);
+			let links = match display_item.as_ref() {
+				Some(whatsnap::DisplayItem::Single(m)) if !is_deleted => m.links(),
+				_ => Vec::new(),
+			};
+			if !links.is_empty() {
+				menu_builder = menu_builder.append_item(
+					copy_link_id,
+					crate::i18n::tr(if links.len() == 1 { "Copy &Link" } else { "Copy &Link..." }),
+					crate::i18n::tr("Copy a link in this message to the clipboard"),
+				);
+			}
+			let reaction_details = match display_item.as_ref() {
+				Some(whatsnap::DisplayItem::Single(m)) if !is_channel_chat => m.reaction_details(),
+				_ => Vec::new(),
+			};
+			if !reaction_details.is_empty() {
+				menu_builder = menu_builder.append_item(
+					reactions_id,
+					crate::i18n::tr("Reactio&ns..."),
+					crate::i18n::tr("See who reacted to this message, and with what"),
+				);
+			}
 			let can_reply = !is_deleted && (!is_channel_chat || can_post_in_channel);
 			if can_reply {
 				menu_builder =
@@ -5213,24 +5535,10 @@ pub fn bind_input_handlers(
 						&& !msg.is_date_divider
 						&& !msg.is_deleted
 					{
-						let mut labels = Vec::new();
-						let mut jids = Vec::new();
-						for jid in &s.chats {
-							if !jid.ends_with("@broadcast") && crate::ui_commands::links::can_forward_to(&s, jid) {
-								let name = s.contacts.get(jid).cloned().unwrap_or_else(|| jid.clone());
-								labels.push(name);
-								jids.push(jid.clone());
-							}
-						}
-						for (jid, name) in &s.contacts {
-							if !jid.ends_with("@broadcast")
-								&& !jids.contains(jid)
-								&& crate::ui_commands::links::can_forward_to(&s, jid)
-							{
-								labels.push(name.clone());
-								jids.push(jid.clone());
-							}
-						}
+						let (jids, labels): (Vec<_>, Vec<_>) = crate::ui_commands::links::send_targets(&s)
+							.into_iter()
+							.map(|target| (target.jid, target.label))
+							.unzip();
 						drop(s);
 
 						if !jids.is_empty() {
@@ -5446,6 +5754,31 @@ pub fn bind_input_handlers(
 					}
 				} else if id == copy_id {
 					copy_for_menu.as_ref()();
+				} else if id == reactions_id {
+					crate::ui::show_text_viewer(
+						&parent_frame_clone,
+						crate::i18n::tr("Reactions"),
+						&reaction_details.join("\n"),
+					);
+				} else if id == copy_link_id {
+					let link = if links.len() == 1 {
+						links.first().cloned()
+					} else {
+						let choices: Vec<&str> = links.iter().map(String::as_str).collect();
+						let dialog = SingleChoiceDialog::builder(
+							&parent_frame_clone,
+							crate::i18n::tr("Select a link to copy:"),
+							crate::i18n::tr("Copy Link"),
+							&choices,
+						)
+						.build();
+						if dialog.show_modal() == wxdragon::id::ID_OK { dialog.get_string_selection() } else { None }
+					};
+					if let Some(link) = link
+						&& crate::copy_text(&link)
+					{
+						crate::platform::announce::announce(msgs_announcer_clone, crate::i18n::tr("Link copied."));
+					}
 				} else if id == retry_id {
 					let s = state_clone.borrow();
 					let msg_opt = s.display_items.get(idx as usize).and_then(|item| match item {
@@ -5739,7 +6072,7 @@ pub fn bind_input_handlers(
 				} else {
 					last_left_arrow.set(now);
 					if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-						let _ = tx_close_list.send(UiCommand::SeekAudio(-5.0));
+						let _ = tx_close_list.send(UiCommand::SeekAudio(-1.0));
 					} else if let Some(idx) = msgs_list_play.get_selection() {
 						let said = state_play.borrow().display_items.get(idx as usize).and_then(|item| match item {
 							whatsnap::DisplayItem::Single(m) => m.reply_announcement(),
@@ -5755,7 +6088,7 @@ pub fn bind_input_handlers(
 				}
 			} else if keys::is_right(code) {
 				if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-					let _ = tx_close_list.send(UiCommand::SeekAudio(5.0));
+					let _ = tx_close_list.send(UiCommand::SeekAudio(1.0));
 					event.skip(false);
 				} else if !search_panel_key.is_shown() {
 					// Right Arrow goes to the next message that replies to the focused one.
@@ -5811,16 +6144,31 @@ pub fn bind_input_handlers(
 				} else {
 					event.skip(true);
 				}
+			} else if pressed(message_list::STATUS) {
+				let said = msgs_list_play.get_selection().and_then(|idx| {
+					let s = state_play.borrow();
+					match s.display_items.get(idx as usize)? {
+						whatsnap::DisplayItem::Single(m) if !m.is_date_divider && !m.is_unread_divider => {
+							Some(m.status_summary())
+						}
+						whatsnap::DisplayItem::Album { messages, .. } => messages.last().map(|m| m.status_summary()),
+						_ => None,
+					}
+				});
+				if let Some(said) = said {
+					crate::platform::announce::announce(msgs_announcer, &said);
+				}
+				event.skip(false);
 			} else if pressed(message_list::SEEK_BACK) {
 				if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-					let _ = tx_close_list.send(UiCommand::SeekAudio(-5.0));
+					let _ = tx_close_list.send(UiCommand::SeekAudio(-1.0));
 					event.skip(false);
 				} else {
 					event.skip(true);
 				}
 			} else if pressed(message_list::SEEK_FORWARD) {
 				if crate::ui_commands::voice::is_voice_playing(&state_play.borrow()) {
-					let _ = tx_close_list.send(UiCommand::SeekAudio(5.0));
+					let _ = tx_close_list.send(UiCommand::SeekAudio(1.0));
 					event.skip(false);
 				} else {
 					event.skip(true);
@@ -6164,24 +6512,10 @@ pub fn bind_input_handlers(
 					if let Some(msg) = msg_opt
 						&& !msg.is_date_divider
 					{
-						let mut labels = Vec::new();
-						let mut jids = Vec::new();
-						for jid in &s.chats {
-							if !jid.ends_with("@broadcast") && crate::ui_commands::links::can_forward_to(&s, jid) {
-								let name = s.contacts.get(jid).cloned().unwrap_or_else(|| jid.clone());
-								labels.push(name);
-								jids.push(jid.clone());
-							}
-						}
-						for (jid, name) in &s.contacts {
-							if !jid.ends_with("@broadcast")
-								&& !jids.contains(jid)
-								&& crate::ui_commands::links::can_forward_to(&s, jid)
-							{
-								labels.push(name.clone());
-								jids.push(jid.clone());
-							}
-						}
+						let (jids, labels): (Vec<_>, Vec<_>) = crate::ui_commands::links::send_targets(&s)
+							.into_iter()
+							.map(|target| (target.jid, target.label))
+							.unzip();
 						drop(s);
 
 						if !jids.is_empty() {
@@ -6422,27 +6756,7 @@ pub fn bind_input_handlers(
 								event.skip(false);
 								return;
 							}
-							let mut urls = Vec::new();
-							let text = &msg.text;
-							let mut start_idx = 0;
-							while let Some(idx) = text[start_idx..].find("http") {
-								let actual_idx = start_idx + idx;
-								if text[actual_idx..].starts_with("http://")
-									|| text[actual_idx..].starts_with("https://")
-								{
-									let space_idx = text[actual_idx..]
-										.find(|c: char| c.is_whitespace())
-										.unwrap_or(text.len() - actual_idx);
-									let mut clean_url = &text[actual_idx..actual_idx + space_idx];
-									while clean_url.ends_with(|c: char| c.is_ascii_punctuation()) {
-										clean_url = &clean_url[..clean_url.len() - 1];
-									}
-									urls.push(clean_url.to_string());
-									start_idx = actual_idx + space_idx;
-								} else {
-									start_idx = actual_idx + 4;
-								}
-							}
+							let urls = msg.links();
 
 							let open_url = |url: &str| {
 								if whatsnap::parse_whatsapp_link(url).is_some() {
@@ -6889,67 +7203,7 @@ pub fn bind_input_handlers(
 
 	let tx_attach = ui_tx.clone();
 	let attach_btn_menu = parts.conversations_parts.add_attachment_btn;
-	parts.conversations_parts.add_attachment_btn.on_click(move |_| {
-		const ATTACH_DOCUMENT_ID: i32 = 4201;
-		const ATTACH_CONTACT_ID: i32 = 4202;
-		const ATTACH_MEDIA_ID: i32 = 4203;
-		const ATTACH_AUDIO_ID: i32 = 4204;
-		const ATTACH_POLL_ID: i32 = 4205;
-		const ATTACH_EVENT_ID: i32 = 4206;
-		const ATTACH_STICKER_ID: i32 = 4207;
-		let mut popup_menu = Menu::builder()
-			.append_item(
-				ATTACH_DOCUMENT_ID,
-				crate::i18n::tr("&Document"),
-				crate::i18n::tr("Send any file as a document, photos at full quality"),
-			)
-			.append_item(
-				ATTACH_MEDIA_ID,
-				crate::i18n::tr("&Photos and videos"),
-				crate::i18n::tr("Send photos and videos"),
-			)
-			.append_item(
-				ATTACH_AUDIO_ID,
-				crate::i18n::tr("&Audio"),
-				crate::i18n::tr("Send audio files to play in the chat"),
-			)
-			.append_item(
-				ATTACH_CONTACT_ID,
-				crate::i18n::tr("&Contact"),
-				crate::i18n::tr("Attach a contact from your WhatsApp contacts"),
-			)
-			.append_item(ATTACH_POLL_ID, crate::i18n::tr("P&oll"), crate::i18n::tr("Create a poll or a quiz"))
-			.append_item(
-				ATTACH_EVENT_ID,
-				crate::i18n::tr("&Event"),
-				crate::i18n::tr("Create an event people can answer"),
-			)
-			.append_item(
-				ATTACH_STICKER_ID,
-				crate::i18n::tr("&Sticker"),
-				crate::i18n::tr("Send a favorite, recent or WhatsApp sticker, or a sticker file"),
-			)
-			.build();
-		let tx_menu = tx_attach.clone();
-		popup_menu.on_selected(move |menu_evt| {
-			let id = menu_evt.get_id();
-			let cmd = match id {
-				ATTACH_DOCUMENT_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Document)),
-				ATTACH_MEDIA_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Media)),
-				ATTACH_AUDIO_ID => Some(UiCommand::AttachFiles(whatsnap::AttachKind::Audio)),
-				ATTACH_CONTACT_ID => Some(UiCommand::PrepareAttachContact),
-				ATTACH_POLL_ID => Some(UiCommand::OpenPollDialog),
-				ATTACH_EVENT_ID => Some(UiCommand::OpenEventDialog),
-				ATTACH_STICKER_ID => Some(UiCommand::OpenEmojiPanel { stickers: true }),
-				_ => None,
-			};
-			if let Some(cmd) = cmd {
-				let _ = tx_menu.send(cmd);
-			}
-		});
-		attach_btn_menu.popup_menu(&mut popup_menu, None);
-		popup_menu.destroy_menu();
-	});
+	parts.conversations_parts.add_attachment_btn.on_click(move |_| show_attach_menu(attach_btn_menu, &tx_attach));
 
 	let tx_speed = ui_tx.clone();
 	parts.conversations_parts.audio_speed_btn.on_click(move |_| {
@@ -7046,10 +7300,10 @@ pub fn bind_input_handlers(
 		if let WindowEventData::Keyboard(ref key) = event {
 			let code = key.get_key_code();
 			if keys::is_left(code) || keys::is_down(code) || keys::is_home(code) {
-				let _ = tx_slider_key.send(UiCommand::SeekAudio(-5.0));
+				let _ = tx_slider_key.send(UiCommand::SeekAudio(-1.0));
 				event.skip(false);
 			} else if keys::is_right(code) || keys::is_up(code) || keys::is_end(code) {
-				let _ = tx_slider_key.send(UiCommand::SeekAudio(5.0));
+				let _ = tx_slider_key.send(UiCommand::SeekAudio(1.0));
 				event.skip(false);
 			} else {
 				event.skip(true);

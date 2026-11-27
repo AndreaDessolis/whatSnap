@@ -201,6 +201,16 @@ unsafe extern "system" fn hidden_frame_subclass_proc(
 	unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
 }
 
+/// Chats left out of the tray's unread count: muted ones, ones with alerts
+/// off, and locked chats while they are locked away.
+pub(crate) fn tray_quiet_chats(s: &AppState) -> std::collections::HashSet<String> {
+	let mut quiet = s.settings.quiet_chats(&s.muted_jids);
+	if !s.chats_unlocked {
+		quiet.extend(s.locked_jids.iter().cloned());
+	}
+	quiet
+}
+
 pub(crate) fn refresh_tray_tooltip(s: &AppState, parts: &WindowParts) {
 	refresh_nav_unread_labels(s, parts);
 	if !s.settings.show_tray_icon || !s.main_ui_shown || crate::platform::quit::is_quitting() {
@@ -208,7 +218,7 @@ pub(crate) fn refresh_tray_tooltip(s: &AppState, parts: &WindowParts) {
 	}
 	let unread = whatsnap::unread_notification_total(
 		&s.unread_counts,
-		&s.settings.quiet_chats(&s.muted_jids),
+		&tray_quiet_chats(s),
 		&s.archived_jids,
 		&s.settings.archived_alert_levels,
 	);

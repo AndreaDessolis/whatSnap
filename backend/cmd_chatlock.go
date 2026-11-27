@@ -6,10 +6,12 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"hash"
+	"log"
 	"net"
 	"time"
 
 	"go.mau.fi/whatsmeow/appstate"
+	"go.mau.fi/whatsmeow/proto/waChatLockSettings"
 	"go.mau.fi/whatsmeow/proto/waSyncAction"
 	"go.mau.fi/whatsmeow/proto/waUserPassword"
 	"go.mau.fi/whatsmeow/types"
@@ -18,23 +20,33 @@ import (
 )
 
 func (acc *Account) handleVerifyChatLockCode(conn net.Conn, raw json.RawMessage) {
+	// Seq is set by the chat list's search box, which checks what is typed
+	// there quietly; the answer carries it back so the app can tell it apart
+	// from the unlock prompt's.
 	var data struct {
 		Code string `json:"code"`
+		Seq  uint64 `json:"seq"`
 	}
 	if err := json.Unmarshal(raw, &data); err != nil {
 		acc.sendEvent(conn, "chat_lock_verify_result", map[string]interface{}{"success": false, "error": "invalid payload"})
 		return
 	}
+	reply := func(result map[string]interface{}) {
+		if data.Seq > 0 {
+			result["seq"] = data.Seq
+		}
+		acc.sendEvent(conn, "chat_lock_verify_result", result)
+	}
 
 	b, err := acc.getChatLockSecretCode()
 	if err != nil || b == nil {
-		acc.sendEvent(conn, "chat_lock_verify_result", map[string]interface{}{"success": false, "error": "no secret code configured"})
+		reply(map[string]interface{}{"success": false, "error": "no secret code configured"})
 		return
 	}
 
 	var config waUserPassword.UserPassword
 	if err := proto.Unmarshal(b, &config); err != nil {
-		acc.sendEvent(conn, "chat_lock_verify_result", map[string]interface{}{"success": false, "error": "failed to decode config"})
+		reply(map[string]interface{}{"success": false, "error": "failed to decode config"})
 		return
 	}
 
@@ -54,22 +66,88 @@ func (acc *Account) handleVerifyChatLockCode(conn net.Conn, raw json.RawMessage)
 	} else if config.GetTransformer() == waUserPassword.UserPassword_PBKDF2_HMAC_SHA384 {
 		hashFunc = sha512.New384
 	} else {
-		acc.sendEvent(conn, "chat_lock_verify_result", map[string]interface{}{"success": false, "error": "unsupported hash algorithm"})
+		reply(map[string]interface{}{"success": false, "error": "unsupported hash algorithm"})
 		return
 	}
 
 	keyLen := len(config.GetTransformedData())
 	if keyLen == 0 {
-		acc.sendEvent(conn, "chat_lock_verify_result", map[string]interface{}{"success": false, "error": "no hash to compare"})
+		reply(map[string]interface{}{"success": false, "error": "no hash to compare"})
 		return
 	}
 
 	derived := pbkdf2.Key([]byte(data.Code), salt, iterations, keyLen, hashFunc)
 	success := bytes.Equal(derived, config.GetTransformedData())
 
-	acc.sendEvent(conn, "chat_lock_verify_result", map[string]interface{}{
-		"success": success,
-	})
+	reply(map[string]interface{}{"success": success})
+}
+
+// applySyncedChatLockSettings stores a chat_lock_settings mutation the way
+// WA Web's WAWebChatLockSettingsSync reads it: hideLockedChats must be set,
+// and a mutation without a secret code clears the stored one. A secret code
+// that isn't PBKDF2-SHA512 with a salt and iteration count is malformed, so the
+// whole mutation is dropped.
+func (acc *Account) applySyncedChatLockSettings(cls *waChatLockSettings.ChatLockSettings) {
+	if cls.HideLockedChats == nil {
+		log.Println("Chat lock settings mutation without hideLockedChats, ignored")
+		return
+	}
+	sc := cls.GetSecretCode()
+	if sc != nil && !validChatLockSecretCode(sc) {
+		log.Println("Chat lock settings mutation with a malformed secret code, ignored")
+		return
+	}
+	acc.saveChatLockHide(cls.GetHideLockedChats())
+	if sc == nil {
+		acc.clearChatLockSecretCode()
+	} else if b, err := proto.Marshal(sc); err == nil {
+		acc.saveChatLockSecretCode(b)
+	}
+	acc.broadcastEvent("chat_lock_settings", acc.chatLockSettingsPayload())
+}
+
+// applyHistoryChatLockSettings stores what the history sync's global settings
+// carry, without clearing anything that is missing there.
+func (acc *Account) applyHistoryChatLockSettings(cls *waChatLockSettings.ChatLockSettings) {
+	if cls.HideLockedChats != nil {
+		acc.saveChatLockHide(cls.GetHideLockedChats())
+	}
+	if sc := cls.GetSecretCode(); sc != nil && validChatLockSecretCode(sc) {
+		if b, err := proto.Marshal(sc); err == nil {
+			acc.saveChatLockSecretCode(b)
+		}
+	}
+	acc.broadcastEvent("chat_lock_settings", acc.chatLockSettingsPayload())
+}
+
+func validChatLockSecretCode(sc *waUserPassword.UserPassword) bool {
+	if sc.Encoding == nil || sc.Transformer == nil || len(sc.GetTransformedData()) == 0 || len(sc.GetTransformerArg()) == 0 {
+		return false
+	}
+	if sc.GetTransformer() != waUserPassword.UserPassword_PBKDF2_HMAC_SHA512 {
+		return false
+	}
+	var salt, iterations bool
+	for _, arg := range sc.GetTransformerArg() {
+		switch arg.GetKey() {
+		case "salt":
+			salt = len(arg.GetValue().GetAsBlob()) > 0
+		case "iterations":
+			iterations = arg.GetValue().GetAsUnsignedInteger() > 0
+		}
+	}
+	return salt && iterations
+}
+
+// chatLockSettingsPayload is what the app needs to know about chat lock: if
+// the locked chats entry is hidden (then the secret code typed in the search
+// box shows it) and if a secret code exists at all.
+func (acc *Account) chatLockSettingsPayload() map[string]interface{} {
+	b, _ := acc.getChatLockSecretCode()
+	return map[string]interface{}{
+		"hide_locked_chats": acc.getChatLockHide(),
+		"has_secret_code":   len(b) > 0,
+	}
 }
 
 // buildLockChat builds a lock or unlock like WA Web's
@@ -125,7 +203,7 @@ func (acc *Account) handleSetChatLocked(conn net.Conn, raw json.RawMessage) {
 		if data.Value {
 			locked_int = 1
 		}
-		acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid = ?", locked_int, data.JID)
+		acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid IN (?, ?)", locked_int, data.JID, acc.storeTwin(jid).ToNonAD().String())
 		if data.Value {
 			now := time.Now().Unix()
 			acc.noteArchiveAction(data.JID, false, nil, now)

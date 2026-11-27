@@ -34,6 +34,43 @@ pub(crate) struct MentionPopup {
 	at: usize,
 	matches: Vec<MentionEntry>,
 	selected: usize,
+	/// Emoji suggestions for ":name" instead of people: `jid` is the emoji
+	/// and `name` what is shown and read.
+	emoji: bool,
+}
+
+const EMOJI_SUGGESTIONS: usize = 10;
+const MIN_EMOJI_QUERY: usize = 2;
+
+/// The ":smi" being typed at the caret: a colon at the start or after a
+/// space, then at least two letters, digits or underscores, as WA Web asks
+/// before it suggests emoji. "Note: x" and "10:30" never count.
+pub(crate) fn find_emoji_query(text: &str, caret: usize) -> Option<(usize, String)> {
+	let chars: Vec<char> = text.chars().collect();
+	let caret = caret.min(chars.len());
+	let mut i = caret;
+	while i > 0 {
+		i -= 1;
+		let c = chars[i];
+		if c == ':' {
+			if i > 0 && !chars[i - 1].is_whitespace() {
+				return None;
+			}
+			let query: String = chars[i + 1..caret].iter().collect();
+			return (query.chars().count() >= MIN_EMOJI_QUERY).then_some((i, query));
+		}
+		if !(c.is_alphanumeric() || c == '_') || caret - i > MAX_QUERY_CHARS {
+			return None;
+		}
+	}
+	None
+}
+
+fn emoji_entries(query: &str) -> Vec<MentionEntry> {
+	crate::ui::emoji_panel::suggest(query, EMOJI_SUGGESTIONS)
+		.into_iter()
+		.map(|(emoji, name)| MentionEntry { jid: emoji.to_string(), name: format!("{emoji} {name}") })
+		.collect()
 }
 
 fn meta_ai_entry(jid: &str) -> MentionEntry {
@@ -133,6 +170,18 @@ pub(crate) fn refresh(state: &Rc<RefCell<AppState>>, cp: &ConversationsPanelPart
 	let Ok(mut s) = state.try_borrow_mut() else { return };
 	let jid = s.selected_chat.clone().filter(|j| can_mention_in(j));
 	let found = find_mention_query(&text, caret).filter(|_| focused && jid.is_some());
+	if found.is_none()
+		&& focused
+		&& s.selected_chat.is_some()
+		&& let Some((at, query)) = find_emoji_query(&text, caret)
+	{
+		if s.mention_dismissed_at == Some(at) {
+			return;
+		}
+		let matches = emoji_entries(&query);
+		show_matches(s, cp, at, matches, true);
+		return;
+	}
 	let Some((at, query)) = found else {
 		s.mention_dismissed_at = None;
 		let was_open = s.mention_popup.take().is_some();
@@ -156,6 +205,16 @@ pub(crate) fn refresh(state: &Rc<RefCell<AppState>>, cp: &ConversationsPanelPart
 	}
 	let Some(candidates) = s.mention_candidates.as_ref().filter(|c| c.jid == jid) else { return };
 	let matches = filter(candidates, &query);
+	show_matches(s, cp, at, matches, false);
+}
+
+fn show_matches(
+	mut s: std::cell::RefMut<'_, AppState>,
+	cp: &ConversationsPanelParts,
+	at: usize,
+	matches: Vec<MentionEntry>,
+	emoji: bool,
+) {
 	if matches.is_empty() {
 		let was_open = s.mention_popup.take().is_some();
 		drop(s);
@@ -172,7 +231,8 @@ pub(crate) fn refresh(state: &Rc<RefCell<AppState>>, cp: &ConversationsPanelPart
 		.and_then(|p| p.matches.get(p.selected))
 		.and_then(|e| matches.iter().position(|m| m.jid == e.jid))
 		.unwrap_or(0);
-	let popup = MentionPopup { at, matches, selected };
+	let opening = opening || previous.as_ref().is_some_and(|p| p.emoji != emoji);
+	let popup = MentionPopup { at, matches, selected, emoji };
 	let announcement = describe(&popup);
 	let names: Vec<String> = popup.matches.iter().map(|e| e.name.clone()).collect();
 	s.mention_popup = Some(popup);
@@ -188,8 +248,11 @@ pub(crate) fn refresh(state: &Rc<RefCell<AppState>>, cp: &ConversationsPanelPart
 			cp.mention_list.show(true);
 			cp.conversation_panel.layout();
 		}
-		let message =
-			if opening { crate::i18n::tr_fmt("Mention suggestions. {}", &[&announcement]) } else { announcement };
+		let message = match (opening, emoji) {
+			(true, false) => crate::i18n::tr_fmt("Mention suggestions. {}", &[&announcement]),
+			(true, true) => crate::i18n::tr_fmt("Emoji suggestions. {}", &[&announcement]),
+			(false, _) => announcement,
+		};
 		crate::platform::announce::announce(announcer, &message);
 	}
 }
@@ -251,13 +314,21 @@ pub(crate) fn accept(state: &Rc<RefCell<AppState>>, cp: &ConversationsPanelParts
 	// Set before the edit: the text change it fires must not reopen the list
 	// on this same "@".
 	s.mention_dismissed_at = Some(popup.at);
-	if !s.composer_mentions.iter().any(|m| m.jid == entry.jid) {
+	if !popup.emoji && !s.composer_mentions.iter().any(|m| m.jid == entry.jid) {
 		s.composer_mentions.push(entry.clone());
 	}
 	let announcer = cp.messages_announcer;
 	drop(s);
 
 	hide_list(cp);
+	if popup.emoji {
+		let from = char_to_wx_pos(&text, popup.at);
+		let to = char_to_wx_pos(&text, caret.max(popup.at));
+		field.replace(from, to, &entry.jid);
+		field.set_insertion_point(from + entry.jid.chars().map(wx_width).sum::<i64>());
+		crate::platform::announce::announce(announcer, &entry.name);
+		return;
+	}
 	let insert = format!("@{} ", entry.name);
 	let from = char_to_wx_pos(&text, popup.at);
 	let to = char_to_wx_pos(&text, caret.max(popup.at));
@@ -349,6 +420,17 @@ mod tests {
 		assert_eq!(find_mention_query("@Hari\nthere", 11), None);
 		assert_eq!(find_mention_query("@Hari there", 5), Some((0, "Hari".into())));
 		assert_eq!(find_mention_query(&format!("@{}", "a".repeat(40)), 41), None);
+	}
+
+	#[test]
+	fn finds_the_emoji_name_being_typed() {
+		assert_eq!(find_emoji_query(":sm", 3), Some((0, "sm".into())));
+		assert_eq!(find_emoji_query("hi :thumbs_up", 13), Some((3, "thumbs_up".into())));
+		assert_eq!(find_emoji_query(":s", 2), None);
+		assert_eq!(find_emoji_query("Note:ab", 7), None);
+		assert_eq!(find_emoji_query("at 10:30", 8), None);
+		assert_eq!(find_emoji_query(":ab cd", 6), None);
+		assert_eq!(find_emoji_query("no colon", 8), None);
 	}
 
 	#[test]

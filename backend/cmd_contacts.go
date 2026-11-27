@@ -138,6 +138,57 @@ func (acc *Account) handleCheckContacts(conn net.Conn, raw json.RawMessage) {
 	}()
 }
 
+// handleLookupNumber answers whether a phone number typed in the chat list's
+// search has a WhatsApp account, for WA Web's "Not in your contacts" result.
+// The typed text decides the country the way New chat does; "digits" is
+// echoed back so the UI can drop an answer for an older query.
+func (acc *Account) handleLookupNumber(conn net.Conn, raw json.RawMessage) {
+	var data struct {
+		Phone  string `json:"phone"`
+		Digits string `json:"digits"`
+	}
+	if err := json.Unmarshal(raw, &data); err != nil || data.Digits == "" {
+		return
+	}
+	go func() {
+		result := map[string]interface{}{"query": data.Digits, "jid": "", "phone": "", "name": ""}
+		defer acc.sendEvent(conn, "number_lookup", result)
+		var candidates []string
+		for _, c := range phoneCandidates(data.Phone, acc.ownCallingCode()) {
+			candidates = append(candidates, "+"+c)
+		}
+		if len(candidates) == 0 {
+			return
+		}
+		results, err := acc.wa().IsOnWhatsApp(context.Background(), candidates)
+		if err != nil {
+			log.Printf("Number lookup failed: %v", err)
+			return
+		}
+		for _, candidate := range candidates {
+			for _, r := range results {
+				if !r.IsIn || r.Query != candidate {
+					continue
+				}
+				pn := r.JID
+				if pn.Server == types.HiddenUserServer {
+					pn = r.PhoneNumber
+				}
+				if pn.IsEmpty() {
+					pn = types.NewJID(strings.TrimPrefix(candidate, "+"), types.DefaultUserServer)
+				}
+				pn = pn.ToNonAD()
+				result["jid"] = pn.String()
+				result["phone"] = pn.User
+				if name := acc.resolveDisplayName(pn); !looksLikePhoneLabel(name) {
+					result["name"] = name
+				}
+				return
+			}
+		}
+	}()
+}
+
 func (acc *Account) handleGetUserInfo(conn net.Conn, raw json.RawMessage) {
 	var data JIDData
 	if err := json.Unmarshal(raw, &data); err != nil {

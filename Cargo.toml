@@ -37,6 +37,8 @@ accesskit = "0.25.1"
 ship-shape = "0.5.0"
 # Translates stock wxWidgets, wx-utils and ship-shape dialogs via embedded .mo catalogs (see build.rs).
 patois = "0.2.4"
+# Window title and chat list templates, like Fedra's (see template.rs).
+minijinja = { version = "3.0.0", default-features = false, features = ["macros"] }
 
 [target.'cfg(windows)'.dependencies]
 # The async result type of the WinRT calls in platform/windows_hello.rs.

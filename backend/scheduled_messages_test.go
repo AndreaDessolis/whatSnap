@@ -94,3 +94,15 @@ func TestHistoryScheduledInner(t *testing.T) {
 		t.Fatalf("image: %v", got)
 	}
 }
+
+func TestScheduledMessagesEnabledReadsFlagLikeWAWeb(t *testing.T) {
+	for value, want := range map[string]bool{"1": true, "True": true, "true": true, "0": false, "false": false, "False": false} {
+		acc := &Account{serverFlags: whatsmeow.ABProps{whatsmeow.ABPropScheduledMessagesSenderEnabled: value}}
+		if got := acc.scheduledMessagesEnabled(); got != want {
+			t.Errorf("flag %q: offering scheduling = %v, want %v", value, got, want)
+		}
+	}
+	if !(&Account{serverFlags: whatsmeow.ABProps{}}).scheduledMessagesEnabled() {
+		t.Error("scheduling should be offered while the server hasn't sent the flag")
+	}
+}

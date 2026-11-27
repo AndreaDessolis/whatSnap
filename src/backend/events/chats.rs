@@ -117,6 +117,8 @@ pub(super) fn apply_chats(chats: Vec<ChatRow>, state: &Rc<RefCell<AppState>>, pa
 	let mut row_art = std::collections::HashMap::new();
 	let mut search_keys = std::collections::HashMap::new();
 	let mut preview_lines = std::collections::HashMap::new();
+	let mut row_parts = std::collections::HashMap::new();
+	let row_template = state.borrow().settings.chat_list_template.clone();
 	for chat in &chats {
 		let jid: &str = &chat.jid;
 		if !jid.is_empty() {
@@ -214,7 +216,7 @@ pub(super) fn apply_chats(chats: Vec<ChatRow>, state: &Rc<RefCell<AppState>>, pa
 			}
 			unread_counts.insert(jid.to_string(), unread);
 
-			let name_line = if tags.is_empty() { name.clone() } else { format!("{} [{}]", name, tags.join("] [")) };
+			let tag_text = if tags.is_empty() { String::new() } else { format!("[{}]", tags.join("] [")) };
 
 			let mut unread_line = if unread == 1 {
 				crate::i18n::tr("1 unread message").to_string()
@@ -297,18 +299,14 @@ pub(super) fn apply_chats(chats: Vec<ChatRow>, state: &Rc<RefCell<AppState>>, pa
 				},
 			);
 
-			let mut parts_vec: Vec<&str> = Vec::new();
-			parts_vec.push(&name_line);
-			if !unread_line.is_empty() {
-				parts_vec.push(&unread_line);
-			}
-			if !time_str.is_empty() {
-				parts_vec.push(&time_str);
-			}
-			if !preview_line.is_empty() {
-				parts_vec.push(&preview_line);
-			}
-			let display_name = parts_vec.join(" | ");
+			let parts_of_row = crate::template::ChatRowParts {
+				name: name.clone(),
+				tags: tag_text,
+				unread: unread_line,
+				time: time_str.clone(),
+			};
+			let display_name = parts_of_row.render(&row_template, &preview_line);
+			row_parts.insert(jid.to_string(), parts_of_row);
 			display_names.insert(jid.to_string(), display_name);
 			preview_lines.insert(jid.to_string(), preview_line);
 			if !chat.search_names.is_empty() || !chat.phone.is_empty() {
@@ -353,6 +351,7 @@ pub(super) fn apply_chats(chats: Vec<ChatRow>, state: &Rc<RefCell<AppState>>, pa
 	s.unread_counts = unread_counts;
 	s.display_names = display_names;
 	s.chat_preview_lines = preview_lines;
+	s.chat_row_parts = row_parts;
 	s.chat_search_keys = search_keys;
 	if s.chat_row_art != row_art {
 		crate::ui::chat_rows::refresh();

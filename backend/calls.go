@@ -255,6 +255,7 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 		acc.activeCallsMutex.Lock()
 		delete(acc.activeCalls, call.ID())
 		acc.activeCallsMutex.Unlock()
+		acc.promoteWaitingCall()
 
 		acc.activeVideoBridgesMutex.Lock()
 		if bridge, ok := acc.activeVideoBridges[call.ID()]; ok {
@@ -296,6 +297,7 @@ func (acc *Account) attachCallHandlers(call *meowcaller.Call) {
 				"name":        acc.callJoinerName(p.JID, p.PN, p.PushName, p.Guest),
 				"state":       p.State,
 				"hand_raised": p.HandRaised,
+				"muted":       call.ParticipantMuted(p.JID.String()),
 			})
 		}
 		acc.broadcastEvent("call_participants", map[string]interface{}{
@@ -472,9 +474,13 @@ func (acc *Account) initCallClient() {
 		}
 		acc.trackLiveCall(call.ID(), chatJID, call.Peer(), true, call.IsVideo(), isGroupCall)
 
+		payload := acc.incomingCallPayload(call, chatJID, groupJID, hasGroupJID, isGroupCall)
 		if alreadyOnACall {
+			if acc.holdWaitingCall(call, payload) {
+				return
+			}
 			defer acc.finishLiveCall(call.ID(), "busy")
-			log.Printf("Already on a call, rejecting incoming call from %v as busy\n", call.Peer())
+			log.Printf("Already on a call with another one waiting, rejecting incoming call from %v as busy\n", call.Peer())
 			if err := call.RejectBusy(); err != nil {
 				log.Println("Failed to auto-reject incoming call while busy:", err)
 			}
@@ -482,23 +488,27 @@ func (acc *Account) initCallClient() {
 		}
 
 		acc.attachCallHandlers(call)
-
-		peer := acc.preferPN(call.Peer().ToNonAD())
-		payload := map[string]interface{}{
-			"call_id":      call.ID(),
-			"caller":       peer.String(),
-			"chat_jid":     acc.preferPN(chatJID).String(),
-			"caller_name":  acc.resolveDisplayName(peer),
-			"caller_phone": acc.callerPhoneDigits(peer),
-			"is_group":     isGroupCall,
-			"is_video":     call.IsVideo(),
-		}
-		if hasGroupJID {
-			payload["group_jid"] = groupJID.String()
-			payload["group_name"] = acc.groupChatName(groupJID)
-		}
 		acc.broadcastEvent("incoming_call", payload)
 	})
+}
+
+// incomingCallPayload is the incoming_call (and call_waiting) event for call.
+func (acc *Account) incomingCallPayload(call *meowcaller.Call, chatJID, groupJID types.JID, hasGroupJID, isGroupCall bool) map[string]interface{} {
+	peer := acc.preferPN(call.Peer().ToNonAD())
+	payload := map[string]interface{}{
+		"call_id":      call.ID(),
+		"caller":       peer.String(),
+		"chat_jid":     acc.preferPN(chatJID).String(),
+		"caller_name":  acc.resolveDisplayName(peer),
+		"caller_phone": acc.callerPhoneDigits(peer),
+		"is_group":     isGroupCall,
+		"is_video":     call.IsVideo(),
+	}
+	if hasGroupJID {
+		payload["group_jid"] = groupJID.String()
+		payload["group_name"] = acc.groupChatName(groupJID)
+	}
+	return payload
 }
 
 // callerPhoneDigits is the caller's phone number, digits only, to show beside
@@ -702,6 +712,7 @@ func (acc *Account) handleRejectCall(data []byte) {
 		acc.activeCallsMutex.Lock()
 		delete(acc.activeCalls, req.CallID)
 		acc.activeCallsMutex.Unlock()
+		acc.promoteWaitingCall()
 	} else {
 		log.Println("Rejected call:", req.CallID)
 	}
@@ -732,6 +743,7 @@ func (acc *Account) handleLeaveCall(data []byte) {
 		acc.activeCallsMutex.Lock()
 		delete(acc.activeCalls, req.CallID)
 		acc.activeCallsMutex.Unlock()
+		acc.promoteWaitingCall()
 	} else {
 		log.Println("Left call:", req.CallID)
 	}

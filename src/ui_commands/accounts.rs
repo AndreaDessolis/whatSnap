@@ -148,21 +148,39 @@ pub(crate) fn has_other_account(state: &Rc<RefCell<AppState>>) -> bool {
 
 /// The window title names the account once there is more than one.
 pub(crate) fn refresh_title(state: &Rc<RefCell<AppState>>, parts: &WindowParts) {
-	let accounts = accounts(state);
-	let a = accounts.borrow();
-	let mut title = if a.registry.live_count() > 1 {
-		format!("{} - whatSnap", a.registry.display_name(&a.registry.active))
-	} else {
-		"whatSnap".to_string()
-	};
-	if let Some(elsewhere) = whatsnap::unread_elsewhere_text(unread_elsewhere(&a)) {
-		title.push_str(" - ");
-		title.push_str(&elsewhere);
-	}
-	drop(a);
+	apply_title(&state.borrow(), parts);
+}
+
+/// The open chat's name starts the title, so the screen reader's "read
+/// title" says where you are, then the account's when there are several.
+pub(crate) fn apply_title(s: &AppState, parts: &WindowParts) {
+	let title = title_text(s);
 	if parts.frame.get_title() != title {
 		parts.frame.set_title(&title);
 	}
+}
+
+/// The window title from the user's template.
+pub(crate) fn title_text(s: &AppState) -> String {
+	let a = s.accounts.borrow();
+	let account =
+		if a.registry.live_count() > 1 { a.registry.display_name(&a.registry.active) } else { String::new() };
+	let chat = s
+		.selected_chat
+		.as_deref()
+		.map(|jid| s.contacts.get(jid).cloned().unwrap_or_else(|| crate::ui::contact_picker::display_name_for_jid(jid)))
+		.unwrap_or_default();
+	let elsewhere = whatsnap::unread_elsewhere_text(unread_elsewhere(&a)).unwrap_or_default();
+	drop(a);
+	crate::template::window_title(
+		&s.settings.window_title_template,
+		&crate::template::WindowTitleVars {
+			app: "whatSnap",
+			account: &account,
+			chat: chat.trim(),
+			unread_elsewhere: &elsewhere,
+		},
+	)
 }
 
 /// Unread chats of the accounts not on screen, for the window title and the

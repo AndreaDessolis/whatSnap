@@ -6712,3 +6712,150 @@ msgstr "{}, tidak tersedia"
 msgid "{}, you declined"
 msgstr "{}, Anda menolak"
 
+msgid "Lock Chats Again When Idle For"
+msgstr "Kunci chat lagi setelah tidak aktif selama"
+
+msgid "Locked chats available."
+msgstr "Chat terkunci tersedia."
+
+msgid "Search locked chats"
+msgstr "Cari chat terkunci"
+
+msgid "1 Minute"
+msgstr "1 Menit"
+
+msgid "5 Minutes"
+msgstr "5 Menit"
+
+msgid "15 Minutes"
+msgstr "15 Menit"
+
+msgid "Lock chats again when whatSnap is minimized or hidden"
+msgstr "Kunci chat lagi saat whatSnap diminimalkan atau disembunyikan"
+
+msgid "Notify about messages in locked chats while they are locked"
+msgstr "Beri tahu pesan di chat terkunci selagi terkunci"
+
+msgid "All {}: {}"
+msgstr ""
+
+msgid "Answering..."
+msgstr ""
+
+msgid "Block"
+msgstr ""
+
+msgid "Block {}?"
+msgstr ""
+
+msgid "Call waiting"
+msgstr ""
+
+msgid "Call waiting: {}. {} ends this call and answers it, {} declines it."
+msgstr ""
+
+msgid "Copy &Link"
+msgstr ""
+
+msgid "Copy &Link..."
+msgstr ""
+
+msgid "Copy Link"
+msgstr ""
+
+msgid "Copy a link in this message to the clipboard"
+msgstr ""
+
+msgid "Decline waiting call"
+msgstr ""
+
+msgid "Emoji suggestions. {}"
+msgstr ""
+
+msgid "End call and answer"
+msgstr ""
+
+msgid "Go back and forward in voice messages by"
+msgstr ""
+
+msgid "Missed {}."
+msgstr ""
+
+msgid "Not in your contacts"
+msgstr ""
+
+msgid "Open chats in the message box instead of the message list"
+msgstr ""
+
+msgid "Reacted with {}."
+msgstr ""
+
+msgid "Reactio&ns..."
+msgstr ""
+
+msgid "Received"
+msgstr ""
+
+msgid "Received at {}"
+msgstr ""
+
+msgid "Report to WhatsApp"
+msgstr ""
+
+msgid "Reset Templates to Default"
+msgstr ""
+
+msgid "Ring"
+msgstr ""
+
+msgid "Ring {}"
+msgstr ""
+
+msgid "See who reacted to this message, and with what"
+msgstr ""
+
+msgid "Select a link to copy:"
+msgstr ""
+
+msgid "Select someone who isn't in the call first."
+msgstr ""
+
+msgid "Templates"
+msgstr ""
+
+msgid "Templates use Jinja syntax, like {{ name }} or {% if unread %}, {{ unread }}{% endif %}. The user manual lists every name you can use."
+msgstr ""
+
+msgid "The {} has a mistake: {}"
+msgstr ""
+
+msgid "This person won't be able to message or call you. They won't know you blocked or reported them."
+msgstr ""
+
+msgid "Up Arrow in an empty message box edits your last message"
+msgstr ""
+
+msgid "Voice Messages"
+msgstr ""
+
+msgid "Waiting call declined."
+msgstr ""
+
+msgid "WhatsApp receives the last message this business sent you."
+msgstr ""
+
+msgid "WhatsApp receives the last message this person sent you."
+msgstr ""
+
+msgid "{} isn't on WhatsApp"
+msgstr ""
+
+msgid "{} off"
+msgstr ""
+
+msgid "{} won't be able to message or call you."
+msgstr ""
+
+msgid "{}, sent at {}"
+msgstr ""
+

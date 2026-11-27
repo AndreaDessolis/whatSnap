@@ -233,6 +233,17 @@ pub(crate) fn forward_message(
 		parts.conversations_parts.messages_announcer,
 		crate::i18n::tr("Message forwarded."),
 	);
+	open_forward_destination(state, parts, &to_jids);
+}
+
+pub(crate) fn open_forward_destination(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, to_jids: &[String]) {
+	// Like WhatsApp Web: once the forward is sent, open the first chat picked.
+	// A locked chat goes through the normal chat lock prompt.
+	let Some(jid) = to_jids.first() else { return };
+	if state.borrow().selected_chat.as_deref() == Some(jid.as_str()) {
+		return;
+	}
+	crate::ui::chat_ui::open_chat_for_jid(jid, state, parts);
 }
 
 pub(crate) fn edit_message(
@@ -496,13 +507,19 @@ pub(crate) fn request_message_resend(state: &Rc<RefCell<AppState>>, parts: &Rc<W
 
 pub(crate) fn react_to_message(
 	state: &Rc<RefCell<AppState>>,
-	_parts: &Rc<WindowParts>,
+	parts: &Rc<WindowParts>,
 	message_id: String,
 	sender_jid: String,
 	emoji: String,
 ) {
 	let s = state.borrow();
 	if let Some(ref jid) = s.selected_chat {
+		let said = if emoji.is_empty() {
+			crate::i18n::tr("Reaction removed.").to_string()
+		} else {
+			crate::i18n::tr_fmt("Reacted with {}.", &[&emoji])
+		};
+		crate::platform::announce::announce(parts.conversations_parts.messages_announcer, &said);
 		let payload = serde_json::json!({
 			"action": "react_message",
 			"data": {

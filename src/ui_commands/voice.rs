@@ -559,8 +559,10 @@ pub(crate) fn stop_voice_message(s: &mut AppState, parts: &WindowParts) -> bool 
 	true
 }
 
-pub(crate) fn seek_audio(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, delta: f32) {
+/// Goes back (negative `direction`) or forward by the step set in Settings.
+pub(crate) fn seek_audio(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, direction: f32) {
 	let mut s = state.borrow_mut();
+	let delta = direction.signum() * s.settings.voice_seek_seconds.max(1) as f32;
 	if s.playing_msg_id.is_some() {
 		let elapsed = if s.is_audio_paused {
 			s.audio_elapsed_secs

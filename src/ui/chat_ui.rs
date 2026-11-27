@@ -374,6 +374,12 @@ pub(crate) fn chat_status_label(s: &AppState, jid: &str) -> String {
 	crate::backend::events::format_conv_data_label(jid, &name, &name, kind == 1, kind == 2, presence_label)
 }
 
+/// A locked chat while the locked chats are hidden, with "Notify About
+/// Messages in Locked Chats" off: no sound and no notification at all.
+pub(crate) fn locked_chat_silenced(s: &AppState, jid: &str) -> bool {
+	!s.settings.chat_lock_notify && !s.chats_unlocked && s.locked_jids.contains(jid)
+}
+
 pub(crate) fn open_chat_for_jid(jid: &str, state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
 	{
 		let mut s = state.borrow_mut();
@@ -449,6 +455,7 @@ pub(crate) fn open_chat_for_jid(jid: &str, state: &Rc<RefCell<AppState>>, parts:
 
 	crate::ui::owner_draw::set_header_chat(jid);
 	parts.conversations_parts.conv_data_btn.set_label(&chat_status_label(&s, jid));
+	crate::ui_commands::accounts::apply_title(&s, parts);
 
 	parts.attachment_dialog.attachment_info_label.set_label("");
 	// The message list was already emptied by release_conversation_buffers
@@ -476,7 +483,11 @@ pub(crate) fn open_chat_for_jid(jid: &str, state: &Rc<RefCell<AppState>>, parts:
 	drop(s);
 	crate::handle_ui_command(UiCommand::SubscribePresence(jid.to_string()), state, parts);
 	crate::handle_ui_command(UiCommand::MarkRead { jid: jid.to_string(), message_ids: Vec::new() }, state, parts);
-	parts.conversations_parts.messages_list.set_focus();
+	if state.borrow().settings.open_chat_in_message_box && parts.conversations_parts.message_field.is_shown() {
+		parts.conversations_parts.message_field.set_focus();
+	} else {
+		parts.conversations_parts.messages_list.set_focus();
+	}
 }
 
 /// The message box's name: "Type a message to Name", like the official

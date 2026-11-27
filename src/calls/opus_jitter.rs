@@ -179,9 +179,26 @@ impl OpusJitter {
 		self.recent.push_back((sequence, at));
 	}
 
+	/// Drops waiting packets that start before `next`: their time was played
+	/// already by the packet before them, which turned out longer than the
+	/// gap to them. Left waiting, the first of them would stand in front of
+	/// every later packet, so no gap after it would ever be bridged and the
+	/// call would go silent for good.
+	fn drop_overlapped(&mut self) {
+		let Some(next) = self.next else { return };
+		while let Some((&first, _)) = self.packets.first_key_value() {
+			if first >= next {
+				break;
+			}
+			self.packets.remove(&first);
+			self.dropped_late += 1;
+		}
+	}
+
 	/// Decodes every packet that is next in line into `out`.
 	pub(crate) fn drain_ready(&mut self, out: &mut VecDeque<f32>) {
 		loop {
+			self.drop_overlapped();
 			let next = match self.next {
 				Some(next) => next,
 				None => match self.packets.keys().next() {
@@ -284,6 +301,7 @@ impl OpusJitter {
 	/// The playout has nothing to play: fill in now. Adds at least one
 	/// sample to `out` once started.
 	pub(crate) fn produce(&mut self, out: &mut VecDeque<f32>) {
+		self.drop_overlapped();
 		let Some(next) = self.next else { return };
 		match self.packets.keys().next().copied() {
 			Some(first) if first > next => {
@@ -408,6 +426,29 @@ mod tests {
 		let out: Vec<f32> = out.into_iter().collect();
 		let hole = &out[6 * 960..7 * 960];
 		assert!(rms(hole) > 0.5 * rms(&out[4 * 960..6 * 960]), "the lost packet went quiet: {}", rms(hole));
+	}
+
+	#[test]
+	fn a_packet_inside_the_one_before_it_does_not_stall_later_gaps() {
+		let mut j = OpusJitter::new(16000).unwrap();
+		let mut out = VecDeque::new();
+		let p = packets(8);
+		// Packet 2 arrives first, and one more that starts 30 ms into it.
+		j.push(0, p[0].0, p[0].1.clone());
+		j.drain_ready(&mut out);
+		j.push(2, p[2].0, p[2].1.clone());
+		j.push(3, p[2].0 + 480, p[3].1.clone());
+		j.drain_ready(&mut out);
+		j.produce(&mut out);
+		assert_eq!(out.len(), 3 * 960);
+		// Then the peer pauses (a timestamp jump with no sequence gap).
+		j.push(4, p[6].0, p[6].1.clone());
+		j.drain_ready(&mut out);
+		j.produce(&mut out);
+		j.push(5, p[7].0, p[7].1.clone());
+		j.drain_ready(&mut out);
+		assert_eq!(out.len(), 5 * 960, "the packets after the pause weren't played");
+		assert_eq!(j.dropped_late, 1);
 	}
 
 	#[test]

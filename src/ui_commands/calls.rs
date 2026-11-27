@@ -500,6 +500,13 @@ pub(crate) fn call_hotkey(
 	parts: &Rc<WindowParts>,
 	hotkey: crate::calls::hotkeys::CallHotkey,
 ) {
+	if state.borrow().call_waiting.is_some() {
+		match hotkey {
+			crate::calls::hotkeys::CallHotkey::Answer => answer_waiting_call(state, parts),
+			crate::calls::hotkeys::CallHotkey::Reject => decline_waiting_call(state, parts),
+		}
+		return;
+	}
 	let ringing = {
 		let s = state.borrow();
 		s.active_call_id.is_some() && s.call_answer_deadline.is_none() && s.call_is_incoming
@@ -535,6 +542,7 @@ pub(crate) fn reject_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>
 		parts.call_parts.callback_btn.show(false);
 		parts.call_parts.close_btn.show(false);
 		s.active_call_id = None;
+		crate::audio::stop_call_reconnect_tone(&mut s);
 		refresh_active_call_row(&mut s, parts);
 		s.active_call_video_send = None;
 		s.call_video_port = None;
@@ -547,6 +555,50 @@ pub(crate) fn reject_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>
 	}
 }
 
+/// Hides the waiting call's buttons, stops its tone and forgets it.
+pub(crate) fn clear_waiting_call(s: &mut AppState, parts: &WindowParts) {
+	s.call_waiting = None;
+	s.call_hotkeys = None;
+	crate::audio::stop_call_waiting_tone(s);
+	parts.call_parts.waiting_answer_btn.show(false);
+	parts.call_parts.waiting_decline_btn.show(false);
+	parts.call_parts.frame.layout();
+}
+
+/// Ends the current call and answers the one waiting (WhatsApp's "End and
+/// accept"). The backend ends this call and sends the waiting one as an
+/// incoming call marked to be answered at once.
+pub(crate) fn answer_waiting_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
+	let mut s = state.borrow_mut();
+	let Some((waiting_id, _)) = s.call_waiting.clone() else { return };
+	crate::backend::events::call_log(parts, &s, "end and answer pressed", &waiting_id);
+	let msg = serde_json::json!({
+		"action": "answer_waiting_call",
+		"data": { "call_id": waiting_id }
+	});
+	let _ = s.ws_tx.send(msg.to_string());
+	clear_waiting_call(&mut s, parts);
+	if s.active_call_id.is_some() {
+		end_call_locally(&mut s, parts);
+	}
+	announce_call(parts, crate::i18n::tr("Answering..."), Priority::High);
+}
+
+/// Declines the waiting call and stays on the current one.
+pub(crate) fn decline_waiting_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
+	let mut s = state.borrow_mut();
+	let Some((waiting_id, _)) = s.call_waiting.clone() else { return };
+	crate::backend::events::call_log(parts, &s, "decline waiting pressed", &waiting_id);
+	let msg = serde_json::json!({
+		"action": "decline_waiting_call",
+		"data": { "call_id": waiting_id }
+	});
+	let _ = s.ws_tx.send(msg.to_string());
+	clear_waiting_call(&mut s, parts);
+	parts.call_parts.leave_btn.set_focus();
+	announce_call(parts, crate::i18n::tr("Waiting call declined."), Priority::High);
+}
+
 pub(crate) fn leave_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
 	let mut s = state.borrow_mut();
 	crate::backend::events::call_log(parts, &s, "leave pressed", "");
@@ -556,25 +608,7 @@ pub(crate) fn leave_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>)
 			"data": { "call_id": call_id }
 		});
 		let _ = s.ws_tx.send(msg.to_string());
-		parts.conversations_parts.incoming_call_banner.show(false);
-		parts.conversations_parts.panel.layout();
-		parts.frame.layout();
-		parts.call_parts.frame.show(false);
-		parts.call_parts.device_settings_btn.show(false);
-		parts.call_parts.input_device_group.show(false);
-		parts.call_parts.output_device_group.show(false);
-		parts.call_parts.camera_device_group.show(false);
-		parts.call_parts.device_settings_btn.set_label(crate::i18n::tr("Device settings"));
-		s.active_call_id = None;
-		refresh_active_call_row(&mut s, parts);
-		s.active_call_audio = None;
-		s.active_call_video_send = None;
-		s.call_video_port = None;
-		s.call_participants.clear();
-		s.call_video = CallVideo::default();
-		s.call_answer_deadline = None;
-		stop_call_ringing_sound(&mut s);
-		play_call_fail_sound(&mut s);
+		end_call_locally(&mut s, parts);
 	} else if s.call_placing {
 		s.call_pending_cancel = true;
 		parts.conversations_parts.incoming_call_banner.show(false);
@@ -588,6 +622,32 @@ pub(crate) fn leave_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>)
 		parts.call_parts.device_settings_btn.set_label(crate::i18n::tr("Device settings"));
 		stop_call_ringing_sound(&mut s);
 	}
+}
+
+/// The app's side of ending the current call: hide the call window, clear
+/// the call state and play the end sound. The backend is told separately.
+fn end_call_locally(s: &mut AppState, parts: &WindowParts) {
+	parts.conversations_parts.incoming_call_banner.show(false);
+	parts.conversations_parts.panel.layout();
+	parts.frame.layout();
+	parts.call_parts.frame.show(false);
+	parts.call_parts.device_settings_btn.show(false);
+	parts.call_parts.input_device_group.show(false);
+	parts.call_parts.output_device_group.show(false);
+	parts.call_parts.camera_device_group.show(false);
+	parts.call_parts.device_settings_btn.set_label(crate::i18n::tr("Device settings"));
+	s.active_call_id = None;
+	refresh_active_call_row(s, parts);
+	s.active_call_audio = None;
+	s.active_call_video_send = None;
+	s.call_video_port = None;
+	s.call_participants.clear();
+	s.call_video = CallVideo::default();
+	s.call_answer_deadline = None;
+	s.call_is_reconnecting = false;
+	crate::audio::stop_call_reconnect_tone(s);
+	stop_call_ringing_sound(s);
+	play_call_fail_sound(s);
 }
 
 pub(crate) fn dismiss_incoming_call(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {

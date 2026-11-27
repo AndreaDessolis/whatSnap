@@ -1055,11 +1055,7 @@ func (acc *Account) eventHandler(evt interface{}) {
 
 			if gs := v.Data.GetGlobalSettings(); gs != nil {
 				if cls := gs.GetChatLockSettings(); cls != nil {
-					if sc := cls.GetSecretCode(); sc != nil {
-						if b, err := proto.Marshal(sc); err == nil {
-							acc.saveChatLockSecretCode(b)
-						}
-					}
+					acc.applyHistoryChatLockSettings(cls)
 				}
 			}
 
@@ -2247,11 +2243,7 @@ func (acc *Account) eventHandler(evt interface{}) {
 				return
 			}
 			if cls := v.GetChatLockSettings(); cls != nil {
-				if sc := cls.GetSecretCode(); sc != nil {
-					if b, err := proto.Marshal(sc); err == nil {
-						acc.saveChatLockSecretCode(b)
-					}
-				}
+				acc.applySyncedChatLockSettings(cls)
 			}
 			if lca := v.GetLockChatAction(); lca != nil {
 				if len(v.Index) > 1 {
@@ -2260,7 +2252,11 @@ func (acc *Account) eventHandler(evt interface{}) {
 					if lca.GetLocked() {
 						isLockedInt = 1
 					}
-					acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid = ?", isLockedInt, jid)
+					var twin string
+					if parsed, err := types.ParseJID(jid); err == nil {
+						twin = acc.storeTwin(parsed).ToNonAD().String()
+					}
+					acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid IN (?, ?)", isLockedInt, jid, twin)
 					acc.broadcastChats()
 				}
 			}
@@ -2333,7 +2329,8 @@ func (acc *Account) eventHandler(evt interface{}) {
 			if v.Action.GetLocked() {
 				lockedInt = 1
 			}
-			acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid = ?", lockedInt, acc.preferPN(v.JID).String())
+			pn := acc.preferPN(v.JID)
+			acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid IN (?, ?)", lockedInt, pn.String(), acc.storeTwin(pn).ToNonAD().String())
 			acc.broadcastChats()
 		}()
 	case *events.MarkChatAsRead:
@@ -3191,7 +3188,7 @@ func (acc *Account) populateChatsFromStoreOnce() {
 			// Only a real name may replace a chat's name - the "+<phone>"
 			// fallback must never clobber a name the chat already has.
 			if entry.nameRank > 0 {
-				tx.Exec(`UPDATE chats SET name = ? WHERE jid = ?`, entry.name, jidStr)
+				tx.Exec(`UPDATE chats SET name = ? WHERE jid = ? AND name IS NOT ?`, entry.name, jidStr, entry.name)
 			} else if entry.name != "" {
 				tx.Exec(`UPDATE chats SET name = ? WHERE jid = ? AND (name IS NULL OR name = '')`, entry.name, jidStr)
 			}
@@ -3301,7 +3298,7 @@ func (acc *Account) populateChatsFromStoreOnce() {
 	// reason enough to list it (at the bottom, having no activity to sort
 	// by). The same can't be done for people: the phone also sends an empty
 	// entry for contacts who were never chatted with, and those must go.
-	const emptyChat = `timestamp = 0 AND COALESCE(is_community, 0) = 0 AND COALESCE(is_channel, 0) = 0 AND jid NOT IN (SELECT DISTINCT jid FROM messages) AND jid NOT IN (SELECT DISTINCT jid FROM chats WHERE pinned = 1 OR muted = 1 OR archived = 1)`
+	const emptyChat = `timestamp = 0 AND COALESCE(is_community, 0) = 0 AND COALESCE(is_channel, 0) = 0 AND jid NOT IN (SELECT DISTINCT jid FROM messages) AND jid NOT IN (SELECT DISTINCT jid FROM chats WHERE pinned = 1 OR muted = 1 OR archived = 1 OR is_locked = 1)`
 	acc.db.Exec("DELETE FROM chats WHERE jid NOT LIKE '%@g.us' AND " + emptyChat)
 	if joinedGroupsSnapshot != nil {
 		if emptyGroups, qErr := acc.db.Query("SELECT jid FROM chats WHERE jid LIKE '%@g.us' AND " + emptyChat); qErr == nil {

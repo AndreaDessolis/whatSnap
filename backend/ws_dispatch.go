@@ -113,6 +113,7 @@ func (acc *Account) sendGreeting(conn net.Conn) {
 		acc.sendEvent(conn, "connection_state", acc.currentConnState())
 		acc.sendEvent(conn, "server_flags", acc.serverFlagsPayload())
 		acc.sendBlocklist(conn)
+		acc.sendEvent(conn, "chat_lock_settings", acc.chatLockSettingsPayload())
 		go func() {
 			acc.populateChatsFromStore()
 			acc.broadcastChats()
@@ -227,6 +228,8 @@ func (acc *Account) dispatchCommand(conn net.Conn, cmd Command) {
 		acc.handleGetWaveforms(conn, cmd.Data)
 	case "check_contacts":
 		acc.handleCheckContacts(conn, cmd.Data)
+	case "lookup_number":
+		acc.handleLookupNumber(conn, cmd.Data)
 	case "delete_contact":
 		acc.handleDeleteContact(conn, cmd.Data)
 	case "get_user_info":
@@ -503,6 +506,10 @@ func (acc *Account) dispatchCommand(conn net.Conn, cmd Command) {
 		acc.handleMuteCall(cmd.Data)
 	case "leave_call":
 		acc.handleLeaveCall(cmd.Data)
+	case "answer_waiting_call":
+		acc.handleAnswerWaitingCall(cmd.Data)
+	case "decline_waiting_call":
+		acc.handleDeclineWaitingCall(cmd.Data)
 	case "add_participant":
 		acc.handleAddParticipant(cmd.Data)
 	case "set_video":

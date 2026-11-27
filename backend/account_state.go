@@ -38,19 +38,22 @@ type Account struct {
 		queued  map[string]bool
 		running bool
 	}
-	blocklistSyncMu            sync.Mutex
-	blocklistSyncedFor         *whatsmeow.Client
-	blocklistDHash             string
-	chatBroadcastTimer         *time.Timer
-	chatBroadcastPendingSince  time.Time
-	businessNameLookups        sync.Map
-	joinableCallsMu            sync.Mutex
-	joinableCalls              []map[string]interface{}
-	liveCallsMu                sync.Mutex
-	liveCalls                  map[string]*liveCall
-	callClient                 *meowcaller.Client
-	activeCalls                map[string]*meowcaller.Call
-	activeCallsMutex           sync.Mutex
+	blocklistSyncMu           sync.Mutex
+	blocklistSyncedFor        *whatsmeow.Client
+	blocklistDHash            string
+	chatBroadcastTimer        *time.Timer
+	chatBroadcastPendingSince time.Time
+	businessNameLookups       sync.Map
+	joinableCallsMu           sync.Mutex
+	joinableCalls             []map[string]interface{}
+	liveCallsMu               sync.Mutex
+	liveCalls                 map[string]*liveCall
+	callClient                *meowcaller.Client
+	activeCalls               map[string]*meowcaller.Call
+	activeCallsMutex          sync.Mutex
+	// waiting is the call ringing us while we're on another one (call
+	// waiting); guarded by activeCallsMutex. See call_waiting.go.
+	waiting                    *waitingCall
 	activeVideoBridges         map[string]*VideoBridge
 	activeVideoBridgesMutex    sync.Mutex
 	activeScreenBridges        map[string]*VideoBridge

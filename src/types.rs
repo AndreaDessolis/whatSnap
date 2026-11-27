@@ -160,6 +160,7 @@ pub enum UiCommand {
 	AdmitCallPerson(bool),
 	MuteCallPerson,
 	RemoveCallPerson,
+	RingCallPerson,
 	CallPersonSelected,
 	SetCallApproval(bool),
 	DismissIncomingCall,
@@ -300,6 +301,8 @@ pub enum UiCommand {
 	JoinGroupCall(Option<String>),
 	AnswerCall,
 	RejectCall,
+	AnswerWaitingCall,
+	DeclineWaitingCall,
 	CallHotkey(crate::calls::hotkeys::CallHotkey),
 	MuteCall,
 	LeaveCall,
@@ -537,6 +540,19 @@ impl MessageHit {
 	}
 }
 
+/// What WhatsApp said about a phone number typed in the chat list's search,
+/// like WA Web's "Not in your contacts" result.
+#[derive(Default, Clone, Debug, PartialEq)]
+pub(crate) struct NumberLookup {
+	/// The digits asked about.
+	pub(crate) digits: String,
+	pub(crate) pending: bool,
+	/// The chat to open, when the number is on WhatsApp.
+	pub(crate) jid: String,
+	pub(crate) phone: String,
+	pub(crate) name: String,
+}
+
 /// The chat list search's message results: WA Web searches message text too,
 /// once the query is long enough, newest first and 30 at a time.
 #[derive(Default)]
@@ -647,4 +663,6 @@ pub(crate) struct CallParticipant {
 	pub(crate) jid: String,
 	pub(crate) name: String,
 	pub(crate) state: String,
+	/// Their microphone is off, from their last mute state in a group call.
+	pub(crate) muted: bool,
 }

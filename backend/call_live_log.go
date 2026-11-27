@@ -85,7 +85,11 @@ func (acc *Account) noteOwnDeviceReject(evt interface{}) {
 
 func (acc *Account) noteOfflineMissedCall(evt interface{}) {
 	offer, ok := evt.(*events.CallOffer)
-	if !ok || !offer.Offline || offer.CallID == "" {
+	if !ok || offer.CallID == "" {
+		return
+	}
+	silent := isSilentLightweightOffer(offer)
+	if !offer.Offline && !silent {
 		return
 	}
 	chatJID := offer.CallCreator
@@ -115,8 +119,23 @@ func (acc *Account) noteOfflineMissedCall(evt interface{}) {
 		started:  started,
 	}
 	text := liveCallText(c, "", started)
-	log.Printf("Call %s rang while offline; logging it as missed", offer.CallID)
+	if silent {
+		log.Printf("Call %s started silently (lightweight offer); logging it as missed", offer.CallID)
+	} else {
+		log.Printf("Call %s rang while offline; logging it as missed", offer.CallID)
+	}
 	acc.storeLiveCallRow(offer.CallID, c, text, liveCallResult(c, ""), 0)
+}
+
+// isSilentLightweightOffer reports a lightweight group offer with <silence>
+// (e.g. vc_wave_all): WhatsApp's notice that a group call started without
+// ringing us, which WA's engine logs as a missed call.
+func isSilentLightweightOffer(offer *events.CallOffer) bool {
+	if offer.Data == nil || offer.Data.AttrGetter().OptionalString("lightweight") != "1" {
+		return false
+	}
+	_, ok := offer.Data.GetOptionalChildByTag("silence")
+	return ok
 }
 
 func (acc *Account) finishLiveCall(callID, reason string) string {
