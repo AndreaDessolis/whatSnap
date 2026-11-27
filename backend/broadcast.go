@@ -220,6 +220,13 @@ func (acc *Account) buildChatsList() []ChatListEntry {
 	}
 	rows.Close()
 
+	lockedJIDs := map[string]bool{}
+	for _, r := range chatRows {
+		if r.isLocked == 1 {
+			lockedJIDs[r.jid] = true
+		}
+	}
+
 	chats := []ChatListEntry{}
 	for _, r := range chatRows {
 		jid, name, ts, unread, pinned, muted, preview, archived, previewSender, previewFromMe, previewIsReaction, previewReactionEmoji, isCommunity, isAdmin, isLocked, parentJID, isAnnounceGroup, adminsOnly, isChannel, channelRole, previewStatus, pinChangedAt, unreadMentions := r.jid, r.name, r.ts, r.unread, r.pinned, r.muted, r.preview, r.archived, r.previewSender, r.previewFromMe, r.previewIsReaction, r.previewReactionEmoji, r.isCommunity, r.isAdmin, r.isLocked, r.parentJID, r.isAnnounceGroup, r.adminsOnly, r.isChannel, r.channelRole, r.previewStatus, r.pinChangedAt, r.unreadMentions
@@ -275,26 +282,15 @@ func (acc *Account) buildChatsList() []ChatListEntry {
 			searchKeys = acc.cachedSearchKeys(parsedJID)
 		}
 
+		// The twin comes from whatsmeow's in-memory LID map, so this stays
+		// free of per-chat queries; it runs after every message.
 		var twinJID string
-		jids := acc.chatJIDList(jid)
-		for _, j := range jids {
-			if j != jid {
-				twinJID = j
-				break
+		if errJid == nil && (parsedJID.Server == types.DefaultUserServer || parsedJID.Server == types.HiddenUserServer) {
+			if twin := acc.storeTwin(parsedJID.ToNonAD()); !twin.IsEmpty() {
+				twinJID = twin.ToNonAD().String()
 			}
 		}
-		chatIsLocked := isLocked == 1
-		if !chatIsLocked && len(jids) > 1 {
-			var anyLocked int
-			inClause := strings.Repeat(", ?", len(jids))[2:]
-			args := make([]interface{}, len(jids))
-			for i, j := range jids {
-				args[i] = j
-			}
-			if err := acc.db.QueryRow("SELECT MAX(is_locked) FROM chats WHERE jid IN ("+inClause+")", args...).Scan(&anyLocked); err == nil && anyLocked == 1 {
-				chatIsLocked = true
-			}
-		}
+		chatIsLocked := isLocked == 1 || (twinJID != "" && lockedJIDs[twinJID])
 
 		chats = append(chats, ChatListEntry{
 			JID:                  jid,

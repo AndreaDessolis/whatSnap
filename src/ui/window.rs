@@ -3186,11 +3186,11 @@ pub fn bind_input_handlers(
 		let old_effective_id = crate::i18n::is_indonesian();
 		let old_templates = (s.settings.window_title_template.clone(), s.settings.chat_list_template.clone());
 		settings_parts_ok.read_chat_settings(&mut s.settings);
-		let show_locked_btn = s.active_tab == 0
-			&& !s.locked_jids.is_empty()
-			&& (s.settings.chat_lock_always_show_sidebar || !s.chat_lock_hidden || s.chats_unlocked || s.chat_lock_search_unlocked);
-		conv_parts_save.locked_chats_btn.show(show_locked_btn);
-		conv_parts_save.panel.layout();
+		let show_locked_btn = crate::ui::message_display::locked_chats_button_shown(&s);
+		if conv_parts_save.locked_chats_btn.is_shown() != show_locked_btn {
+			conv_parts_save.locked_chats_btn.show(show_locked_btn);
+			conv_parts_save.panel.layout();
+		}
 		if old_templates.1 != s.settings.chat_list_template {
 			let _ = s.ws_tx.send(serde_json::json!({ "action": "get_chats" }).to_string());
 		}

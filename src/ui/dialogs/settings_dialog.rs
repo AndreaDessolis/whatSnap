@@ -706,11 +706,6 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		&lock_sizer,
 		"Allows unlocking hidden and locked chats using your Windows Hello biometric or PIN credentials.",
 	);
-	let chat_lock_always_show_sidebar_check = setting_switch(
-		&lock_panel,
-		&lock_sizer,
-		"Always show Locked Chats button in chat list (even when hidden on phone)",
-	);
 	let chat_lock_auto_lock_combo = visibility_combo(
 		&lock_panel,
 		&lock_sizer,
@@ -721,6 +716,11 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		setting_switch(&lock_panel, &lock_sizer, "Lock chats again when whatSnap is minimized or hidden");
 	let chat_lock_notify_check =
 		setting_switch(&lock_panel, &lock_sizer, "Notify about messages in locked chats while they are locked");
+	let chat_lock_always_show_sidebar_check = setting_switch(
+		&lock_panel,
+		&lock_sizer,
+		"Always show the Locked Chats button, even when locked chats are hidden on the phone",
+	);
 	lock_panel.set_sizer(lock_sizer, true);
 
 	// 11. Backup and Restore Panel

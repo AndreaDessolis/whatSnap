@@ -2248,17 +2248,7 @@ func (acc *Account) eventHandler(evt interface{}) {
 			if lca := v.GetLockChatAction(); lca != nil {
 				if len(v.Index) > 1 {
 					jid := acc.appStateChatJID(v.Index[1])
-					isLockedInt := 0
-					if lca.GetLocked() {
-						isLockedInt = 1
-					}
-					jids := acc.chatJIDList(jid)
-					for _, j := range jids {
-						res, _ := acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid = ?", isLockedInt, j)
-						if rows, _ := res.RowsAffected(); rows == 0 && isLockedInt == 1 {
-							acc.db.Exec("INSERT OR IGNORE INTO chats (jid, is_locked, timestamp) VALUES (?, 1, 0)", j)
-						}
-					}
+					acc.setChatLockedRows(jid, lca.GetLocked())
 					acc.broadcastChats()
 				}
 			}
@@ -2327,18 +2317,7 @@ func (acc *Account) eventHandler(evt interface{}) {
 			if v.Action == nil {
 				return
 			}
-			lockedInt := 0
-			if v.Action.GetLocked() {
-				lockedInt = 1
-			}
-			pn := acc.preferPN(v.JID)
-			jids := acc.chatJIDList(pn.String())
-			for _, j := range jids {
-				res, _ := acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid = ?", lockedInt, j)
-				if rows, _ := res.RowsAffected(); rows == 0 && lockedInt == 1 {
-					acc.db.Exec("INSERT OR IGNORE INTO chats (jid, is_locked, timestamp) VALUES (?, 1, 0)", j)
-				}
-			}
+			acc.setChatLockedRows(acc.preferPN(v.JID).String(), v.Action.GetLocked())
 			acc.broadcastChats()
 		}()
 	case *events.MarkChatAsRead:

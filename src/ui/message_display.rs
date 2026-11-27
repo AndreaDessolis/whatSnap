@@ -485,14 +485,22 @@ pub(crate) fn refresh_chat_rows(s: &mut AppState, parts: &crate::ui::window::Win
 	s.displayed_chat_labels = rows.labels;
 }
 
+/// With WA's "Hide locked chats" on, the button shows only once the secret
+/// code is typed in the search box (or the chats are open), unless the
+/// "Always show the Locked Chats button" setting is on.
+pub(crate) fn locked_chats_button_shown(s: &AppState) -> bool {
+	s.active_tab == 0
+		&& !s.locked_jids.is_empty()
+		&& (s.settings.chat_lock_always_show_sidebar
+			|| !s.chat_lock_hidden
+			|| s.chats_unlocked
+			|| s.chat_lock_search_unlocked)
+}
+
 pub(crate) fn apply_chat_filter(s: &mut AppState, parts: &crate::ui::window::WindowParts) {
 	crate::ui::window::refresh_menu_bar(s, &parts.frame);
 	crate::platform::tray::refresh_nav_unread_labels(s, parts);
-	// With WA's "Hide locked chats" on, the button shows only once the
-	// secret code is typed in the search box (or the chats are open).
-	let show_locked_btn = s.active_tab == 0
-		&& !s.locked_jids.is_empty()
-		&& (s.settings.chat_lock_always_show_sidebar || !s.chat_lock_hidden || s.chats_unlocked || s.chat_lock_search_unlocked);
+	let show_locked_btn = locked_chats_button_shown(s);
 	let show_filter = s.active_tab == 0 && !s.chats_unlocked;
 	let conv = &parts.conversations_parts;
 	let btn_label = crate::i18n::tr(if s.chats_unlocked { "Hide Locked Chats" } else { "Locked Chats" });

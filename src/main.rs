@@ -99,6 +99,9 @@ impl AppState {
 	}
 
 	pub(crate) fn is_chat_locked(&self, jid: &str) -> bool {
+		if self.locked_jids.is_empty() {
+			return false;
+		}
 		if self.locked_jids.contains(jid) {
 			return true;
 		}
@@ -107,23 +110,20 @@ impl AppState {
 				return true;
 			}
 		}
+		// A blocked contact's other address, when the chat list has no twin
+		// for it.
+		let jid_pn = jid.strip_suffix("@s.whatsapp.net");
 		for b in &self.blocked_entries {
+			let pn = b.phone.trim_start_matches('+');
+			if pn.is_empty() {
+				continue;
+			}
 			if b.jid == jid {
-				let pn = b.phone.trim_start_matches('+');
-				if !pn.is_empty() {
-					let pn_jid = format!("{}@s.whatsapp.net", pn);
-					if self.locked_jids.contains(&pn_jid) {
-						return true;
-					}
+				if self.locked_jids.contains(&format!("{pn}@s.whatsapp.net")) {
+					return true;
 				}
-			} else {
-				let pn = b.phone.trim_start_matches('+');
-				if !pn.is_empty() {
-					let pn_jid = format!("{}@s.whatsapp.net", pn);
-					if pn_jid == jid && self.locked_jids.contains(&b.jid) {
-						return true;
-					}
-				}
+			} else if jid_pn == Some(pn) && self.locked_jids.contains(&b.jid) {
+				return true;
 			}
 		}
 		false
@@ -198,7 +198,7 @@ struct AppState {
 	chat_lock_last_activity: std::time::Instant,
 	pending_locked_chat: Option<String>,
 	pending_forward: Option<(Vec<String>, Vec<String>)>,
-	pending_send_files: Option<(Vec<String>, Vec<String>, String)>,
+	pending_send_files: Option<(Vec<String>, Vec<String>, String, String)>,
 	pending_send_text: Option<(String, Vec<String>)>,
 	community_jids: std::collections::HashSet<String>,
 	chat_parents: std::collections::HashMap<String, String>,

@@ -157,6 +157,10 @@ While the locked chats are shown, the heading says `Locked Chats` and the search
 
 If you turned on `Hide locked chats` in WhatsApp on your phone, the `Locked Chats` button stays hidden. Type your secret code in the chat list's search box: whatSnap says `Locked chats available.` and the button shows. Press `Enter` in the search box or press the button to open them.
 
+To keep the button showing anyway, turn on `Always show the Locked Chats button, even when locked chats are hidden on the phone` in Settings, Chat Lock. It is off at first, as in WhatsApp Web. Pressing the button still asks for your secret code.
+
+If you forward a message or send files or text to a contact whose chat is locked, whatSnap asks for your secret code first and sends once it is right, as WhatsApp on the phone does.
+
 To lock chats or open them on this computer, your phone needs a secret code. Set it in WhatsApp on your phone, in `Settings > Privacy > Chat lock > Secret code`.
 
 In Settings, Chat Lock, `Lock Chats Again When Idle For` locks the shown locked chats again after that long without a key press. It is `Never` at first.

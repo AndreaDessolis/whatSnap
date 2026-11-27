@@ -258,8 +258,8 @@ pub(crate) fn execute_forward(
 	let spoken = if count == 1 {
 		crate::i18n::tr_fmt("Message forwarded to {}.", &[&names_joined])
 	} else {
-		let plural_msgs = format!("{} messages", count);
-		crate::i18n::tr_fmt("{} forwarded to {}.", &[&plural_msgs, &names_joined])
+		let messages = format!("{count} {}", crate::i18n::tr_str("messages"));
+		crate::i18n::tr_fmt("{} forwarded to {}.", &[&messages, &names_joined])
 	};
 	crate::platform::announce::announce(
 		parts.conversations_parts.messages_announcer,

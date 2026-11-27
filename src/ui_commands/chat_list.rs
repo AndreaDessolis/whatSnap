@@ -747,8 +747,8 @@ pub(crate) fn show_locked_chats(state: &Rc<RefCell<AppState>>, parts: &Rc<Window
 		crate::ui_commands::messaging::execute_forward(state, parts, msg_ids, to_jids);
 		return;
 	}
-	if let Some((paths, to_jids, text)) = pending_send_files {
-		crate::ui_commands::links::execute_send_files(state, parts, paths, to_jids, text);
+	if let Some((paths, to_jids, text, note)) = pending_send_files {
+		crate::ui_commands::links::execute_send_files(state, parts, paths, to_jids, text, note);
 		return;
 	}
 	if let Some((text, to_jids)) = pending_send_text {

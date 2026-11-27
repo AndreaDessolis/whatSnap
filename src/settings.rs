@@ -118,8 +118,8 @@ pub struct Settings {
 	pub chat_lock_on_minimize: bool,
 	/// Sound and notifications for locked chats while they are locked; off is silent.
 	pub chat_lock_notify: bool,
-	/// Always show the Locked Chats button in the chat list, even when
-	/// WhatsApp's "Hide locked chats" phone setting is on.
+	/// Show the Locked Chats button even with WhatsApp's "Hide locked chats"
+	/// on. Off is WA Web's behaviour: the button waits for the secret code.
 	pub chat_lock_always_show_sidebar: bool,
 }
 
@@ -214,7 +214,7 @@ impl Default for Settings {
 			chat_lock_auto_lock_mins: 0,
 			chat_lock_on_minimize: false,
 			chat_lock_notify: true,
-			chat_lock_always_show_sidebar: true,
+			chat_lock_always_show_sidebar: false,
 		}
 	}
 }

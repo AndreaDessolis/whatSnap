@@ -192,23 +192,24 @@ pub(crate) fn share_files(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>
 	if choice.jids.is_empty() {
 		return;
 	}
-	if left_out > 0 {
-		let message = crate::i18n::tr_fmt(
+	let note = if left_out > 0 {
+		crate::i18n::tr_fmt(
 			if left_out == 1 {
 				" You can send up to {} files at once; {} file weren't sent."
 			} else {
 				" You can send up to {} files at once; {} files weren't sent."
 			},
 			&[&max, &left_out],
-		);
-		crate::platform::announce::announce(parts.conversations_parts.messages_announcer, &message);
-	}
+		)
+	} else {
+		String::new()
+	};
 	if state.borrow().is_any_locked(&choice.jids) && !state.borrow().chats_unlocked {
-		state.borrow_mut().pending_send_files = Some((paths, choice.jids, choice.text));
+		state.borrow_mut().pending_send_files = Some((paths, choice.jids, choice.text, note));
 		crate::ui_commands::chat_list::prompt_locked_chats(state, parts);
 		return;
 	}
-	execute_send_files(state, parts, paths, choice.jids, choice.text);
+	execute_send_files(state, parts, paths, choice.jids, choice.text, note);
 }
 
 pub(crate) fn execute_send_files(
@@ -217,6 +218,7 @@ pub(crate) fn execute_send_files(
 	paths: Vec<String>,
 	to_jids: Vec<String>,
 	text: String,
+	note: String,
 ) {
 	if paths.is_empty() || to_jids.is_empty() {
 		return;
@@ -230,7 +232,8 @@ pub(crate) fn execute_send_files(
 		to_jids.iter().map(|jid| s.contacts.get(jid).cloned().unwrap_or_else(|| jid.clone())).collect();
 	drop(s);
 	let names_joined = names.join(", ");
-	let message = crate::i18n::tr_fmt("Sending to {}.", &[&names_joined]);
+	let mut message = crate::i18n::tr_fmt("Sending to {}.", &[&names_joined]);
+	message.push_str(&note);
 	crate::platform::announce::announce(parts.conversations_parts.messages_announcer, &message);
 }
 

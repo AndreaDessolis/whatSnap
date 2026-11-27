@@ -41,7 +41,7 @@ func (acc *Account) fetchMessagesPage(jid string, limit, offset int) []MessageJS
 // twin LID or PN, and database mappings from whatsmeow_lid_map / blocked_contacts).
 func (acc *Account) chatJIDList(jid string) []string {
 	if jid == "" {
-		return nil
+		return []string{""}
 	}
 	seen := map[string]bool{}
 	var list []string
@@ -77,27 +77,59 @@ func (acc *Account) chatJIDList(jid string) []string {
 		}
 	}
 
-	var bLID, bPN string
-	if err := acc.db.QueryRow("SELECT lid, pn FROM blocked_contacts WHERE lid = ? OR pn = ?", jid, jid).Scan(&bLID, &bPN); err == nil {
-		add(bLID)
+	var bJID, bPN string
+	if err := acc.db.QueryRow("SELECT jid, pn FROM blocked_contacts WHERE jid = ? OR pn = ?", jid, jid).Scan(&bJID, &bPN); err == nil {
+		add(bJID)
 		add(bPN)
 	}
 
 	return list
 }
 
-func (acc *Account) chatJIDInClause(jid string) (string, []interface{}) {
+// chatJIDInClause is the IN list for a chat's messages: the chat itself plus
+// any twin address that really holds messages. Twins without messages are
+// left out so the usual one-address chat keeps its index-ordered read.
+func (acc *Account) chatJIDInClause(jid string) (string, []any) {
+	args := []any{jid}
+	for _, j := range acc.chatJIDList(jid)[1:] {
+		var one int
+		if acc.db.QueryRow("SELECT 1 FROM messages WHERE jid = ? LIMIT 1", j).Scan(&one) == nil {
+			args = append(args, j)
+		}
+	}
+	return strings.Repeat(", ?", len(args))[2:], args[:len(args):len(args)]
+}
+
+// setChatLockedRows stores a chat's lock on every address it has. A lock for
+// a chat with no row yet (it can arrive before history sync makes one) gets a
+// row under the phone-number address, so it isn't lost and doesn't add a
+// second LID chat later.
+func (acc *Account) setChatLockedRows(jid string, locked bool) {
+	if jid == "" {
+		return
+	}
 	jids := acc.chatJIDList(jid)
-	if len(jids) == 0 {
-		return "?", []interface{}{jid}
+	lockedInt := 0
+	if locked {
+		lockedInt = 1
 	}
-	placeholders := make([]string, len(jids))
-	args := make([]interface{}, len(jids))
-	for i, j := range jids {
-		placeholders[i] = "?"
-		args[i] = j
+	args := make([]any, 0, len(jids)+1)
+	args = append(args, lockedInt)
+	for _, j := range jids {
+		args = append(args, j)
 	}
-	return strings.Join(placeholders, ", "), args
+	res, err := acc.db.Exec("UPDATE chats SET is_locked = ? WHERE jid IN ("+strings.Repeat(", ?", len(jids))[2:]+")", args...)
+	if err != nil || !locked {
+		return
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		return
+	}
+	row := jid
+	if parsed, perr := types.ParseJID(jid); perr == nil {
+		row = acc.preferPN(parsed).String()
+	}
+	acc.db.Exec("INSERT OR IGNORE INTO chats (jid, is_locked, timestamp) VALUES (?, 1, 0)", row)
 }
 
 func (acc *Account) fetchMessagesPageBefore(jid string, limit, offset int, before *pageCursor) []MessageJSON {
@@ -126,13 +158,13 @@ func (acc *Account) fetchMessagesWhere(jid, filter string, limit, offset int, be
 	var rows *sql.Rows
 	var queryErr error
 	if after != nil {
-		args := append(append([]interface{}{}, jidArgs...), after.Timestamp, after.Timestamp, after.ID, limit)
+		args := append(append([]any{}, jidArgs...), after.Timestamp, after.Timestamp, after.ID, limit)
 		rows, queryErr = acc.db.Query(cols+` AND (timestamp > ? OR (timestamp = ? AND id > ?)) ORDER BY timestamp ASC, id ASC LIMIT ?`, args...)
 	} else if before != nil {
-		args := append(append([]interface{}{}, jidArgs...), before.Timestamp, before.Timestamp, before.ID, limit)
+		args := append(append([]any{}, jidArgs...), before.Timestamp, before.Timestamp, before.ID, limit)
 		rows, queryErr = acc.db.Query(cols+` AND (timestamp < ? OR (timestamp = ? AND id < ?)) ORDER BY timestamp DESC, id DESC LIMIT ?`, args...)
 	} else {
-		args := append(append([]interface{}{}, jidArgs...), limit, offset)
+		args := append(append([]any{}, jidArgs...), limit, offset)
 		rows, queryErr = acc.db.Query(cols+` ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?`, args...)
 	}
 
