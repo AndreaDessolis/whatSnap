@@ -1328,6 +1328,15 @@ func (acc *Account) resolveDisplayName(jid types.JID) string {
 	if jid.Server == types.BotServer && (jid.User == types.NewMetaAIJID.User || jid.User == types.TeeMetaAIJID.User) {
 		return "Meta AI"
 	}
+	if jid.Server == types.GroupServer {
+		var name string
+		if acc.db != nil {
+			acc.db.QueryRow(`SELECT COALESCE(name, '') FROM chats WHERE jid = ?`, jid.String()).Scan(&name)
+		}
+		if name != "" {
+			return name
+		}
+	}
 	if jid.Server == types.NewsletterServer {
 		var name string
 		if acc.db != nil {
