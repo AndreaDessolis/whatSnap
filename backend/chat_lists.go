@@ -399,3 +399,29 @@ func (acc *Account) handleGetCommonGroups(conn net.Conn, raw json.RawMessage) {
 	}
 	acc.sendEvent(conn, "common_groups", map[string]interface{}{"jid": data.JID, "groups": list})
 }
+
+// noteLabelReorder applies a label_reordering sync like WA Web's
+// updateLabelsSortOrder: each known list takes its position in the order.
+func (acc *Account) noteLabelReorder(act *waSyncAction.LabelReorderingAction) {
+	ids := act.GetSortedLabelIDs()
+	if len(ids) == 0 {
+		return
+	}
+	pos := make(map[string]int32, len(ids))
+	for i, id := range ids {
+		pos[strconv.Itoa(int(id))] = int32(i)
+	}
+	acc.listsMu.Lock()
+	for _, l := range acc.storedLists() {
+		p, ok := pos[l.id]
+		if !ok {
+			continue
+		}
+		l.action.OrderIndex = proto.Int32(p)
+		if raw, err := proto.Marshal(l.action); err == nil {
+			acc.db.Exec(`INSERT OR REPLACE INTO chat_lists (id, action) VALUES (?, ?)`, l.id, raw)
+		}
+	}
+	acc.listsMu.Unlock()
+	acc.broadcastChatLists()
+}
