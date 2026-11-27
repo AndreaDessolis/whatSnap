@@ -233,19 +233,17 @@ pub(crate) fn forward_message(
 		parts.conversations_parts.messages_announcer,
 		crate::i18n::tr("Message forwarded."),
 	);
-	open_locked_forward_destination(state, parts, &to_jids);
+	open_forward_destination(state, parts, &to_jids);
 }
 
-pub(crate) fn open_locked_forward_destination(
-	state: &Rc<RefCell<AppState>>,
-	parts: &Rc<WindowParts>,
-	to_jids: &[String],
-) {
-	// WhatsApp Web starts forwarding before opening the first destination.
-	// Opening a locked conversation goes through the normal chat lock prompt.
-	if let Some(jid) = to_jids.first().filter(|jid| state.borrow().locked_jids.contains(*jid)) {
-		crate::ui::chat_ui::open_chat_for_jid(jid, state, parts);
+pub(crate) fn open_forward_destination(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, to_jids: &[String]) {
+	// Like WhatsApp Web: once the forward is sent, open the first chat picked.
+	// A locked chat goes through the normal chat lock prompt.
+	let Some(jid) = to_jids.first() else { return };
+	if state.borrow().selected_chat.as_deref() == Some(jid.as_str()) {
+		return;
 	}
+	crate::ui::chat_ui::open_chat_for_jid(jid, state, parts);
 }
 
 pub(crate) fn edit_message(
