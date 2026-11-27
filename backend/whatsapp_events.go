@@ -3194,7 +3194,7 @@ func (acc *Account) populateChatsFromStoreOnce() {
 			// Only a real name may replace a chat's name - the "+<phone>"
 			// fallback must never clobber a name the chat already has.
 			if entry.nameRank > 0 {
-				tx.Exec(`UPDATE chats SET name = ? WHERE jid = ?`, entry.name, jidStr)
+				tx.Exec(`UPDATE chats SET name = ? WHERE jid = ? AND name IS NOT ?`, entry.name, jidStr, entry.name)
 			} else if entry.name != "" {
 				tx.Exec(`UPDATE chats SET name = ? WHERE jid = ? AND (name IS NULL OR name = '')`, entry.name, jidStr)
 			}

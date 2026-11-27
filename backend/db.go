@@ -1274,7 +1274,15 @@ func upsertContactCacheRowWith(ex sqlExecer, jid, name, phone string, isBusiness
 			END,
 			phone = COALESCE(NULLIF(excluded.phone, ''), contacts_cache.phone),
 			is_business = MAX(COALESCE(contacts_cache.is_business, 0), excluded.is_business),
-			updated_at = excluded.updated_at`,
+			updated_at = excluded.updated_at
+		WHERE (CASE
+				WHEN (excluded.name = '' OR excluded.name LIKE '+%')
+					AND COALESCE(contacts_cache.name, '') != '' AND contacts_cache.name NOT LIKE '+%'
+				THEN contacts_cache.name
+				ELSE excluded.name
+			END) IS NOT contacts_cache.name
+			OR COALESCE(NULLIF(excluded.phone, ''), contacts_cache.phone) IS NOT contacts_cache.phone
+			OR MAX(COALESCE(contacts_cache.is_business, 0), excluded.is_business) IS NOT contacts_cache.is_business`,
 		jid, name, phone, isBusiness, time.Now().Unix())
 	return err
 }
