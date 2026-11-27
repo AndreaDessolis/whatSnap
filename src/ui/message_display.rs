@@ -358,7 +358,7 @@ pub(crate) fn chat_tab_rows(s: &AppState) -> ChatTabRows {
 	let contacts: Vec<&crate::Contact> = s
 		.all_contacts
 		.iter()
-		.filter(|c| !chat_jids.contains(c.jid.as_str()) && !s.locked_jids.contains(&c.jid))
+		.filter(|c| !chat_jids.contains(c.jid.as_str()) && !s.is_chat_locked(&c.jid))
 		.filter(|c| c.phone.is_empty() || !chat_phones.contains(c.phone.as_str()))
 		.filter(|c| {
 			let names = [c.name.as_str()];
@@ -368,7 +368,7 @@ pub(crate) fn chat_tab_rows(s: &AppState) -> ChatTabRows {
 		.collect();
 	let current = s.message_search.query == s.search_query;
 	let hits: Vec<&crate::MessageHit> = if current {
-		s.message_search.hits.iter().filter(|h| !s.locked_jids.contains(&h.jid)).collect()
+		s.message_search.hits.iter().filter(|h| !s.is_chat_locked(&h.jid)).collect()
 	} else {
 		Vec::new()
 	};
@@ -492,7 +492,7 @@ pub(crate) fn apply_chat_filter(s: &mut AppState, parts: &crate::ui::window::Win
 	// secret code is typed in the search box (or the chats are open).
 	let show_locked_btn = s.active_tab == 0
 		&& !s.locked_jids.is_empty()
-		&& (!s.chat_lock_hidden || s.chats_unlocked || s.chat_lock_search_unlocked);
+		&& (s.settings.chat_lock_always_show_sidebar || !s.chat_lock_hidden || s.chats_unlocked || s.chat_lock_search_unlocked);
 	let show_filter = s.active_tab == 0 && !s.chats_unlocked;
 	let conv = &parts.conversations_parts;
 	let btn_label = crate::i18n::tr(if s.chats_unlocked { "Hide Locked Chats" } else { "Locked Chats" });
