@@ -30,7 +30,9 @@ impl UiWaker {
 
 	pub fn wake(&self) {
 		if !self.pending.swap(true, Ordering::SeqCst) {
-			if !self.alive.load(Ordering::SeqCst) {
+			// Once Exit has started the frame may already be gone, and posting
+			// to it then crashes (a second launch during shutdown did).
+			if !self.alive.load(Ordering::SeqCst) || crate::platform::quit::is_quitting() {
 				return;
 			}
 			let handle = self.frame_ptr as *mut ffi::wxd_Window_t;
