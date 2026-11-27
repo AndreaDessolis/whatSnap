@@ -6,3 +6,15 @@ release = "run -p xtask -- release"
 # Some C dependencies still ask for an old CMake policy version, which CMake 4
 # refuses without this.
 CMAKE_POLICY_VERSION_MINIMUM = "3.5"
+
+# No Visual C++ redistributable needed: the Visual C++ runtime (vcruntime) is linked
+# into each exe (+crt-static; wxdragon and libopus follow it), while the C library
+# itself comes from Windows' own Universal CRT (ucrtbase.dll, part of every Windows 10
+# and 11) instead of a static copy, which keeps the exes small. This is Microsoft's
+# "hybrid CRT" setup. CI checks the exes import no vcruntime/msvcp DLL.
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = [
+	"-C", "target-feature=+crt-static",
+	"-C", "link-arg=/NODEFAULTLIB:libucrt.lib",
+	"-C", "link-arg=/DEFAULTLIB:ucrt.lib",
+]

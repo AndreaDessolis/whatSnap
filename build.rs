@@ -27,12 +27,18 @@ fn build_libopus() {
 		.define("OPUS_BUILD_SHARED_LIBRARY", "OFF")
 		.define("OPUS_INSTALL_PKG_CONFIG_MODULE", "OFF")
 		.define("OPUS_INSTALL_CMAKE_CONFIG_MODULE", "OFF")
-		// A Rust build links the release C runtime (/MD) in every profile.
-		.define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
+		// The release C runtime in every profile, linked the same way as the Rust code: static
+		// (/MT) with crt-static (.cargo/config.toml), so the exe needs no Visual C++ redistributable.
+		.define("CMAKE_MSVC_RUNTIME_LIBRARY", if crt_static() { "MultiThreaded" } else { "MultiThreadedDLL" })
 		.profile("Release")
 		.build();
 	println!("cargo:rustc-link-search=native={}", out.join("lib").display());
 	println!("cargo:rustc-link-lib=static=opus");
+}
+
+/// Whether the Rust code links the C runtime statically (`+crt-static`, set in .cargo/config.toml).
+fn crt_static() -> bool {
+	env::var("CARGO_CFG_TARGET_FEATURE").is_ok_and(|features| features.split(',').any(|f| f == "crt-static"))
 }
 
 fn main() {

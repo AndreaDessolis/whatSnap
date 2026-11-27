@@ -62,6 +62,8 @@ jobs:
         MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
         MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
       run: cargo release
+    - name: Check the exes don't need the Visual C++ redistributable
+      run: ./tools/check_no_vc_runtime.ps1
     - name: Check the build produced both packages
       run: |
         $suffix = if ('${{ matrix.arch }}' -eq 'arm64') { '-arm64' } else { '' }

@@ -71,6 +71,8 @@ jobs:
         if (-not $env:MINISIGN_KEY) { throw "The MINISIGN_KEY secret is missing, so the release can't be signed" }
         cargo release
         if ($LASTEXITCODE -ne 0) { throw "cargo release failed" }
+    - name: Check the exes don't need the Visual C++ redistributable
+      run: ./tools/check_no_vc_runtime.ps1
     - name: Upload release files
       uses: actions/upload-artifact@v7
       with:
