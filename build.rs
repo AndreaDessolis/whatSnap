@@ -219,7 +219,7 @@ fn build_mo_catalogs() {
 		("Update to %s", "Perbarui ke %s"),
 		("{} (not on this keyboard layout)", "{} (tidak ada di tata letak keyboard ini)"),
 	];
-	let patois_mo = build_mo_bytes(patois_entries);
+	let patois_mo = build_mo_bytes(patois_entries, ONE_FORM);
 	let patois_deflated = deflate_stored(&patois_mo);
 	std::fs::write(out_dir.join("patois_id.mo.deflate"), patois_deflated).expect("write patois_id.mo.deflate");
 
@@ -274,14 +274,170 @@ fn build_mo_catalogs() {
 		("Working...", "Memproses..."),
 		("Yes", "Ya"),
 	];
-	let wxstd_mo = build_mo_bytes(wxstd_entries);
+	let wxstd_mo = build_mo_bytes(wxstd_entries, ONE_FORM);
 	std::fs::write(out_dir.join("wxstd_id.mo"), wxstd_mo).expect("write wxstd_id.mo");
+
+	let patois_it_entries: &[(&str, &str)] = &[
+		("%d hour\0%d hours", "%d ora\0%d ore"),
+		("%d minute\0%d minutes", "%d minuto\0%d minuti"),
+		("%d second\0%d seconds", "%d secondo\0%d secondi"),
+		("%s Update", "Aggiornamento di %s"),
+		("&Alt", "&Alt"),
+		("&Clear", "Ca&ncella"),
+		("&Clear Shortcut", "Ca&ncella scorciatoia"),
+		("&Cmd", "&Cmd"),
+		("&Ctrl", "&Ctrl"),
+		("&Key:", "&Tasto:"),
+		("&No", "&No"),
+		("&Option", "&Option"),
+		("&Reset to Default", "&Ripristina predefinita"),
+		("&Set Shortcut...", "&Imposta scorciatoia..."),
+		("&Shift", "&Maiusc"),
+		("&Shortcuts:", "&Scorciatoie:"),
+		("&Win", "&Win"),
+		("&Yes", "&Sì"),
+		("'{}' is already assigned to '{}'. Reassign it to '{}'?", "'{}' è già assegnato a '{}'. Assegnarlo a '{}'?"),
+		(
+			"A new version of %s is available. Here's what's new:",
+			"È disponibile una nuova versione di %s. Ecco le novità:",
+		),
+		(
+			"A system-wide shortcut needs Ctrl, Alt, or Win, or it would take that key from every other program.",
+			"Una scorciatoia valida in tutto il sistema deve usare Ctrl, Alt o Win, altrimenti toglierebbe quel tasto a tutti gli altri programmi.",
+		),
+		("Cancel", "Annulla"),
+		("Checking for updates...", "Ricerca aggiornamenti in corso..."),
+		("Configure shortcut for {}:", "Configura la scorciatoia per {}:"),
+		("Could not reach the update server: %s", "Impossibile raggiungere il server degli aggiornamenti: %s"),
+		("Current version is not a valid semver.", "Il numero della versione attuale non è valido."),
+		("Customize Keyboard Shortcuts", "Personalizza scorciatoie da tastiera"),
+		("Detected: (none)", "Rilevato: (nessuno)"),
+		("Detected: {}", "Rilevato: {}"),
+		("Downloading update...", "Download dell'aggiornamento in corso..."),
+		("Error", "Errore"),
+		("Failed to create file", "Impossibile creare il file"),
+		("Failed to create private download directory", "Impossibile creare la cartella per il download"),
+		("Failed to determine exe path", "Impossibile trovare il percorso del programma"),
+		("Failed to get current exe path", "Impossibile leggere il percorso del programma"),
+		("Failed to get exe directory", "Impossibile leggere la cartella del programma"),
+		("Failed to launch update script", "Impossibile avviare lo script di aggiornamento"),
+		("Failed to parse release JSON", "Impossibile leggere i dati della versione"),
+		("Failed to read file for verification", "Impossibile leggere il file da verificare"),
+		("Failed to read signature", "Impossibile leggere la firma digitale"),
+		("Failed to rename verified file", "Impossibile rinominare il file verificato"),
+		("Failed to write file", "Impossibile scrivere il file"),
+		("Info", "Informazioni"),
+		("Invalid public key", "Chiave pubblica non valida"),
+		("Invalid signature", "Firma digitale non valida"),
+		("Latest release does not include downloadable assets.", "L'ultima versione non contiene file da scaricare."),
+		("Latest release tag is not a valid semver.", "Il numero dell'ultima versione non è valido."),
+		("No key detected", "Nessun tasto rilevato"),
+		("No release notes provided.", "Nessuna nota di versione."),
+		("No updates available.", "Nessun aggiornamento disponibile."),
+		("No updates available. Latest version: %s", "Nessun aggiornamento disponibile. Ultima versione: %s"),
+		("None", "Nessuna"),
+		("OK", "OK"),
+		("Preparing update...", "Preparazione dell'aggiornamento..."),
+		("Reset &All to Defaults", "Ripristina &tutte le predefinite"),
+		("Reset Shortcuts", "Ripristina scorciatoie"),
+		(
+			"Reset all shortcuts in this tab to their default values?",
+			"Ripristinare i valori predefiniti di tutte le scorciatoie di questa scheda?",
+		),
+		("Reset all shortcuts to their default values?", "Ripristinare i valori predefiniti di tutte le scorciatoie?"),
+		("Security Error", "Errore di sicurezza"),
+		(
+			"Security verification failed. The update might have been tampered with: %s",
+			"Verifica di sicurezza non riuscita. L'aggiornamento potrebbe essere stato manomesso: %s",
+		),
+		("Set Shortcut for {}", "Imposta la scorciatoia per {}"),
+		("Shortcut Conflict", "Scorciatoia già in uso"),
+		("Shortcut Not Allowed", "Scorciatoia non consentita"),
+		("Signature verification failed", "Verifica della firma digitale non riuscita"),
+		("The update server returned HTTP error %s.", "Il server degli aggiornamenti ha restituito l'errore HTTP %s."),
+		(
+			"Tip: click in the key field and press the key combination you want.",
+			"Suggerimento: fai clic nel campo del tasto e premi la combinazione che vuoi.",
+		),
+		("Update Ready", "Aggiornamento pronto"),
+		("Update cancelled.", "Aggiornamento annullato."),
+		(
+			"Update is available but no matching download asset or signature was found.",
+			"C'è un aggiornamento, ma non è stato trovato il file da scaricare o la sua firma.",
+		),
+		("Update to %s", "Aggiorna alla versione %s"),
+		("{} (not on this keyboard layout)", "{} (non presente in questo layout di tastiera)"),
+	];
+	let patois_it_mo = build_mo_bytes(patois_it_entries, SINGULAR_AND_PLURAL);
+	std::fs::write(out_dir.join("patois_it.mo.deflate"), deflate_stored(&patois_it_mo))
+		.expect("write patois_it.mo.deflate");
+
+	let wxstd_it_entries: &[(&str, &str)] = &[
+		("&Apply", "&Applica"),
+		("&Cancel", "&Annulla"),
+		("&Clear", "&Cancella"),
+		("&Close", "&Chiudi"),
+		("&Copy", "&Copia"),
+		("&Delete", "&Elimina"),
+		("&Details", "&Dettagli"),
+		("&Help", "&Guida"),
+		("&No", "&No"),
+		("&OK", "&OK"),
+		("&Open", "A&pri"),
+		("&Paste", "&Incolla"),
+		("&Redo", "&Ripeti"),
+		("&Save", "&Salva"),
+		("&Undo", "&Annulla"),
+		("&Yes", "&Sì"),
+		("All files (*)|*", "Tutti i file (*)|*"),
+		("All files (*.*)|*.*", "Tutti i file (*.*)|*.*"),
+		("All files (%s)|%s", "Tutti i file (%s)|%s"),
+		("Apply", "Applica"),
+		("Cancel", "Annulla"),
+		("Choose a directory", "Scegli una cartella"),
+		("Choose a file", "Scegli un file"),
+		("Clear", "Cancella"),
+		("Close", "Chiudi"),
+		("Cu&t", "&Taglia"),
+		("Elapsed time:", "Tempo trascorso:"),
+		("Elapsed time : ", "Tempo trascorso : "),
+		("Error", "Errore"),
+		("Estimated time:", "Tempo stimato:"),
+		("Estimated time : ", "Tempo stimato : "),
+		("Help", "Guida"),
+		("Hide details", "Nascondi dettagli"),
+		("Information", "Informazioni"),
+		("No", "No"),
+		("OK", "OK"),
+		("Open", "Apri"),
+		("Open file", "Apri file"),
+		("Please wait...", "Attendere..."),
+		("Remaining time:", "Tempo rimanente:"),
+		("Remaining time : ", "Tempo rimanente : "),
+		("Save", "Salva"),
+		("Save file", "Salva file"),
+		("Searching...", "Ricerca in corso..."),
+		("Select &All", "Seleziona &tutto"),
+		("Show details", "Mostra dettagli"),
+		("Warning", "Attenzione"),
+		("Working...", "Elaborazione in corso..."),
+		("Yes", "Sì"),
+	];
+	let wxstd_it_mo = build_mo_bytes(wxstd_it_entries, SINGULAR_AND_PLURAL);
+	std::fs::write(out_dir.join("wxstd_it.mo"), wxstd_it_mo).expect("write wxstd_it.mo");
 }
 
-fn build_mo_bytes(entries: &[(&str, &str)]) -> Vec<u8> {
-	let header = "Content-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=1; plural=0;\n";
+/// Plural rules for the catalogs above: Indonesian has one form, Italian a
+/// singular and a plural.
+const ONE_FORM: &str = "nplurals=1; plural=0;";
+const SINGULAR_AND_PLURAL: &str = "nplurals=2; plural=(n != 1);";
+
+fn build_mo_bytes(entries: &[(&str, &str)], plural_forms: &str) -> Vec<u8> {
+	let header = format!(
+		"Content-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: {plural_forms}\n"
+	);
 	let mut pairs: Vec<(&str, &str)> = Vec::with_capacity(entries.len() + 1);
-	pairs.push(("", header));
+	pairs.push(("", header.as_str()));
 	pairs.extend_from_slice(entries);
 	pairs.sort_by(|a, b| a.0.as_bytes().cmp(b.0.as_bytes()));
 	pairs.dedup_by(|a, b| a.0 == b.0);

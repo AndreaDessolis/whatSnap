@@ -5077,6 +5077,15 @@ msgstr "Di {}"
 msgid "{} unread messages"
 msgstr "{} pesan belum dibaca"
 
+msgid "No unread messages"
+msgstr "Tidak ada pesan belum dibaca"
+
+msgid "1 unread chat in other accounts"
+msgstr "1 chat belum dibaca di akun lain"
+
+msgid "{} unread chats in other accounts"
+msgstr "{} chat belum dibaca di akun lain"
+
 msgid "{} reacted with {} to: {}"
 msgstr "{} bereaksi {} ke: {}"
 

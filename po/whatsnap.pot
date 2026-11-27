@@ -5660,6 +5660,15 @@ msgstr ""
 msgid "{} unread messages"
 msgstr ""
 
+msgid "No unread messages"
+msgstr ""
+
+msgid "1 unread chat in other accounts"
+msgstr ""
+
+msgid "{} unread chats in other accounts"
+msgstr ""
+
 msgid "{} unstarred."
 msgstr ""
 
