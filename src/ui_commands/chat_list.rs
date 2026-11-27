@@ -520,11 +520,7 @@ pub(crate) fn load_more_messages(state: &Rc<RefCell<AppState>>, parts: &Rc<Windo
 	}
 	s.history_loading = true;
 	if s.no_more_messages {
-		if !s.blocked_jids.contains(&jid) {
-			request_phone_history_sync(&mut s, &jid);
-		} else {
-			s.history_loading = false;
-		}
+		request_phone_history_sync(&mut s, &jid);
 	} else {
 		eprintln!("[LOG UI] Reached top of chat! Requesting next local page for {}", jid);
 		let payload = older_page_request(&s.messages, &jid);

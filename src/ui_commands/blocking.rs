@@ -70,43 +70,36 @@ fn ask_block_confirm(parent: &impl WxWidget, name: &str, is_business: bool) -> B
 	let sizer = BoxSizer::builder(Orientation::Vertical).build();
 
 	let question_text = if is_business {
-		crate::i18n::tr(
-			"This business won't be able to message or call you. They won't know you blocked or reported them.",
-		)
+		crate::i18n::tr_fmt("{} won't be able to message or call you.", &[&name])
 	} else {
 		crate::i18n::tr(
 			"This person won't be able to message or call you. They won't know you blocked or reported them.",
 		)
+		.to_string()
 	};
-	let question = StaticText::builder(&panel).with_label(question_text).build();
+	let question = StaticText::builder(&panel).with_label(&question_text).build();
 	question.set_font(&crate::ui::theme::Fonts::body());
+	question.wrap(400);
 	sizer.add(&question, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right | SizerFlag::Top, 16);
 
-	let report_check = CheckBox::builder(&panel)
-		.with_label(crate::i18n::tr("Report to WhatsApp"))
-		.build();
+	let report_check = CheckBox::builder(&panel).with_label(crate::i18n::tr("Report to WhatsApp")).build();
 	crate::ui::dialog_look::switch(&report_check, crate::ui::theme::Palette::CONTENT_BG());
 	sizer.add(&report_check, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right | SizerFlag::Top, 12);
 
 	let report_hint_text = if is_business {
-		crate::i18n::tr("The last 5 messages from this business will be sent to WhatsApp.")
+		crate::i18n::tr("WhatsApp receives the last message this business sent you.")
 	} else {
-		crate::i18n::tr("The last 5 messages from this user will be sent to WhatsApp.")
+		crate::i18n::tr("WhatsApp receives the last message this person sent you.")
 	};
 	let report_hint = StaticText::builder(&panel).with_label(report_hint_text).build();
 	crate::ui::theme::style_muted_label(&report_hint);
+	report_hint.wrap(400);
 	sizer.add(&report_hint, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right | SizerFlag::Top, 4);
 
-	let block_btn = Button::builder(&panel)
-		.with_id(ID_OK)
-		.with_label(crate::i18n::tr("Block"))
-		.build();
+	let block_btn = Button::builder(&panel).with_id(ID_OK).with_label(crate::i18n::tr("Block")).build();
 	crate::ui::dialog_look::pill_button(&block_btn, true, crate::ui::theme::Palette::CONTENT_BG());
 
-	let cancel_btn = Button::builder(&panel)
-		.with_id(ID_CANCEL)
-		.with_label(crate::i18n::tr("Cancel"))
-		.build();
+	let cancel_btn = Button::builder(&panel).with_id(ID_CANCEL).with_label(crate::i18n::tr("Cancel")).build();
 	crate::ui::dialog_look::pill_button(&cancel_btn, false, crate::ui::theme::Palette::CONTENT_BG());
 
 	crate::ui::dialog_look::button_row(&sizer, &[&block_btn, &cancel_btn]);
@@ -117,6 +110,8 @@ fn ask_block_confirm(parent: &impl WxWidget, name: &str, is_business: bool) -> B
 	dialog.set_sizer(outer, true);
 	dialog.center();
 	crate::ui::keys::escape_cancels_anywhere(dialog);
+	block_btn.on_click(move |_| dialog.end_modal(ID_OK));
+	cancel_btn.on_click(move |_| dialog.end_modal(ID_CANCEL));
 	block_btn.set_focus();
 
 	let confirmed = dialog.show_modal() == ID_OK;
@@ -140,21 +135,13 @@ fn block_with_confirm(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, ji
 	if result.report {
 		let payload = serde_json::json!({
 			"action": "report",
-			"data": {
-				"jid": jid,
-				"message_id": "",
-				"block": true,
-				"leave": false
-			}
+			"data": { "jid": jid, "message_id": "", "block": false, "leave": false }
 		});
 		let _ = state.borrow().ws_tx.send(payload.to_string());
-		let msg = crate::i18n::tr_fmt("Reporting and blocking {}...", &[&name]);
-		announce(state, parts, &msg);
-	} else {
-		send(state, "block_contact", jid);
-		let msg = crate::i18n::tr_fmt("Blocking {}...", &[&name]);
-		announce(state, parts, &msg);
 	}
+	send(state, "block_contact", jid);
+	let msg = crate::i18n::tr_fmt("Blocking {}...", &[&name]);
+	announce(state, parts, &msg);
 }
 
 pub(crate) fn toggle_block(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, jid: String) {
