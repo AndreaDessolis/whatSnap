@@ -2245,6 +2245,9 @@ func (acc *Account) eventHandler(evt interface{}) {
 			if tf := v.GetTimeFormatAction(); tf != nil && tf.IsTwentyFourHourFormatEnabled != nil && len(v.Index) > 0 && v.Index[0] == appstate.IndexTimeFormat {
 				acc.broadcastEvent("synced_setting", map[string]interface{}{"name": "is24Hour", "value": tf.GetIsTwentyFourHourFormatEnabled()})
 			}
+			if ra := v.GetPrivacySettingRelayAllCalls(); ra != nil && len(v.Index) > 0 && v.Index[0] == appstate.IndexSettingRelayAllCalls {
+				acc.noteRelayAllCalls(ra)
+			}
 			if lr := v.GetLabelReorderingAction(); lr != nil {
 				acc.noteLabelReorder(lr)
 			}

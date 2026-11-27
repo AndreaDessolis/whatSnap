@@ -141,6 +141,7 @@ pub struct SettingsDialogParts {
 	pub calls_combo: ComboBox,
 	pub online_combo: ComboBox,
 	pub link_previews_off_check: CheckBox,
+	pub protect_ip_check: CheckBox,
 	pub blocked_contacts_btn: Button,
 	pub status_privacy_btn: Button,
 
@@ -565,6 +566,11 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 	let groups_combo = visibility_combo(&privacy_panel, &privacy_sizer, "Who Can Add Me to Groups", VISIBILITY_CHOICES);
 	let groups_except_btn = except_button(&privacy_panel, &privacy_sizer, "Groups");
 	let calls_combo = visibility_combo(&privacy_panel, &privacy_sizer, "Silence Unknown Callers", CALL_CHOICES);
+	let protect_ip_check = setting_switch(
+		&privacy_panel,
+		&privacy_sizer,
+		"Protect IP address in calls: calls always go through WhatsApp's servers, on all your devices",
+	);
 
 	privacy_sizer.add_spacer(8);
 	section_header(&privacy_panel, &privacy_sizer, "Advanced & Blocked Contacts");
@@ -857,6 +863,7 @@ pub fn build_settings_dialog(parent: &impl WxWidget) -> SettingsDialogParts {
 		calls_combo,
 		online_combo,
 		link_previews_off_check,
+		protect_ip_check,
 		blocked_contacts_btn,
 		status_privacy_btn,
 		storage_panel,
@@ -967,13 +974,14 @@ impl SettingsDialogParts {
 		(on != was_on).then_some(if on { "all" } else { "none" })
 	}
 
-	fn app_pref_checks(&self) -> [(&'static str, CheckBox); 7] {
+	fn app_pref_checks(&self) -> [(&'static str, CheckBox); 8] {
 		[
 			("auto_download_photos", self.auto_download_photos_check),
 			("auto_download_audio", self.auto_download_audio_check),
 			("auto_download_videos", self.auto_download_videos_check),
 			("auto_download_documents", self.auto_download_documents_check),
 			("link_previews_disabled", self.link_previews_off_check),
+			("protect_ip_in_calls", self.protect_ip_check),
 			("security_notifications", self.security_notifications_check),
 			("hide_phone_numbers", self.hide_phone_numbers_check),
 		]

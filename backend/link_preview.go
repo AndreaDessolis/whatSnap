@@ -12,7 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/proto/waSyncAction"
 	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/protobuf/proto"
 )
@@ -38,6 +40,38 @@ var (
 
 func (acc *Account) noteDisableLinkPreviews(v *events.DisableLinkPreviews) {
 	acc.db.Exec(`INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)`, linkPreviewsOffKey, boolToInt(v.Disabled))
+}
+
+// protectIPKey keeps "Protect IP address in calls" (setting_relayAllCalls,
+// WA Web's disallowAllP2p): on means calls only ever go through relays.
+const protectIPKey = "protect_ip_in_calls"
+
+func (acc *Account) noteRelayAllCalls(act *waSyncAction.PrivacySettingRelayAllCalls) {
+	if act.IsEnabled == nil {
+		return
+	}
+	acc.db.Exec(`INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)`, protectIPKey, boolToInt(act.GetIsEnabled()))
+	acc.broadcastEvent("app_prefs", acc.appPrefsPayload())
+}
+
+func (acc *Account) protectIPInCalls() bool {
+	var on int
+	acc.db.QueryRow(`SELECT CAST(value AS INTEGER) FROM app_settings WHERE key = ?`, protectIPKey).Scan(&on)
+	return on == 1
+}
+
+// buildRelayAllCalls is WAWebVoipRelayAllCallsSettingSync.getMutation.
+func buildRelayAllCalls(on bool) appstate.PatchInfo {
+	return appstate.PatchInfo{
+		Type: appstate.WAPatchRegular,
+		Mutations: []appstate.MutationInfo{{
+			Index:   []string{appstate.IndexSettingRelayAllCalls},
+			Version: 1,
+			Value: &waSyncAction.SyncActionValue{
+				PrivacySettingRelayAllCalls: &waSyncAction.PrivacySettingRelayAllCalls{IsEnabled: proto.Bool(on)},
+			},
+		}},
+	}
 }
 
 func (acc *Account) linkPreviewsDisabled() bool {

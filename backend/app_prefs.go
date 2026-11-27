@@ -31,7 +31,7 @@ func (acc *Account) appPref(name string) bool {
 }
 
 func (acc *Account) appPrefsPayload() map[string]interface{} {
-	out := map[string]interface{}{"link_previews_disabled": acc.linkPreviewsDisabled()}
+	out := map[string]interface{}{"link_previews_disabled": acc.linkPreviewsDisabled(), protectIPKey: acc.protectIPInCalls()}
 	for name := range appPrefDefaults {
 		out[name] = acc.appPref(name)
 	}
@@ -57,6 +57,16 @@ func (acc *Account) handleSetAppPrefs(raw json.RawMessage) {
 		}
 	}
 	acc.syncAppPrefs(changed)
+	if on, ok := data[protectIPKey]; ok && on != acc.protectIPInCalls() {
+		go func() {
+			if err := acc.sendAppStateWithRetry(context.Background(), buildRelayAllCalls(on)); err != nil {
+				log.Printf("Changing protect IP in calls failed: %v", err)
+				acc.broadcastEvent("error", map[string]string{"message": "Couldn't change Protect IP address in calls: " + err.Error()})
+				return
+			}
+			acc.db.Exec(`INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)`, protectIPKey, boolToInt(on))
+		}()
+	}
 	off, ok := data["link_previews_disabled"]
 	if !ok || off == acc.linkPreviewsDisabled() {
 		return

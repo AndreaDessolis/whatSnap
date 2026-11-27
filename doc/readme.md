@@ -561,6 +561,7 @@ A window title without the open chat:
 - `Read receipts`: when this is off, you don't send or get read receipts. In groups, read receipts are always sent.
 - `Who Can Add Me to Groups`
 - `Silence Unknown Callers`
+- `Protect IP address in calls`: calls always go through WhatsApp's servers so the other person can't see your IP address. It's the same switch as on your phone and WhatsApp Web.
 - `Turn off link previews`: links that you send go without a preview, on all your devices.
 - `Manage Blocked Contacts...`: the same list as `Blocked Contacts...` in the menu. It opens over the settings.
 
