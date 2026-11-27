@@ -2998,9 +2998,9 @@ pub fn bind_input_handlers(
 
 		restored.save();
 
-		let old_effective_id = crate::i18n::is_indonesian();
+		let old_language = crate::i18n::current_language();
 		crate::i18n::set_language(restored.language);
-		let language_changed = crate::i18n::is_indonesian() != old_effective_id;
+		let language_changed = crate::i18n::current_language() != old_language;
 
 		let mut s = state_restore.borrow_mut();
 		s.settings = restored.clone();
@@ -3183,7 +3183,7 @@ pub fn bind_input_handlers(
 		s.settings.voice_message_stereo = stereo_voice_check_ok.is_checked();
 		s.settings.dual_stream_screen_share = dual_stream_check_ok.is_checked();
 		let old_theme = s.settings.theme;
-		let old_effective_id = crate::i18n::is_indonesian();
+		let old_language = crate::i18n::current_language();
 		let old_templates = (s.settings.window_title_template.clone(), s.settings.chat_list_template.clone());
 		settings_parts_ok.read_chat_settings(&mut s.settings);
 		let show_locked_btn = crate::ui::message_display::locked_chats_button_shown(&s);
@@ -3199,7 +3199,7 @@ pub fn bind_input_handlers(
 		}
 		crate::calls::audio::set_call_raw_audio(s.settings.call_raw_audio);
 		crate::calls::audio::set_call_stereo_send(s.settings.call_stereo);
-		let language_changed = crate::i18n::is_indonesian() != old_effective_id;
+		let language_changed = crate::i18n::current_language() != old_language;
 		crate::ui::spell_check::configure(s.settings.spell_check, &s.settings.spell_language);
 		if s.settings.theme != old_theme {
 			let theme = s.settings.theme;

@@ -5077,6 +5077,15 @@ msgstr "In {}"
 msgid "{} unread messages"
 msgstr "{} messaggi non letti"
 
+msgid "No unread messages"
+msgstr "Nessun messaggio non letto"
+
+msgid "1 unread chat in other accounts"
+msgstr "1 chat non letta in altri account"
+
+msgid "{} unread chats in other accounts"
+msgstr "{} chat non lette in altri account"
+
 msgid "{} reacted with {} to: {}"
 msgstr "{} ha reagito con {} a: {}"
 

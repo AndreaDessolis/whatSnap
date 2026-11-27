@@ -32,23 +32,27 @@ struct WxStdCatalogLoader;
 
 impl wxdragon::translations::TranslationsLoader for WxStdCatalogLoader {
 	fn load_catalog(&self, domain: &str, lang: &str) -> Option<std::borrow::Cow<'_, [u8]>> {
-		if (domain == "wxstd" || domain.starts_with("wxstd-")) && (lang == "id" || lang.starts_with("id_")) {
-			Some(std::borrow::Cow::Borrowed(crate::i18n::WXSTD_ID_MO))
+		if domain == "wxstd" || domain.starts_with("wxstd-") {
+			crate::i18n::wxstd_catalog(lang).map(std::borrow::Cow::Borrowed)
 		} else {
 			None
 		}
 	}
 
 	fn available_translations(&self, domain: &str) -> Vec<String> {
-		if domain == "wxstd" || domain.starts_with("wxstd-") { vec!["id".to_string()] } else { Vec::new() }
+		if domain == "wxstd" || domain.starts_with("wxstd-") {
+			crate::i18n::STOCK_DIALOG_LANGUAGES.iter().map(|code| code.to_string()).collect()
+		} else {
+			Vec::new()
+		}
 	}
 }
 
 pub(crate) fn init_wx_translations() {
 	let translations = wxdragon::translations::Translations::new();
-	if crate::i18n::is_indonesian() {
+	if let Some(code) = crate::i18n::stock_dialog_language() {
 		translations.set_loader(WxStdCatalogLoader);
-		translations.set_language_str("id");
+		translations.set_language_str(code);
 		let _ = translations.add_std_catalog();
 	}
 	translations.set_global();

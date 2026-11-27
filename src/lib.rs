@@ -1806,9 +1806,9 @@ pub const TRAY_APP_NAME: &str = "whatSnap";
 /// icon stutter its own name.
 pub fn tray_tooltip_text(unread: u64) -> String {
 	match unread {
-		0 => "No unread messages".to_string(),
-		1 => "1 unread message".to_string(),
-		n => format!("{} unread messages", n),
+		0 => i18n::tr("No unread messages").to_string(),
+		1 => i18n::tr("1 unread message").to_string(),
+		n => i18n::tr_fmt("{} unread messages", &[&n]),
 	}
 }
 
@@ -1817,8 +1817,8 @@ pub fn tray_tooltip_text(unread: u64) -> String {
 pub fn unread_elsewhere_text(chats: usize) -> Option<String> {
 	match chats {
 		0 => None,
-		1 => Some("1 unread chat in other accounts".to_string()),
-		n => Some(format!("{n} unread chats in other accounts")),
+		1 => Some(i18n::tr("1 unread chat in other accounts").to_string()),
+		n => Some(i18n::tr_fmt("{} unread chats in other accounts", &[&n])),
 	}
 }
 

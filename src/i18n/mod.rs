@@ -11,12 +11,34 @@ pub use backend::{translate_backend_message, translate_rich_message_text, transl
 pub use countries::{translate_country_entry, translate_country_name};
 
 const PATOIS_ID_MO_DEFLATE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/patois_id.mo.deflate"));
-pub const WXSTD_ID_MO: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/wxstd_id.mo"));
+const PATOIS_IT_MO_DEFLATE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/patois_it.mo.deflate"));
+const WXSTD_ID_MO: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/wxstd_id.mo"));
+const WXSTD_IT_MO: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/wxstd_it.mo"));
+
+/// The languages the stock wxWidgets, wx-utils and ship-shape dialogs (update
+/// checks, shortcut editing, Yes/No buttons) are translated into, from the
+/// tables in build.rs.
+pub const STOCK_DIALOG_LANGUAGES: [&str; 2] = ["id", "it"];
+
+/// The stock wxWidgets catalog for `lang` ("it", "it_IT"...), if there is one.
+pub fn wxstd_catalog(lang: &str) -> Option<&'static [u8]> {
+	match lang.split(['_', '-']).next() {
+		Some("id") => Some(WXSTD_ID_MO),
+		Some("it") => Some(WXSTD_IT_MO),
+		_ => None,
+	}
+}
+
+/// The language the stock dialogs should use, when they have a catalog for the app language.
+pub fn stock_dialog_language() -> Option<&'static str> {
+	let code = current_language().as_str();
+	STOCK_DIALOG_LANGUAGES.contains(&code).then_some(code)
+}
 
 patois::inventory::submit! {
 	patois::EmbeddedDomain {
 		name: "whatsnap",
-		files: &[("id", PATOIS_ID_MO_DEFLATE)],
+		files: &[("id", PATOIS_ID_MO_DEFLATE), ("it", PATOIS_IT_MO_DEFLATE)],
 	}
 }
 
@@ -77,7 +99,7 @@ pub fn set_language(choice: LanguageChoice) {
 	let index = po::catalog_index(&code).map_or(0, |i| i + 1);
 	ACTIVE_LANG.store(index, Ordering::Relaxed);
 	patois::set_default_domain("whatsnap");
-	patois::set_locale(if index > 0 && code == "id" { "id" } else { "en" });
+	patois::set_locale(stock_dialog_language().unwrap_or("en"));
 }
 
 pub fn is_indonesian() -> bool {
@@ -188,6 +210,17 @@ mod tests {
 	#[test]
 	fn tr_fmt_fills_placeholders_in_order() {
 		assert_eq!(tr_fmt("{} of {}", &[&1, &"two"]), "1 of two");
+	}
+
+	#[test]
+	fn stock_dialogs_have_a_catalog_for_each_listed_language() {
+		for code in STOCK_DIALOG_LANGUAGES {
+			assert!(wxstd_catalog(code).is_some(), "{code}");
+			assert!(po::catalog_index(code).is_some(), "{code} has no po file");
+		}
+		assert!(wxstd_catalog("it_IT").is_some());
+		assert!(wxstd_catalog("id-ID").is_some());
+		assert!(wxstd_catalog("de").is_none());
 	}
 
 	#[test]
