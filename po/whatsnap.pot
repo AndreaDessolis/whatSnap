@@ -20,6 +20,15 @@ msgstr ""
 msgid " (Super Admin)"
 msgstr ""
 
+msgid " (including "
+msgstr ""
+
+msgid " (including 1 guest)"
+msgstr ""
+
+msgid " 1 vote"
+msgstr ""
+
 msgid " Downloading {} more."
 msgstr ""
 
@@ -29,22 +38,52 @@ msgstr ""
 msgid " You can send up to {} files at once; {} files weren't sent."
 msgstr ""
 
+msgid " You can't go."
+msgstr ""
+
 msgid " You liked this."
 msgstr ""
 
 msgid " You reacted {}."
 msgstr ""
 
+msgid " You said maybe."
+msgstr ""
+
+msgid " You're going."
+msgstr ""
+
 msgid " and "
 msgstr ""
 
+msgid " can't go."
+msgstr ""
+
+msgid " going"
+msgstr ""
+
+msgid " guests)"
+msgstr ""
+
 msgid " in {}"
+msgstr ""
+
+msgid " maybe, "
+msgstr ""
+
+msgid " people voted"
 msgstr ""
 
 msgid " started by {}"
 msgstr ""
 
 msgid " to "
+msgstr ""
+
+msgid " votes"
+msgstr ""
+
+msgid " votes in all"
 msgstr ""
 
 msgid " {} couldn't be saved."
@@ -497,6 +536,9 @@ msgstr ""
 msgid ", only works on your phone"
 msgstr ""
 
+msgid ", out of stock"
+msgstr ""
+
 msgid ", phone number {}"
 msgstr ""
 
@@ -539,6 +581,12 @@ msgstr ""
 msgid ". In progress, press Enter to return to it"
 msgstr ""
 
+msgid ". No votes yet"
+msgstr ""
+
+msgid ". No votes yet."
+msgstr ""
+
 msgid "0 selected"
 msgstr ""
 
@@ -578,6 +626,9 @@ msgstr ""
 msgid "1 option"
 msgstr ""
 
+msgid "1 person voted"
+msgstr ""
+
 msgid "1 reaction"
 msgstr ""
 
@@ -594,6 +645,9 @@ msgid "1 view"
 msgstr ""
 
 msgid "1 vote"
+msgstr ""
+
+msgid "1 vote in all"
 msgstr ""
 
 msgid "30 seconds reached. Recording stopped."
@@ -725,6 +779,18 @@ msgstr ""
 msgid "Adding {}..."
 msgstr ""
 
+msgid "Admin invite cancelled."
+msgstr ""
+
+msgid "Admin invite sent."
+msgstr ""
+
+msgid "Admin invites sent to {} people."
+msgstr ""
+
+msgid "Admin removed."
+msgstr ""
+
 msgid "Advanced & Blocked Contacts"
 msgstr ""
 
@@ -789,6 +855,9 @@ msgid "Also save to my phone's WhatsApp contacts"
 msgstr ""
 
 msgid "Always show the Locked Chats button, even when locked chats are hidden on the phone"
+msgstr ""
+
+msgid "An option added to a poll was removed"
 msgstr ""
 
 msgid "An option is too long. Each option allows up to 100 characters."
@@ -1112,6 +1181,9 @@ msgstr ""
 msgid "Calls"
 msgstr ""
 
+msgid "Calls aren't available yet."
+msgstr ""
+
 msgid "Camera"
 msgstr ""
 
@@ -1131,6 +1203,21 @@ msgid "Camera on."
 msgstr ""
 
 msgid "Can't connect to WhatsApp."
+msgstr ""
+
+msgid "Can't create the event: {}"
+msgstr ""
+
+msgid "Can't pin this post: it hasn't finished loading from the channel."
+msgstr ""
+
+msgid "Can't reach WhatsApp. Check your internet connection."
+msgstr ""
+
+msgid "Can't react to this post: it hasn't finished loading from the channel."
+msgstr ""
+
+msgid "Can't vote in this poll: it hasn't finished loading from the channel."
 msgstr ""
 
 msgid "Cancel"
@@ -1215,6 +1302,15 @@ msgid "Channel info"
 msgstr ""
 
 msgid "Channel name"
+msgstr ""
+
+msgid "Channel picture changed."
+msgstr ""
+
+msgid "Channel picture removed."
+msgstr ""
+
+msgid "Channel updated."
 msgstr ""
 
 msgid "Channel {} created."
@@ -1326,6 +1422,9 @@ msgid "Choose Theme"
 msgstr ""
 
 msgid "Choose Who Can See My Status Updates..."
+msgstr ""
+
+msgid "Choose a date and a time for the message."
 msgstr ""
 
 msgid "Choose a folder to save the files into"
@@ -1574,16 +1673,88 @@ msgstr ""
 msgid "Could not register the call key {}; another program is using it"
 msgstr ""
 
+msgid "Could not start pairing: {}"
+msgstr ""
+
+msgid "Couldn't accept the invite: {}"
+msgstr ""
+
 msgid "Couldn't add an account: {}"
 msgstr ""
 
 msgid "Couldn't add that person to the call."
 msgstr ""
 
+msgid "Couldn't add {}"
+msgstr ""
+
+msgid "Couldn't add {}: WhatsApp hasn't sent the call details needed to invite someone yet. Try again in a moment."
+msgstr ""
+
+msgid "Couldn't add {}: the call is full."
+msgstr ""
+
+msgid "Couldn't add {}: they have no device that can take a call."
+msgstr ""
+
+msgid "Couldn't answer the event: {}"
+msgstr ""
+
+msgid "Couldn't answer the join requests: {}"
+msgstr ""
+
 msgid "Couldn't be scheduled, {}: {}"
 msgstr ""
 
 msgid "Couldn't block {}: {}"
+msgstr ""
+
+msgid "Couldn't cancel the invite: {}"
+msgstr ""
+
+msgid "Couldn't change a group setting: {}"
+msgstr ""
+
+msgid "Couldn't change advanced chat privacy: {}"
+msgstr ""
+
+msgid "Couldn't change disappearing messages: {}"
+msgstr ""
+
+msgid "Couldn't change link previews: {}"
+msgstr ""
+
+msgid "Couldn't change muted status updates: {}"
+msgstr ""
+
+msgid "Couldn't change the channel's admins: {}"
+msgstr ""
+
+msgid "Couldn't change the channel: {}"
+msgstr ""
+
+msgid "Couldn't change the default message timer: {}"
+msgstr ""
+
+msgid "Couldn't change this channel's mute setting: {}"
+msgstr ""
+
+msgid "Couldn't change who sees your status: {}"
+msgstr ""
+
+msgid "Couldn't change your favorite stickers: {}"
+msgstr ""
+
+msgid "Couldn't change your profile photo: {}"
+msgstr ""
+
+msgid "Couldn't change your tag: {}"
+msgstr ""
+
+msgid "Couldn't complete the secure connection to WhatsApp."
+msgstr ""
+
+msgid "Couldn't connect to WhatsApp."
 msgstr ""
 
 msgid "Couldn't copy the code."
@@ -1595,16 +1766,154 @@ msgstr ""
 msgid "Couldn't copy to clipboard."
 msgstr ""
 
+msgid "Couldn't create the call link: {}"
+msgstr ""
+
+msgid "Couldn't create the channel: {}"
+msgstr ""
+
+msgid "Couldn't create the community: {}"
+msgstr ""
+
+msgid "Couldn't deactivate the community: {}"
+msgstr ""
+
+msgid "Couldn't delete scheduled message."
+msgstr ""
+
+msgid "Couldn't delete scheduled message. Connect to the internet and try again."
+msgstr ""
+
+msgid "Couldn't delete the channel: {}"
+msgstr ""
+
+msgid "Couldn't delete the contact: {}"
+msgstr ""
+
+msgid "Couldn't delete the status: {}"
+msgstr ""
+
+msgid "Couldn't find this channel."
+msgstr ""
+
+msgid "Couldn't forward the media: {}"
+msgstr ""
+
+msgid "Couldn't get the invite link: {}"
+msgstr ""
+
 msgid "Couldn't get the security code with {}. {}"
+msgstr ""
+
+msgid "Couldn't join the call: {}"
+msgstr ""
+
+msgid "Couldn't join this group: its community isn't known. Open the community's groups list and try again."
+msgstr ""
+
+msgid "Couldn't join this group: {}"
+msgstr ""
+
+msgid "Couldn't keep the message: {}"
+msgstr ""
+
+msgid "Couldn't like the status: {}"
+msgstr ""
+
+msgid "Couldn't load WhatsApp's sticker packs: {}"
+msgstr ""
+
+msgid "Couldn't load channels: {}"
+msgstr ""
+
+msgid "Couldn't load member changes: {}"
+msgstr ""
+
+msgid "Couldn't load reported messages: {}"
+msgstr ""
+
+msgid "Couldn't load similar channels: {}"
+msgstr ""
+
+msgid "Couldn't load the catalogue. This business may not have one."
+msgstr ""
+
+msgid "Couldn't load the channel's followers: {}"
+msgstr ""
+
+msgid "Couldn't load the community's groups: {}"
+msgstr ""
+
+msgid "Couldn't load the group's members to mention: {}"
+msgstr ""
+
+msgid "Couldn't load the group: {}"
+msgstr ""
+
+msgid "Couldn't load the groups in common: {}"
+msgstr ""
+
+msgid "Couldn't load the join requests: {}"
+msgstr ""
+
+msgid "Couldn't load the order's details."
+msgstr ""
+
+msgid "Couldn't load the pending admin invites: {}"
+msgstr ""
+
+msgid "Couldn't load the pinned messages."
+msgstr ""
+
+msgid "Couldn't load this channel's posts: {}"
+msgstr ""
+
+msgid "Couldn't load this channel: {}"
+msgstr ""
+
+msgid "Couldn't load this sticker pack."
+msgstr ""
+
+msgid "Couldn't load who reacted: {}"
+msgstr ""
+
+msgid "Couldn't load who voted: {}"
 msgstr ""
 
 msgid "Couldn't load who's excluded from {} right now, so it can't be changed. Try again later. ({})"
 msgstr ""
 
+msgid "Couldn't load your groups: {}"
+msgstr ""
+
 msgid "Couldn't mark {} as read. Check your connection and try again."
 msgstr ""
 
+msgid "Couldn't open this invite link: {}"
+msgstr ""
+
+msgid "Couldn't pin: {}"
+msgstr ""
+
+msgid "Couldn't react to the status: {}"
+msgstr ""
+
+msgid "Couldn't react: {}"
+msgstr ""
+
+msgid "Couldn't read the group's settings: {}"
+msgstr ""
+
 msgid "Couldn't receive video from"
+msgstr ""
+
+msgid "Couldn't recover this message's text to send it now."
+msgstr ""
+
+msgid "Couldn't refresh WhatsApp's connection token."
+msgstr ""
+
+msgid "Couldn't report to the admins: {}"
 msgstr ""
 
 msgid "Couldn't restart whatSnap automatically:\n{}\n\nPlease close and reopen the app manually."
@@ -1613,10 +1922,31 @@ msgstr ""
 msgid "Couldn't save the contact: {}"
 msgstr ""
 
+msgid "Couldn't save the excluded contacts: {}"
+msgstr ""
+
 msgid "Couldn't save the file: {}"
 msgstr ""
 
+msgid "Couldn't send an admin invite to {}"
+msgstr ""
+
 msgid "Couldn't send the message history."
+msgstr ""
+
+msgid "Couldn't send the message history: {}"
+msgstr ""
+
+msgid "Couldn't send the report: {}"
+msgstr ""
+
+msgid "Couldn't send the sticker: {}"
+msgstr ""
+
+msgid "Couldn't send the vote: {}"
+msgstr ""
+
+msgid "Couldn't send your answer: {}"
 msgstr ""
 
 msgid "Couldn't share the screen on this call."
@@ -1637,7 +1967,22 @@ msgstr ""
 msgid "Couldn't unblock {}: {}"
 msgstr ""
 
+msgid "Couldn't update participant(s): {}"
+msgstr ""
+
+msgid "Couldn't use that photo: {}"
+msgstr ""
+
+msgid "Couldn't use the picture: {}"
+msgstr ""
+
+msgid "Couldn't vote: {}"
+msgstr ""
+
 msgid "Couldn't work out when this message can be scheduled."
+msgstr ""
+
+msgid "Couldn't {}"
 msgstr ""
 
 msgid "Country:"
@@ -1865,6 +2210,12 @@ msgstr ""
 msgid "Discard voice message"
 msgstr ""
 
+msgid "Disconnected: Connection lost. Attempting to reconnect..."
+msgstr ""
+
+msgid "Disconnected: Logged out from primary device."
+msgstr ""
+
 msgid "Dismiss"
 msgstr ""
 
@@ -2057,6 +2408,9 @@ msgstr ""
 msgid "Event name"
 msgstr ""
 
+msgid "Events can't be posted in channels."
+msgstr ""
+
 msgid "Exit fullscreen"
 msgstr ""
 
@@ -2070,6 +2424,12 @@ msgid "Export chat as"
 msgstr ""
 
 msgid "Export chat text as"
+msgstr ""
+
+msgid "Export failed while finalizing archive: {}"
+msgstr ""
+
+msgid "Export failed: {}"
 msgstr ""
 
 msgid "Export just the message text as a Markdown file, no media"
@@ -2093,16 +2453,34 @@ msgstr ""
 msgid "Failed to answer call."
 msgstr ""
 
+msgid "Failed to answer call: {}"
+msgstr ""
+
+msgid "Failed to clear chat: {}"
+msgstr ""
+
 msgid "Failed to copy file to clipboard."
 msgstr ""
 
+msgid "Failed to delete chat: {}"
+msgstr ""
+
 msgid "Failed to format settings:\n{}"
+msgstr ""
+
+msgid "Failed to leave group: {}"
+msgstr ""
+
+msgid "Failed to parse message protobuf for forwarding"
 msgstr ""
 
 msgid "Failed to parse settings"
 msgstr ""
 
 msgid "Failed to place call."
+msgstr ""
+
+msgid "Failed to post status: {}"
 msgstr ""
 
 msgid "Failed to read backup file:\n{}"
@@ -2112,6 +2490,9 @@ msgid "Failed to resume recording."
 msgstr ""
 
 msgid "Failed to send"
+msgstr ""
+
+msgid "Failed to send QR image"
 msgstr ""
 
 msgid "Failed to start audio stream."
@@ -2240,6 +2621,9 @@ msgstr ""
 msgid "Group call ringtone"
 msgstr ""
 
+msgid "Group created"
+msgstr ""
+
 msgid "Group description"
 msgstr ""
 
@@ -2247,6 +2631,9 @@ msgid "Group invite link"
 msgstr ""
 
 msgid "Group name"
+msgstr ""
+
+msgid "Group name changed to \"{}\""
 msgstr ""
 
 msgid "Group name is required."
@@ -2528,6 +2915,9 @@ msgstr ""
 msgid "Left group {}."
 msgstr ""
 
+msgid "Left the group, but failed to delete the chat: {}"
+msgstr ""
+
 msgid "Let in"
 msgstr ""
 
@@ -2673,6 +3063,12 @@ msgid "Log {} out of WhatsApp on this computer? You'll need to scan a QR code or
 msgstr ""
 
 msgid "Logged Out"
+msgstr ""
+
+msgid "Logged out from primary device."
+msgstr ""
+
+msgid "Logout failed: {}"
 msgstr ""
 
 msgid "Looking for chats, contacts or messages…"
@@ -2846,6 +3242,12 @@ msgstr ""
 msgid "Message kept."
 msgstr ""
 
+msgid "Message not found for forwarding"
+msgstr ""
+
+msgid "Message not found for retry"
+msgstr ""
+
 msgid "Message notification tone"
 msgstr ""
 
@@ -2874,6 +3276,9 @@ msgid "Messages"
 msgstr ""
 
 msgid "Messages can only be scheduled in one-on-one chats and groups."
+msgstr ""
+
+msgid "Messages can't be scheduled in this chat."
 msgstr ""
 
 msgid "Messages members reported to the admins"
@@ -3170,6 +3575,9 @@ msgstr ""
 msgid "No response - the call could not be answered."
 msgstr ""
 
+msgid "No responses yet."
+msgstr ""
+
 msgid "No results"
 msgstr ""
 
@@ -3200,6 +3608,9 @@ msgstr ""
 msgid "No unread messages"
 msgstr ""
 
+msgid "No votes yet"
+msgstr ""
+
 msgid "No votes yet."
 msgstr ""
 
@@ -3216,6 +3627,12 @@ msgid "Not available"
 msgstr ""
 
 msgid "Not in your contacts"
+msgstr ""
+
+msgid "Not on WhatsApp or query failed"
+msgstr ""
+
+msgid "Not responding."
 msgstr ""
 
 msgid "Not set"
@@ -3281,6 +3698,12 @@ msgstr ""
 msgid "Only contacts can be blocked."
 msgstr ""
 
+msgid "Only group admins can see this group's invite link."
+msgstr ""
+
+msgid "Only this channel's admins can post in it."
+msgstr ""
+
 msgid "Open"
 msgstr ""
 
@@ -3344,7 +3767,13 @@ msgstr ""
 msgid "Open your chat with this member"
 msgstr ""
 
+msgid "Options were removed from a poll"
+msgstr ""
+
 msgid "Options, one per line (2 to 12)"
+msgstr ""
+
+msgid "Options: "
 msgstr ""
 
 msgid "Order"
@@ -3386,6 +3815,9 @@ msgstr ""
 msgid "Overview"
 msgstr ""
 
+msgid "Ownership handed over. You're now an admin."
+msgstr ""
+
 msgid "P&oll"
 msgstr ""
 
@@ -3398,7 +3830,13 @@ msgstr ""
 msgid "Pairing code updated: {}"
 msgstr ""
 
+msgid "Pairing failed: {}"
+msgstr ""
+
 msgid "Parse error: {} for json: {}"
+msgstr ""
+
+msgid "Participant {} is not on WhatsApp"
 msgstr ""
 
 msgid "Pasted files"
@@ -3441,6 +3879,12 @@ msgid "Personalization"
 msgstr ""
 
 msgid "Phone Number"
+msgstr ""
+
+msgid "Phone could not re-upload the expired media"
+msgstr ""
+
+msgid "Phone could not re-upload the media"
 msgstr ""
 
 msgid "Phone number must have at least 7 digits."
@@ -3596,7 +4040,13 @@ msgstr ""
 msgid "Post Voice Status"
 msgstr ""
 
+msgid "Post pinned."
+msgstr ""
+
 msgid "Post text status. Type your status update, press Next Colour or Next Font to style, or Ctrl+Enter to post."
+msgstr ""
+
+msgid "Post unpinned."
 msgstr ""
 
 msgid "Post voice status. Press Record to start, then Stop, then Post Status or Ctrl+Enter."
@@ -3786,6 +4236,9 @@ msgid "Recent Calls"
 msgstr ""
 
 msgid "Recent calls"
+msgstr ""
+
+msgid "Recent message history was shared with {}"
 msgstr ""
 
 msgid "Recent updates"
@@ -4571,6 +5024,9 @@ msgstr ""
 msgid "Similar channels..."
 msgstr ""
 
+msgid "Some participants have privacy settings that prevent being added directly. An invite link was sent to them instead."
+msgstr ""
+
 msgid "Someone"
 msgstr ""
 
@@ -4850,7 +5306,13 @@ msgstr ""
 msgid "Text that turns into emoji"
 msgstr ""
 
+msgid "That call has already ended."
+msgstr ""
+
 msgid "That call has ended."
+msgstr ""
+
+msgid "That call is no longer available."
 msgstr ""
 
 msgid "That is not a date. Use year-month-day, like 2026-03-27."
@@ -4859,13 +5321,31 @@ msgstr ""
 msgid "That isn't a WhatsApp call link."
 msgstr ""
 
+msgid "That isn't a sticker that can be added to favorites."
+msgstr ""
+
 msgid "That message isn't on this computer, so it can't be shown."
+msgstr ""
+
+msgid "That scheduled message is already gone."
+msgstr ""
+
+msgid "That status update isn't here any more."
+msgstr ""
+
+msgid "The answer is "
 msgstr ""
 
 msgid "The camera isn't ready yet - wait for the call to connect."
 msgstr ""
 
 msgid "The channel"
+msgstr ""
+
+msgid "The community \"{}\" was deactivated"
+msgstr ""
+
+msgid "The community was created, but its description couldn't be set: {}"
 msgstr ""
 
 msgid "The file does not appear to contain whatSnap settings"
@@ -4880,7 +5360,13 @@ msgstr ""
 msgid "The notification tone is shared with WhatsApp on your other computers, unless it is a custom sound file; the rest only change this computer. To mute this chat on all your devices, use Mute in its menu."
 msgstr ""
 
+msgid "The original file is no longer available to retry."
+msgstr ""
+
 msgid "The other person"
+msgstr ""
+
+msgid "The pairing code expired. Ask for a new one to try again."
 msgstr ""
 
 msgid "The question is too long. Polls allow up to 255 characters."
@@ -4899,6 +5385,9 @@ msgid "The {} has a mistake: {}"
 msgstr ""
 
 msgid "Theme"
+msgstr ""
+
+msgid "There's no one else in this group to call."
 msgstr ""
 
 msgid "These apply while another account is on screen. Each chat's own notification settings still count, and the account on screen always uses the normal settings."
@@ -4925,10 +5414,40 @@ msgstr ""
 msgid "This contact can't be displayed in whatSnap. Download it to open it with another app on your computer?"
 msgstr ""
 
+msgid "This contact card can't be opened here."
+msgstr ""
+
 msgid "This copy of whatSnap doesn't include the Share menu helper. Reinstall whatSnap and try again."
 msgstr ""
 
+msgid "This event can't be opened here."
+msgstr ""
+
+msgid "This event was cancelled."
+msgstr ""
+
 msgid "This group"
+msgstr ""
+
+msgid "This group invite has expired."
+msgstr ""
+
+msgid "This group needs an admin to approve new members. Your request to join was sent."
+msgstr ""
+
+msgid "This group was added to the community \"{}\""
+msgstr ""
+
+msgid "This group was removed from the community \"{}\""
+msgstr ""
+
+msgid "This invite is no longer valid: {}"
+msgstr ""
+
+msgid "This invite link isn't valid."
+msgstr ""
+
+msgid "This invite link was reset by a group admin and no longer works."
 msgstr ""
 
 msgid "This invite to be an admin of {} has expired."
@@ -4946,16 +5465,31 @@ msgstr ""
 msgid "This is the start of the chat."
 msgstr ""
 
+msgid "This kind of message can't be forwarded."
+msgstr ""
+
 msgid "This message can no longer be edited - the 15 minute edit window has passed."
 msgstr ""
 
 msgid "This message can no longer be edited - the 30 day edit window has passed."
 msgstr ""
 
+msgid "This message can only be forwarded to {} chat(s) at a time."
+msgstr ""
+
+msgid "This message has no buttons."
+msgstr ""
+
+msgid "This message isn't a contact card."
+msgstr ""
+
 msgid "This message was deleted"
 msgstr ""
 
 msgid "This message will not be sent. This action cannot be undone."
+msgstr ""
+
+msgid "This message's buttons can't be opened here."
 msgstr ""
 
 msgid "This pack has no stickers."
@@ -4970,10 +5504,25 @@ msgstr ""
 msgid "This photo couldn't be shown."
 msgstr ""
 
+msgid "This poll can't be opened here."
+msgstr ""
+
+msgid "This poll hasn't finished loading from the channel."
+msgstr ""
+
+msgid "This post hasn't finished loading from the channel."
+msgstr ""
+
+msgid "This version of whatSnap is outdated. Please update it."
+msgstr ""
+
 msgid "This video's format can't be played here."
 msgstr ""
 
 msgid "Thursday"
+msgstr ""
+
+msgid "Timeout waiting for phone to re-upload media"
 msgstr ""
 
 msgid "Today"
@@ -5240,6 +5789,12 @@ msgstr ""
 msgid "View once"
 msgstr ""
 
+msgid "View once media opens outside the viewer."
+msgstr ""
+
+msgid "View once messages can't be forwarded."
+msgstr ""
+
 msgid "View once voice message sent."
 msgstr ""
 
@@ -5354,6 +5909,9 @@ msgstr ""
 msgid "Votes: {}"
 msgstr ""
 
+msgid "Wait for the call to connect before adding someone."
+msgstr ""
+
 msgid "Waiting call declined."
 msgstr ""
 
@@ -5402,7 +5960,16 @@ msgstr ""
 msgid "WhatsApp Name"
 msgstr ""
 
+msgid "WhatsApp error 479: Failed to delete for everyone. The message key mismatch or the revoke time limit expired."
+msgstr ""
+
+msgid "WhatsApp has rejected this version of whatSnap as outdated. Please update whatSnap to reconnect."
+msgstr ""
+
 msgid "WhatsApp hasn't shared this person's phone number, so they can't be saved as a contact."
+msgstr ""
+
+msgid "WhatsApp hasn't turned on pinning channel posts for your account yet."
 msgstr ""
 
 msgid "WhatsApp hasn't turned on scheduling messages for your account yet."
@@ -5486,16 +6053,28 @@ msgstr ""
 msgid "You"
 msgstr ""
 
+msgid "You added this group to the community \"{}\""
+msgstr ""
+
+msgid "You added {}"
+msgstr ""
+
 msgid "You are already on a call. End the current call before placing a new one."
 msgstr ""
 
 msgid "You aren't an admin of any group that could be added. A group can be in one community at a time."
 msgstr ""
 
+msgid "You blocked this contact."
+msgstr ""
+
 msgid "You blocked this contact. Click to unblock."
 msgstr ""
 
 msgid "You blocked {}. Unblock them to message or call them?"
+msgstr ""
+
+msgid "You can only forward to channels you run."
 msgstr ""
 
 msgid "You can only send to {} chats at once. {} not selected."
@@ -5507,6 +6086,9 @@ msgstr ""
 msgid "You can send up to {} files at once; {} files weren't added."
 msgstr ""
 
+msgid "You can't add yourself to the call."
+msgstr ""
+
 msgid "You can't send messages to this group because you're no longer a member"
 msgstr ""
 
@@ -5514,6 +6096,48 @@ msgid "You can't send messages to this group because you're no longer a member."
 msgstr ""
 
 msgid "You cannot send messages to this chat."
+msgstr ""
+
+msgid "You changed the group description"
+msgstr ""
+
+msgid "You changed the group name to \"{}\""
+msgstr ""
+
+msgid "You changed this group's icon"
+msgstr ""
+
+msgid "You changed this group's settings to allow all members to add others to this group"
+msgstr ""
+
+msgid "You changed this group's settings to allow all members to edit this group's info"
+msgstr ""
+
+msgid "You changed this group's settings to allow all members to send messages to this group"
+msgstr ""
+
+msgid "You changed this group's settings to allow only admins to add others to this group"
+msgstr ""
+
+msgid "You changed this group's settings to allow only admins to edit this group's info"
+msgstr ""
+
+msgid "You changed this group's settings to allow only admins to send messages to this group"
+msgstr ""
+
+msgid "You created the group"
+msgstr ""
+
+msgid "You created this group"
+msgstr ""
+
+msgid "You deleted the group description"
+msgstr ""
+
+msgid "You deleted this group"
+msgstr ""
+
+msgid "You deleted this group's icon"
 msgstr ""
 
 msgid "You deleted this message"
@@ -5525,10 +6149,28 @@ msgstr ""
 msgid "You follow this channel"
 msgstr ""
 
+msgid "You got it right: the answer is "
+msgstr ""
+
 msgid "You have no locked chats"
 msgstr ""
 
+msgid "You have reached the maximum number of messages you can schedule."
+msgstr ""
+
 msgid "You invited {} to be an admin of {}. Cancel this invite?"
+msgstr ""
+
+msgid "You joined"
+msgstr ""
+
+msgid "You joined the group"
+msgstr ""
+
+msgid "You joined using this group's invite link"
+msgstr ""
+
+msgid "You left"
 msgstr ""
 
 msgid "You left the group."
@@ -5537,10 +6179,73 @@ msgstr ""
 msgid "You lowered your hand."
 msgstr ""
 
+msgid "You made {} a group admin"
+msgstr ""
+
+msgid "You must configure a Secret Code for Chat Lock on your primary phone before you can lock or unlock chats from this device."
+msgstr ""
+
 msgid "You own this channel"
 msgstr ""
 
+msgid "You pinned a message"
+msgstr ""
+
 msgid "You reacted {}."
+msgstr ""
+
+msgid "You received a view once message. For added privacy, you can only open it on your phone."
+msgstr ""
+
+msgid "You removed an option that was added to a poll"
+msgstr ""
+
+msgid "You removed options from a poll"
+msgstr ""
+
+msgid "You removed this group from the community \"{}\""
+msgstr ""
+
+msgid "You removed {}"
+msgstr ""
+
+msgid "You removed {} as group admin"
+msgstr ""
+
+msgid "You reset this group's invite link"
+msgstr ""
+
+msgid "You scheduled a message"
+msgstr ""
+
+msgid "You sent a view once message from another device."
+msgstr ""
+
+msgid "You shared recent message history"
+msgstr ""
+
+msgid "You shared recent message history with {}"
+msgstr ""
+
+msgid "You turned off admin approval to join this group"
+msgstr ""
+
+msgid "You turned off advanced chat privacy"
+msgstr ""
+
+msgid "You turned off disappearing messages."
+msgstr ""
+
+msgid "You turned on admin approval to join this group"
+msgstr ""
+
+msgid "You turned on advanced chat privacy"
+msgstr ""
+
+msgid "You turned on disappearing messages. New messages will disappear from this chat {} after they're sent."
+msgstr ""
+
+msgid "You unblocked this contact."
 msgstr ""
 
 msgid "You're all caught up."
@@ -5552,13 +6257,25 @@ msgstr ""
 msgid "You're an admin of this channel"
 msgstr ""
 
+msgid "You're now an admin of this channel."
+msgstr ""
+
 msgid "You're sharing a window:"
 msgstr ""
 
 msgid "You're sharing your screen."
 msgstr ""
 
+msgid "You've already answered this quiz."
+msgstr ""
+
 msgid "You've already answered this quiz: {}."
+msgstr ""
+
+msgid "You've already opened this view once message."
+msgstr ""
+
+msgid "You've already played this view once voice message."
 msgstr ""
 
 msgid "You: "
@@ -5612,6 +6329,9 @@ msgstr ""
 msgid "Your screen is visible to the others now."
 msgstr ""
 
+msgid "Your security code with {} changed."
+msgstr ""
+
 msgid "Your status update can't exceed 700 characters or 10 lines."
 msgstr ""
 
@@ -5636,7 +6356,118 @@ msgstr ""
 msgid "Zip archive (*.zip)|*.zip"
 msgstr ""
 
+msgid "[Asked for your phone number]"
+msgstr ""
+
+msgid "[Audio]"
+msgstr ""
+
+msgid "[Audio] {}"
+msgstr ""
+
+msgid "[Channel Admin Invite]"
+msgstr ""
+
+msgid "[Channel Admin Invite] {}"
+msgstr ""
+
+msgid "[Channel Invite]"
+msgstr ""
+
+msgid "[Channel Invite] {}"
+msgstr ""
+
+msgid "[Event cancelled]"
+msgstr ""
+
+msgid "[Event cancelled] {}"
+msgstr ""
+
+msgid "[Event]"
+msgstr ""
+
+msgid "[Event] {}"
+msgstr ""
+
+msgid "[Group Invite]"
+msgstr ""
+
+msgid "[Group Invite] {}"
+msgstr ""
+
+msgid "[Mentioned you in a status update]"
+msgstr ""
+
+msgid "[Order]"
+msgstr ""
+
+msgid "[Order] {}"
+msgstr ""
+
+msgid "[Payment] Open WhatsApp on your phone to see this payment."
+msgstr ""
+
+msgid "[Poll results]"
+msgstr ""
+
+msgid "[Poll results] {}"
+msgstr ""
+
+msgid "[Product]"
+msgstr ""
+
+msgid "[Product] {}"
+msgstr ""
+
+msgid "[Protocol Message]"
+msgstr ""
+
+msgid "[Reaction]"
+msgstr ""
+
+msgid "[Scheduled Call]"
+msgstr ""
+
+msgid "[Scheduled Call] {}"
+msgstr ""
+
+msgid "[Sticker Pack]"
+msgstr ""
+
+msgid "[Sticker Pack] {}"
+msgstr ""
+
+msgid "[Unsupported Message]"
+msgstr ""
+
+msgid "[Video Note]"
+msgstr ""
+
+msgid "[Video Note] {}"
+msgstr ""
+
+msgid "[View once] Opened"
+msgstr ""
+
+msgid "[View once] {}"
+msgstr ""
+
+msgid "[Voice Message]"
+msgstr ""
+
+msgid "[Voice Message] {}"
+msgstr ""
+
 msgid "a channel"
+msgstr ""
+
+msgid "a poll can have at most twelve options"
+msgstr ""
+
+msgid "a poll needs at least two options"
+msgstr ""
+
+msgid "a poll option is too long"
 msgstr ""
 
 msgid "admin"
@@ -5699,6 +6530,12 @@ msgstr ""
 msgid "in the call"
 msgstr ""
 
+msgid "invalid jid"
+msgstr ""
+
+msgid "invalid participant number(s), skipped: {}"
+msgstr ""
+
 msgid "invited"
 msgstr ""
 
@@ -5724,6 +6561,9 @@ msgid "no admins besides the owner"
 msgstr ""
 
 msgid "no one"
+msgstr ""
+
+msgid "not logged in"
 msgstr ""
 
 msgid "not selected"
@@ -5757,6 +6597,9 @@ msgid "photo"
 msgstr ""
 
 msgid "played"
+msgstr ""
+
+msgid "poll options must all be different"
 msgstr ""
 
 msgid "quoted message"
@@ -5801,6 +6644,15 @@ msgstr ""
 msgid "the group"
 msgstr ""
 
+msgid "the poll needs a question"
+msgstr ""
+
+msgid "the poll question is too long"
+msgstr ""
+
+msgid "the quiz's correct answer isn't one of its options"
+msgstr ""
+
 msgid "the screen couldn't be read"
 msgstr ""
 
@@ -5834,7 +6686,13 @@ msgstr ""
 msgid "unknown error"
 msgstr ""
 
+msgid "unknown participant action: {}"
+msgstr ""
+
 msgid "unread"
+msgstr ""
+
+msgid "user info not found"
 msgstr ""
 
 msgid "verified"
@@ -5882,10 +6740,19 @@ msgstr ""
 msgid "{} / 700 characters"
 msgstr ""
 
+msgid "{} added this group to the community \"{}\""
+msgstr ""
+
 msgid "{} added to favorites."
 msgstr ""
 
 msgid "{} added to {}."
+msgstr ""
+
+msgid "{} added you"
+msgstr ""
+
+msgid "{} added {}"
 msgstr ""
 
 msgid "{} admins"
@@ -5898,6 +6765,36 @@ msgid "{} at {}"
 msgstr ""
 
 msgid "{} blocked."
+msgstr ""
+
+msgid "{} changed the group description"
+msgstr ""
+
+msgid "{} changed the group name to \"{}\""
+msgstr ""
+
+msgid "{} changed their phone number"
+msgstr ""
+
+msgid "{} changed this group's icon"
+msgstr ""
+
+msgid "{} changed this group's settings to allow all members to add others to this group"
+msgstr ""
+
+msgid "{} changed this group's settings to allow all members to edit this group's info"
+msgstr ""
+
+msgid "{} changed this group's settings to allow all members to send messages to this group"
+msgstr ""
+
+msgid "{} changed this group's settings to allow only admins to add others to this group"
+msgstr ""
+
+msgid "{} changed this group's settings to allow only admins to edit this group's info"
+msgstr ""
+
+msgid "{} changed this group's settings to allow only admins to send messages to this group"
 msgstr ""
 
 msgid "{} channels."
@@ -5913,6 +6810,24 @@ msgid "{} contacts"
 msgstr ""
 
 msgid "{} copied: {}"
+msgstr ""
+
+msgid "{} created the group"
+msgstr ""
+
+msgid "{} created this group"
+msgstr ""
+
+msgid "{} days"
+msgstr ""
+
+msgid "{} deleted the group description"
+msgstr ""
+
+msgid "{} deleted this group"
+msgstr ""
+
+msgid "{} deleted this group's icon"
 msgstr ""
 
 msgid "{} deleted."
@@ -5954,16 +6869,31 @@ msgstr ""
 msgid "{} is already blocked."
 msgstr ""
 
+msgid "{} is already in the call."
+msgstr ""
+
 msgid "{} is back on the call."
 msgstr ""
 
 msgid "{} is calling {}."
 msgstr ""
 
+msgid "{} is no longer a group admin"
+msgstr ""
+
+msgid "{} is now a group admin"
+msgstr ""
+
 msgid "{} is now online"
 msgstr ""
 
 msgid "{} is on a phone call and can't hear you right now."
+msgstr ""
+
+msgid "{} is on in this chat, so Meta AI can't be mentioned here."
+msgstr ""
+
+msgid "{} is on in this chat, so it can't be exported."
 msgstr ""
 
 msgid "{} is recording audio..."
@@ -5978,10 +6908,22 @@ msgstr ""
 msgid "{} isn't on WhatsApp"
 msgstr ""
 
+msgid "{} joined"
+msgstr ""
+
+msgid "{} joined using this group's invite link"
+msgstr ""
+
 msgid "{} kept."
 msgstr ""
 
+msgid "{} left"
+msgstr ""
+
 msgid "{} lowered their hand."
+msgstr ""
+
+msgid "{} made {} a group admin"
 msgstr ""
 
 msgid "{} media items"
@@ -6026,6 +6968,9 @@ msgstr ""
 msgid "{} photos"
 msgstr ""
 
+msgid "{} pinned a message"
+msgstr ""
+
 msgid "{} raised their hand."
 msgstr ""
 
@@ -6044,16 +6989,40 @@ msgstr ""
 msgid "{} reactions"
 msgstr ""
 
+msgid "{} removed an option that was added to a poll"
+msgstr ""
+
 msgid "{} removed from favorites."
 msgstr ""
 
 msgid "{} removed from {}."
 msgstr ""
 
+msgid "{} removed options from a poll"
+msgstr ""
+
+msgid "{} removed this group from the community \"{}\""
+msgstr ""
+
+msgid "{} removed {}"
+msgstr ""
+
+msgid "{} removed {} as group admin"
+msgstr ""
+
+msgid "{} reset this group's invite link"
+msgstr ""
+
 msgid "{} second"
 msgstr ""
 
 msgid "{} seconds"
+msgstr ""
+
+msgid "{} shared recent message history"
+msgstr ""
+
+msgid "{} shared recent message history with {}"
 msgstr ""
 
 msgid "{} shown, {}"
@@ -6078,6 +7047,24 @@ msgid "{} to {}"
 msgstr ""
 
 msgid "{} to {}, duration {}"
+msgstr ""
+
+msgid "{} turned off admin approval to join this group"
+msgstr ""
+
+msgid "{} turned off advanced chat privacy"
+msgstr ""
+
+msgid "{} turned off disappearing messages."
+msgstr ""
+
+msgid "{} turned on admin approval to join this group"
+msgstr ""
+
+msgid "{} turned on advanced chat privacy"
+msgstr ""
+
+msgid "{} turned on disappearing messages. New messages will disappear from this chat {} after they're sent."
 msgstr ""
 
 msgid "{} unblocked."
@@ -6192,6 +7179,9 @@ msgid "{}, wants to join"
 msgstr ""
 
 msgid "{}, you declined"
+msgstr ""
+
+msgid "{}, you voted {}"
 msgstr ""
 
 msgid "{}, {} of {}"

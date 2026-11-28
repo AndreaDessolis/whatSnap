@@ -12,6 +12,7 @@ already in a .po file are never removed.
 """
 
 import glob
+import os
 import re
 import sys
 
@@ -61,8 +62,9 @@ def unescape_po(text):
 def collect_code_strings():
     found = set()
     call = re.compile(r"i18n::tr(?:_str|_fmt)?\(\s*(?:if [^{]+\{\s*(" + LIT + r")\s*\}\s*else\s*\{\s*)?(" + LIT + ")")
+    backend = os.path.join("src", "i18n", "backend.rs")
     for path in glob.glob("src/**/*.rs", recursive=True):
-        if path.startswith("src/i18n/"):
+        if path.startswith(os.path.join("src", "i18n", "")) and path != backend:
             continue
         content = open(path, encoding="utf-8").read()
         for m in call.finditer(content):
@@ -95,6 +97,17 @@ def collect_code_strings():
     ):
         for m in re.finditer(pat, sd):
             found.add(unescape_rust(m.group(1)))
+
+    # src/i18n/backend.rs keeps WhatsApp's English notices and errors in
+    # `static ..._TEXTS` tables and `for part in [...]` lists, and passes
+    # by_who() a "You ..." and a "{} ..." form.
+    be = open(backend, encoding="utf-8").read().split("#[cfg(test)]")[0]
+    blocks = re.findall(r"static\s+[A-Z_]+_TEXTS\s*:[^=]*=\s*\[(.*?)\];", be, re.DOTALL)
+    blocks += re.findall(r"for\s+part\s+in\s+\[(.*?)\]", be, re.DOTALL)
+    blocks += re.findall(r"by_who\(\s*\w+,\s*(" + LIT + r"\s*,\s*" + LIT + ")", be)
+    for block in blocks:
+        for m in re.finditer(LIT, block):
+            found.add(unescape_rust(m.group(0)))
 
     # The shortcut editor's tabs and action names, also used as menu labels.
     km = open("src/keymap.rs", encoding="utf-8").read()
