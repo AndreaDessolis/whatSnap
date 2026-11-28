@@ -123,6 +123,31 @@ func (acc *Account) handleCreateCallLink(conn net.Conn, raw json.RawMessage) {
 	}()
 }
 
+// handleSetCallLinkApproval turns "approve new participants" on or off for a
+// link we made, from the Call Link dialog (WA Web's toggleWaitingRoomForCallLink).
+func (acc *Account) handleSetCallLinkApproval(conn net.Conn, raw json.RawMessage) {
+	var data struct {
+		Link  string `json:"link"`
+		Video bool   `json:"video"`
+		On    bool   `json:"on"`
+	}
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return
+	}
+	token := strings.TrimRight(data.Link, "/")
+	if i := strings.LastIndex(token, "/"); i >= 0 {
+		token = token[i+1:]
+	}
+	go func() {
+		if acc.callClient == nil {
+			return
+		}
+		if err := acc.callClient.SetCallLinkApproval(context.Background(), token, data.Video, data.On); err != nil {
+			acc.sendEvent(conn, "error", map[string]string{"message": "Couldn't change approval for the call link: " + err.Error()})
+		}
+	}()
+}
+
 func callLinkJoinPushName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {

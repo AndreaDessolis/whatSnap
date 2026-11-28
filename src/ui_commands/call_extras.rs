@@ -514,6 +514,10 @@ fn show_call_link(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, url: S
 	let link_field = TextCtrl::builder(&panel).with_style(TextCtrlStyle::ReadOnly).build();
 	link_field.set_value(&url);
 	sizer.add(&link_field, 0, SizerFlag::Expand | SizerFlag::All, 10);
+	// WA Web's call link popup: "approve new participants" can be changed
+	// after the link is made (waiting_room_toggle).
+	let approval_check = CheckBox::builder(&panel).with_label(crate::i18n::tr("Approve new participants")).build();
+	sizer.add(&approval_check, 0, SizerFlag::Left | SizerFlag::Right | SizerFlag::Bottom, 10);
 	let buttons = BoxSizer::builder(Orientation::Horizontal).build();
 	let copy_btn = Button::builder(&panel).with_label(crate::i18n::tr("Copy link")).build();
 	let send_btn = Button::builder(&panel).with_label(crate::i18n::tr("Send link...")).build();
@@ -542,6 +546,24 @@ fn show_call_link(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>, url: S
 		crate::platform::announce::announce(
 			announcer,
 			crate::i18n::tr(if copied { "Link copied." } else { "Couldn't copy the link." }),
+		);
+	});
+	let approval_state = state.clone();
+	let approval_url = url.clone();
+	approval_check.on_toggled(move |event| {
+		let on = event.is_checked();
+		send(
+			&approval_state.borrow(),
+			"set_call_link_approval",
+			serde_json::json!({ "link": approval_url, "video": video, "on": on }),
+		);
+		crate::platform::announce::announce(
+			announcer,
+			crate::i18n::tr(if on {
+				"New participants will wait until you let them in."
+			} else {
+				"Anyone with the link can join right away."
+			}),
 		);
 	});
 	send_btn.on_click(move |_| dialog.end_modal(SEND));

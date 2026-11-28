@@ -470,6 +470,8 @@ func (acc *Account) dispatchCommand(conn net.Conn, cmd Command) {
 		acc.handleCreateCallLink(conn, cmd.Data)
 	case "join_call_link":
 		acc.handleJoinCallLink(cmd.Data)
+	case "set_call_link_approval":
+		acc.handleSetCallLinkApproval(conn, cmd.Data)
 	case "join_group_call":
 		acc.handleJoinGroupCall(cmd.Data)
 	case "get_joinable_calls":

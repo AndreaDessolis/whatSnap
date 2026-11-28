@@ -380,7 +380,7 @@ In a group call, the People list shows who is in the call, and says when someone
 In the Calls section, select a call under Recent calls and press `Delete`, or open its context menu and choose `Delete call`. To delete all your calls, choose `Clear call log...` in the same menu. whatSnap deletes a call the same way WhatsApp Web does, so the call is also deleted on your other linked devices.
 
 ### Call Links
-- `Call -> Create Call Link...` makes a link that anyone can use to join a call.
+- `Call -> Create Call Link...` makes a link that anyone can use to join a call. In the Call Link window, `Approve new participants` makes people wait until you let them in, the same as in WhatsApp Web.
 - `Call -> Join Call Link...` joins a call from a link.
 - Like WhatsApp Web, you get a notification when someone joins a call from your link, or is waiting for you to let them in.
 
