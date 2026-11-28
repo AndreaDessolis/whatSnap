@@ -602,10 +602,16 @@ msgstr ""
 msgid "1 chat"
 msgstr ""
 
+msgid "1 chat chosen."
+msgstr ""
+
 msgid "1 chat selected."
 msgstr ""
 
 msgid "1 contact"
+msgstr ""
+
+msgid "1 contact excluded."
 msgstr ""
 
 msgid "1 emoji: {}"
@@ -618,6 +624,9 @@ msgid "1 group in common"
 msgstr ""
 
 msgid "1 invite waiting to be accepted"
+msgstr ""
+
+msgid "1 member"
 msgstr ""
 
 msgid "1 new message"
@@ -1451,10 +1460,16 @@ msgstr ""
 msgid "Choose a sticker to send"
 msgstr ""
 
+msgid "Choose a time at least {} minutes from now and no more than {} days ahead."
+msgstr ""
+
 msgid "Choose an emoji to insert:"
 msgstr ""
 
 msgid "Choose at least one chat to send to."
+msgstr ""
+
+msgid "Choose at least one contact to exclude."
 msgstr ""
 
 msgid "Choose at least one contact to share with."
@@ -3506,10 +3521,16 @@ msgstr ""
 msgid "No chat open."
 msgstr ""
 
+msgid "No chats chosen."
+msgstr ""
+
 msgid "No chats selected."
 msgstr ""
 
 msgid "No chats, contacts or messages found"
+msgstr ""
+
+msgid "No contacts excluded."
 msgstr ""
 
 msgid "No emoji found."
@@ -3636,6 +3657,9 @@ msgid "Not responding."
 msgstr ""
 
 msgid "Not set"
+msgstr ""
+
+msgid "Note: {}"
 msgstr ""
 
 msgid "Notification se&ttings..."
@@ -3951,6 +3975,9 @@ msgid "Place a video call"
 msgstr ""
 
 msgid "Place a voice call"
+msgstr ""
+
+msgid "Placed {}"
 msgstr ""
 
 msgid "Placing call..."
@@ -5375,6 +5402,9 @@ msgstr ""
 msgid "The selected file could not be restored:\n{}"
 msgstr ""
 
+msgid "The time has to be at least {} minutes from now and no more than {} days ahead."
+msgstr ""
+
 msgid "The video couldn't be decoded. The file may be damaged."
 msgstr ""
 
@@ -5418,6 +5448,9 @@ msgid "This contact card can't be opened here."
 msgstr ""
 
 msgid "This copy of whatSnap doesn't include the Share menu helper. Reinstall whatSnap and try again."
+msgstr ""
+
+msgid "This copy of whatSnap doesn't include the Share menu package. Reinstall whatSnap and try again."
 msgstr ""
 
 msgid "This event can't be opened here."
@@ -5528,7 +5561,13 @@ msgstr ""
 msgid "Today"
 msgstr ""
 
+msgid "Today, {}"
+msgstr ""
+
 msgid "Toggle &Mute"
+msgstr ""
+
+msgid "Tomorrow, {}"
 msgstr ""
 
 msgid "Tuesday"
@@ -5672,6 +5711,9 @@ msgstr ""
 msgid "Unnamed channel"
 msgstr ""
 
+msgid "Unnamed group"
+msgstr ""
+
 msgid "Unnamed product"
 msgstr ""
 
@@ -5808,6 +5850,12 @@ msgid "Viewed"
 msgstr ""
 
 msgid "Viewed By"
+msgstr ""
+
+msgid "Viewed by 1 person"
+msgstr ""
+
+msgid "Viewed by {} people"
 msgstr ""
 
 msgid "Viewed updates"
@@ -6476,10 +6524,16 @@ msgstr ""
 msgid "and"
 msgstr ""
 
+msgid "announcements"
+msgstr ""
+
 msgid "as set in Settings"
 msgstr ""
 
 msgid "channel"
+msgstr ""
+
+msgid "chosen"
 msgstr ""
 
 msgid "couldn't allocate a surface for the window"
@@ -6512,7 +6566,13 @@ msgstr ""
 msgid "didn't answer."
 msgstr ""
 
+msgid "excluded"
+msgstr ""
+
 msgid "following"
+msgstr ""
+
+msgid "general chat"
 msgstr ""
 
 msgid "group video call from"
@@ -6539,6 +6599,9 @@ msgstr ""
 msgid "invited"
 msgstr ""
 
+msgid "joined"
+msgstr ""
+
 msgid "joined the call."
 msgstr ""
 
@@ -6561,6 +6624,15 @@ msgid "no admins besides the owner"
 msgstr ""
 
 msgid "no one"
+msgstr ""
+
+msgid "not chosen"
+msgstr ""
+
+msgid "not excluded"
+msgstr ""
+
+msgid "not joined"
 msgstr ""
 
 msgid "not logged in"
@@ -6707,6 +6779,12 @@ msgstr ""
 msgid "voice call from"
 msgstr ""
 
+msgid "whatSnap couldn't be added to the Share menu.\n\nSigning failed: {}"
+msgstr ""
+
+msgid "whatSnap couldn't be added to the Share menu.\n\n{}"
+msgstr ""
+
 msgid "whatSnap couldn't be added to the Share menu. Try again, or reinstall whatSnap."
 msgstr ""
 
@@ -6719,7 +6797,13 @@ msgstr ""
 msgid "whatSnap is linked to WhatsApp on your phone as one of its linked devices. Accounts switches between, adds and removes accounts, and sets how each one alerts you. Log Out unlinks the account on screen from this computer. Both close Settings."
 msgstr ""
 
+msgid "whatSnap is now in the Windows Share menu."
+msgstr ""
+
 msgid "whatSnap was logged out of WhatsApp: {}"
+msgstr ""
+
+msgid "whatSnap wasn't added to the Share menu, because that needs an administrator to approve it once. You can still send files with Send to in Explorer's menu."
 msgstr ""
 
 msgid "yes"
@@ -6767,6 +6851,9 @@ msgstr ""
 msgid "{} blocked."
 msgstr ""
 
+msgid "{} bytes"
+msgstr ""
+
 msgid "{} changed the group description"
 msgstr ""
 
@@ -6803,10 +6890,16 @@ msgstr ""
 msgid "{} chats"
 msgstr ""
 
+msgid "{} chats chosen."
+msgstr ""
+
 msgid "{} chats selected."
 msgstr ""
 
 msgid "{} contacts"
+msgstr ""
+
+msgid "{} contacts excluded."
 msgstr ""
 
 msgid "{} copied: {}"
@@ -6834,6 +6927,9 @@ msgid "{} deleted."
 msgstr ""
 
 msgid "{} downloaded"
+msgstr ""
+
+msgid "{} each"
 msgstr ""
 
 msgid "{} emoji."
@@ -6927,6 +7023,9 @@ msgid "{} made {} a group admin"
 msgstr ""
 
 msgid "{} media items"
+msgstr ""
+
+msgid "{} members"
 msgstr ""
 
 msgid "{} mentioned"
@@ -7113,6 +7212,9 @@ msgid "{} whatSnap will keep trying to reconnect."
 msgstr ""
 
 msgid "{} won't be able to message or call you."
+msgstr ""
+
+msgid "{} {} of {} messages are scheduled in this chat."
 msgstr ""
 
 msgid "{} {} of {}{}"

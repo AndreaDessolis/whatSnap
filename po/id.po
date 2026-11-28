@@ -7909,3 +7909,96 @@ msgstr "{}, Anda memilih {}"
 msgid "No votes yet"
 msgstr "Belum ada suara."
 
+msgid "1 chat chosen."
+msgstr ""
+
+msgid "1 contact excluded."
+msgstr "1 kontak dikecualikan."
+
+msgid "1 member"
+msgstr "1 anggota"
+
+msgid "Choose a time at least {} minutes from now and no more than {} days ahead."
+msgstr "Pilih waktu minimal {} menit dari sekarang dan paling lambat {} hari ke depan."
+
+msgid "No chats chosen."
+msgstr ""
+
+msgid "No contacts excluded."
+msgstr "Tidak ada kontak dikecualikan."
+
+msgid "Note: {}"
+msgstr "Catatan: {}"
+
+msgid "Placed {}"
+msgstr "Dipesan {}"
+
+msgid "The time has to be at least {} minutes from now and no more than {} days ahead."
+msgstr "Waktu harus minimal {} menit dari sekarang dan paling lambat {} hari ke depan."
+
+msgid "This copy of whatSnap doesn't include the Share menu package. Reinstall whatSnap and try again."
+msgstr "Salinan whatSnap ini tidak menyertakan paket menu Bagikan. Instal ulang whatSnap lalu coba lagi."
+
+msgid "Today, {}"
+msgstr "Hari ini, {}"
+
+msgid "Tomorrow, {}"
+msgstr "Besok, {}"
+
+msgid "Unnamed group"
+msgstr "Grup tanpa nama"
+
+msgid "Viewed by 1 person"
+msgstr "Dilihat oleh 1 orang"
+
+msgid "Viewed by {} people"
+msgstr "Dilihat oleh {} orang"
+
+msgid "announcements"
+msgstr "pengumuman"
+
+msgid "chosen"
+msgstr ""
+
+msgid "general chat"
+msgstr "chat umum"
+
+msgid "joined"
+msgstr "bergabung"
+
+msgid "not chosen"
+msgstr ""
+
+msgid "not joined"
+msgstr "belum bergabung"
+
+msgid "whatSnap couldn't be added to the Share menu.\n\nSigning failed: {}"
+msgstr "whatSnap tidak dapat ditambahkan ke menu Bagikan.\n\nPenandatanganan gagal: {}"
+
+msgid "whatSnap couldn't be added to the Share menu.\n\n{}"
+msgstr "whatSnap tidak dapat ditambahkan ke menu Bagikan.\n\n{}"
+
+msgid "whatSnap is now in the Windows Share menu."
+msgstr "whatSnap kini ada di menu Bagikan Windows."
+
+msgid "whatSnap wasn't added to the Share menu, because that needs an administrator to approve it once. You can still send files with Send to in Explorer's menu."
+msgstr "whatSnap tidak ditambahkan ke menu Bagikan karena diperlukan persetujuan administrator satu kali. Anda tetap dapat mengirim file lewat Kirim ke di menu Explorer."
+
+msgid "{} bytes"
+msgstr "{} byte"
+
+msgid "{} each"
+msgstr "{} per item"
+
+msgid "{} members"
+msgstr "{} anggota"
+
+msgid "{} {} of {} messages are scheduled in this chat."
+msgstr "{} {} dari {} pesan dijadwalkan di chat ini."
+
+msgid "{} chats chosen."
+msgstr ""
+
+msgid "{} contacts excluded."
+msgstr "{} kontak dikecualikan."
+

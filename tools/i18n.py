@@ -6,8 +6,9 @@
   python3 tools/i18n.py --check  only report what is missing or untranslated
 
 Strings are collected from tr("..."), tr_str("..."), tr_fmt("...", ...) and the
-`if cond { "A" } else { "B" }` form passed straight to them. Strings that reach
-tr() through a variable, such as table entries, are not found here, so entries
+`if cond { "A" } else { "B" }` form passed straight to them, plus the tables
+listed in collect_code_strings(), such as `static ..._TEXTS` arrays. Other
+strings that reach tr() through a variable are not found here, so entries
 already in a .po file are never removed.
 """
 
@@ -71,6 +72,14 @@ def collect_code_strings():
             for g in m.groups():
                 if g:
                     found.add(unescape_rust(g))
+        # Tables of English text named `static ..._TEXTS`, and the contact
+        # picker's PickerWords, reach tr() through a variable.
+        code = content.split("#[cfg(test)]")[0]
+        blocks = re.findall(r"static\s+[A-Z_]+_TEXTS\s*:[^=]*=\s*\[(.*?)\];", code, re.DOTALL)
+        blocks += re.findall(r"PickerWords\s*\{(.*?)\n\s*\}", code, re.DOTALL)
+        for block in blocks:
+            for m in re.finditer(LIT, block):
+                found.add(unescape_rust(m.group(0)))
 
     palette = re.search(
         r"STATUS_PALETTE:\s*\[\(&str,\s*u32\);\s*\d+\]\s*=\s*\[(.*?)\];",
@@ -98,12 +107,10 @@ def collect_code_strings():
         for m in re.finditer(pat, sd):
             found.add(unescape_rust(m.group(1)))
 
-    # src/i18n/backend.rs keeps WhatsApp's English notices and errors in
-    # `static ..._TEXTS` tables and `for part in [...]` lists, and passes
-    # by_who() a "You ..." and a "{} ..." form.
+    # src/i18n/backend.rs also replaces the parts in `for part in [...]`
+    # lists, and passes by_who() a "You ..." and a "{} ..." form.
     be = open(backend, encoding="utf-8").read().split("#[cfg(test)]")[0]
-    blocks = re.findall(r"static\s+[A-Z_]+_TEXTS\s*:[^=]*=\s*\[(.*?)\];", be, re.DOTALL)
-    blocks += re.findall(r"for\s+part\s+in\s+\[(.*?)\]", be, re.DOTALL)
+    blocks = re.findall(r"for\s+part\s+in\s+\[(.*?)\]", be, re.DOTALL)
     blocks += re.findall(r"by_who\(\s*\w+,\s*(" + LIT + r"\s*,\s*" + LIT + ")", be)
     for block in blocks:
         for m in re.finditer(LIT, block):

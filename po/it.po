@@ -7909,3 +7909,96 @@ msgstr "{}, tu hai votato {}"
 msgid "No votes yet"
 msgstr "Ancora nessun voto"
 
+msgid "1 chat chosen."
+msgstr "1 chat scelta."
+
+msgid "1 contact excluded."
+msgstr "1 contatto escluso."
+
+msgid "1 member"
+msgstr "1 membro"
+
+msgid "Choose a time at least {} minutes from now and no more than {} days ahead."
+msgstr "Scegli un orario tra almeno {} minuti e al massimo tra {} giorni."
+
+msgid "No chats chosen."
+msgstr "Nessuna chat scelta."
+
+msgid "No contacts excluded."
+msgstr "Nessun contatto escluso."
+
+msgid "Note: {}"
+msgstr "Nota: {}"
+
+msgid "Placed {}"
+msgstr "Ordinato {}"
+
+msgid "The time has to be at least {} minutes from now and no more than {} days ahead."
+msgstr "L'orario deve essere tra almeno {} minuti e al massimo tra {} giorni."
+
+msgid "This copy of whatSnap doesn't include the Share menu package. Reinstall whatSnap and try again."
+msgstr "Questa copia di whatSnap non contiene il pacchetto per il menu Condividi. Reinstalla whatSnap e riprova."
+
+msgid "Today, {}"
+msgstr "Oggi, {}"
+
+msgid "Tomorrow, {}"
+msgstr "Domani, {}"
+
+msgid "Unnamed group"
+msgstr "Gruppo senza nome"
+
+msgid "Viewed by 1 person"
+msgstr "Visto da 1 persona"
+
+msgid "Viewed by {} people"
+msgstr "Visto da {} persone"
+
+msgid "announcements"
+msgstr "annunci"
+
+msgid "chosen"
+msgstr "scelta"
+
+msgid "general chat"
+msgstr "chat generale"
+
+msgid "joined"
+msgstr "iscritto"
+
+msgid "not chosen"
+msgstr "non scelta"
+
+msgid "not joined"
+msgstr "non iscritto"
+
+msgid "whatSnap couldn't be added to the Share menu.\n\nSigning failed: {}"
+msgstr "Impossibile aggiungere whatSnap al menu Condividi.\n\nFirma non riuscita: {}"
+
+msgid "whatSnap couldn't be added to the Share menu.\n\n{}"
+msgstr "Impossibile aggiungere whatSnap al menu Condividi.\n\n{}"
+
+msgid "whatSnap is now in the Windows Share menu."
+msgstr "whatSnap ora è nel menu Condividi di Windows."
+
+msgid "whatSnap wasn't added to the Share menu, because that needs an administrator to approve it once. You can still send files with Send to in Explorer's menu."
+msgstr "whatSnap non è stato aggiunto al menu Condividi, perché serve l'approvazione di un amministratore una volta sola. Puoi comunque inviare file con Invia a nel menu di Esplora file."
+
+msgid "{} bytes"
+msgstr "{} byte"
+
+msgid "{} each"
+msgstr "{} cadauno"
+
+msgid "{} members"
+msgstr "{} membri"
+
+msgid "{} {} of {} messages are scheduled in this chat."
+msgstr "{} In questa chat sono programmati {} messaggi su {}."
+
+msgid "{} chats chosen."
+msgstr "{} chat scelte."
+
+msgid "{} contacts excluded."
+msgstr "{} contatti esclusi."
+
