@@ -47,6 +47,7 @@ struct PersonRow {
 	waiting: bool,
 	connected: bool,
 	ringable: bool,
+	ringing: bool,
 	muted: bool,
 }
 
@@ -62,6 +63,7 @@ fn people_rows(s: &AppState) -> Vec<PersonRow> {
 			waiting: true,
 			connected: false,
 			ringable: false,
+			ringing: false,
 			muted: false,
 		})
 		.collect();
@@ -88,6 +90,7 @@ fn people_rows(s: &AppState) -> Vec<PersonRow> {
 			waiting: false,
 			connected,
 			ringable: !connected && !p.state.is_empty() && !is_ringing_state(&p.state),
+			ringing: !connected && is_ringing_state(&p.state),
 			muted,
 		});
 	}
@@ -151,6 +154,15 @@ fn ringable_person(s: &AppState, parts: &WindowParts) -> Option<PersonRow> {
 	selected_row(s, parts).filter(|r| r.ringable)
 }
 
+/// Someone being rung right now: the same button stops ringing them (WA's
+/// cancel_offer).
+fn ringing_person(s: &AppState, parts: &WindowParts) -> Option<PersonRow> {
+	if s.incoming_call_caller.is_some() {
+		return None;
+	}
+	selected_row(s, parts).filter(|r| r.ringing)
+}
+
 /// The buttons follow WA Web's people menu: anyone in a group call may ask
 /// someone to mute (greyed out once they're muted), only a call link's
 /// creator or admins may remove people, and anyone may ring someone who
@@ -173,17 +185,25 @@ pub(crate) fn person_buttons(s: &AppState, parts: &WindowParts) {
 	c.mute_person_btn.enable(person.as_ref().is_some_and(|p| !p.muted));
 	c.remove_person_btn.show(person.is_some() && can_remove);
 	let ring = ringable_person(s, parts);
-	match &ring {
-		Some(p) => c.ring_person_btn.set_label(&crate::i18n::tr_fmt("Ring {}", &[&p.name])),
-		None => c.ring_person_btn.set_label(crate::i18n::tr("Ring")),
+	let ringing = ringing_person(s, parts);
+	match (&ring, &ringing) {
+		(Some(p), _) => c.ring_person_btn.set_label(&crate::i18n::tr_fmt("Ring {}", &[&p.name])),
+		(None, Some(p)) => c.ring_person_btn.set_label(&crate::i18n::tr_fmt("Stop ringing {}", &[&p.name])),
+		(None, None) => c.ring_person_btn.set_label(crate::i18n::tr("Ring")),
 	}
-	c.ring_person_btn.show(ring.is_some());
+	c.ring_person_btn.show(ring.is_some() || ringing.is_some());
 	c.people_panel.layout();
 }
 
 pub(crate) fn ring_person(state: &Rc<RefCell<AppState>>, parts: &Rc<WindowParts>) {
 	let s = state.borrow();
 	let Some(call_id) = s.active_call_id.clone() else { return };
+	if let Some(person) = ringing_person(&s, parts) {
+		send(&s, "stop_ringing_call_participant", serde_json::json!({ "call_id": call_id, "jid": person.jid }));
+		drop(s);
+		announce_call(parts, &crate::i18n::tr_fmt("Stopped ringing {}.", &[&person.name]), Priority::High);
+		return;
+	}
 	let Some(person) = ringable_person(&s, parts) else {
 		drop(s);
 		announce_call(parts, crate::i18n::tr("Select someone who isn't in the call first."), Priority::High);

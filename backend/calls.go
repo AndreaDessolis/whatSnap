@@ -1014,6 +1014,30 @@ func addParticipantErrorMessage(err error, name string) string {
 	return "Couldn't add " + name + ": " + msg
 }
 
+func (acc *Account) handleStopRingingParticipant(data []byte) {
+	var req struct {
+		CallID string `json:"call_id"`
+		JID    string `json:"jid"`
+	}
+	if err := json.Unmarshal(data, &req); err != nil {
+		return
+	}
+	call := acc.activeCall(req.CallID)
+	if call == nil {
+		return
+	}
+	go func() {
+		if err := call.StopRinging(context.Background(), req.JID); err != nil {
+			log.Println("Failed to stop ringing participant:", err)
+			acc.broadcastEvent("call_participant_add_failed", map[string]string{
+				"call_id": req.CallID,
+				"jid":     req.JID,
+				"message": "Couldn't stop ringing: " + err.Error(),
+			})
+		}
+	}()
+}
+
 func (acc *Account) handleRingParticipant(data []byte) {
 	var req struct {
 		CallID string `json:"call_id"`
