@@ -6868,3 +6868,57 @@ msgstr ""
 msgid "{}, sent at {}"
 msgstr ""
 
+msgid "Always show the Locked Chats button, even when locked chats are hidden on the phone"
+msgstr ""
+
+msgid "Anyone with the link can join right away."
+msgstr ""
+
+msgid "Joined your call link"
+msgstr ""
+
+msgid "New participants will wait until you let them in."
+msgstr ""
+
+msgid "Protect IP address in calls: calls always go through WhatsApp's servers, on all your devices"
+msgstr ""
+
+msgid "Someone joined your call link"
+msgstr ""
+
+msgid "Stop ringing {}"
+msgstr ""
+
+msgid "Stopped ringing {}."
+msgstr ""
+
+msgid "Want to join your call link"
+msgstr ""
+
+msgid "Wants to join your call link"
+msgstr ""
+
+msgid "Add Attachment"
+msgstr ""
+
+msgid "Chat list template"
+msgstr ""
+
+msgid "Say only the status and time"
+msgstr ""
+
+msgid "Video Call"
+msgstr ""
+
+msgid "Voice Call"
+msgstr ""
+
+msgid "Voice message: go back"
+msgstr ""
+
+msgid "Voice message: go forward"
+msgstr ""
+
+msgid "Window title template"
+msgstr ""
+

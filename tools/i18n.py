@@ -90,9 +90,20 @@ def collect_code_strings():
         r"notify_switch\(\s*(" + LIT + r")\s*,?\s*\)",
         r"(?:setting_switch|setting_note|section_header|setting_button)\([^;()]*,\s*(" + LIT + r")\s*,?\s*\)",
         r"visibility_combo\([^;()]*,\s*(" + LIT + r")\s*,",
+        r"template_field\(\s*(" + LIT + r")\s*\)",
+        r"sound_picker\(\s*(" + LIT + r")\s*,",
     ):
         for m in re.finditer(pat, sd):
             found.add(unescape_rust(m.group(1)))
+
+    # The shortcut editor's tabs and action names, also used as menu labels.
+    km = open("src/keymap.rs", encoding="utf-8").read()
+    for m in re.finditer(r"\blabel:\s*(" + LIT + ")", km):
+        found.add(unescape_rust(m.group(1)))
+    tabs = re.search(r"pub const TABS:[^=]*=\s*\[(.*?)\];", km, re.DOTALL)
+    if tabs:
+        for m in re.finditer(LIT, tabs.group(1)):
+            found.add(unescape_rust(m.group(0)))
 
     found.update([
         "Mobile", "iPhone", "Main", "Home fax", "Work fax", "Home", "Work",

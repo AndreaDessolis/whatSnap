@@ -89,7 +89,13 @@ msgstr ""
 msgid "&Add to contacts"
 msgstr ""
 
+msgid "&Archive Chat"
+msgstr ""
+
 msgid "&Archive chat"
+msgstr ""
+
+msgid "&Archived Chats"
 msgstr ""
 
 msgid "&Audio"
@@ -105,6 +111,9 @@ msgid "&Call"
 msgstr ""
 
 msgid "&Call {}"
+msgstr ""
+
+msgid "&Calls"
 msgstr ""
 
 msgid "&Caption (optional):"
@@ -179,6 +188,9 @@ msgstr ""
 msgid "&Edit name and description..."
 msgstr ""
 
+msgid "&End Call"
+msgstr ""
+
 msgid "&Event"
 msgstr ""
 
@@ -221,6 +233,9 @@ msgstr ""
 msgid "&Like"
 msgstr ""
 
+msgid "&Lock Chat"
+msgstr ""
+
 msgid "&Lock chat"
 msgstr ""
 
@@ -239,6 +254,9 @@ msgstr ""
 msgid "&Mute"
 msgstr ""
 
+msgid "&Mute Chat"
+msgstr ""
+
 msgid "&Mute notifications"
 msgstr ""
 
@@ -246,6 +264,9 @@ msgid "&Mute {}"
 msgstr ""
 
 msgid "&Mute {}'s status updates"
+msgstr ""
+
+msgid "&New Chat"
 msgstr ""
 
 msgid "&Next"
@@ -278,6 +299,9 @@ msgstr ""
 msgid "&Photos and videos"
 msgstr ""
 
+msgid "&Pin Chat"
+msgstr ""
+
 msgid "&Pin chat"
 msgstr ""
 
@@ -291,6 +315,9 @@ msgid "&Previous"
 msgstr ""
 
 msgid "&React..."
+msgstr ""
+
+msgid "&Reconnect Now"
 msgstr ""
 
 msgid "&Record"
@@ -332,10 +359,16 @@ msgstr ""
 msgid "&Schedule message..."
 msgstr ""
 
+msgid "&Search"
+msgstr ""
+
 msgid "&Send"
 msgstr ""
 
 msgid "&Send sticker"
+msgstr ""
+
+msgid "&Settings..."
 msgstr ""
 
 msgid "&Silent"
@@ -344,7 +377,13 @@ msgstr ""
 msgid "&Star"
 msgstr ""
 
+msgid "&Star Message"
+msgstr ""
+
 msgid "&Star all"
+msgstr ""
+
+msgid "&Status"
 msgstr ""
 
 msgid "&Sticker"
@@ -545,6 +584,9 @@ msgstr ""
 msgid "1 sticker."
 msgstr ""
 
+msgid "1 unread chat in other accounts"
+msgstr ""
+
 msgid "1 unread message"
 msgstr ""
 
@@ -567,6 +609,9 @@ msgid "A poll can have at most 12 options."
 msgstr ""
 
 msgid "A poll needs at least two options, one per line."
+msgstr ""
+
+msgid "A&ccounts..."
 msgstr ""
 
 msgid "About"
@@ -615,6 +660,9 @@ msgid "Add &text status update..."
 msgstr ""
 
 msgid "Add Account"
+msgstr ""
+
+msgid "Add Attachment"
 msgstr ""
 
 msgid "Add Chats to {}"
@@ -740,7 +788,13 @@ msgstr ""
 msgid "Also save to my phone's WhatsApp contacts"
 msgstr ""
 
+msgid "Always show the Locked Chats button, even when locked chats are hidden on the phone"
+msgstr ""
+
 msgid "An option is too long. Each option allows up to 100 characters."
+msgstr ""
+
+msgid "Announce Chat Sta&tus"
 msgstr ""
 
 msgid "Announce when someone is recording a voice message"
@@ -753,6 +807,9 @@ msgid "Announcements"
 msgstr ""
 
 msgid "Answer"
+msgstr ""
+
+msgid "Answer Incoming Call"
 msgstr ""
 
 msgid "Answer event"
@@ -768,6 +825,9 @@ msgid "Answering..."
 msgstr ""
 
 msgid "Anyone with WhatsApp can use this link to join your {} call."
+msgstr ""
+
+msgid "Anyone with the link can join right away."
 msgstr ""
 
 msgid "Anyone with the link can now join straight away."
@@ -950,7 +1010,13 @@ msgstr ""
 msgid "C&hannel post"
 msgstr ""
 
+msgid "C&hannels"
+msgstr ""
+
 msgid "C&lear call log..."
+msgstr ""
+
+msgid "C&ommunities"
 msgstr ""
 
 msgid "C&onversation"
@@ -1014,6 +1080,9 @@ msgid "Call log cleared."
 msgstr ""
 
 msgid "Call notifications: show notifications for incoming calls"
+msgstr ""
+
+msgid "Call ringtone"
 msgstr ""
 
 msgid "Call waiting"
@@ -1169,6 +1238,9 @@ msgstr ""
 msgid "Channels show vote totals, not who voted. Admins can see voters from the Channel post menu."
 msgstr ""
 
+msgid "Chat &Info"
+msgstr ""
+
 msgid "Chat Lock"
 msgstr ""
 
@@ -1182,6 +1254,9 @@ msgid "Chat exported to {}. {} media files included."
 msgstr ""
 
 msgid "Chat history"
+msgstr ""
+
+msgid "Chat list template"
 msgstr ""
 
 msgid "Chat overview"
@@ -1419,6 +1494,9 @@ msgid "Contacts"
 msgstr ""
 
 msgid "Continue"
+msgstr ""
+
+msgid "Conversation"
 msgstr ""
 
 msgid "Conversation data"
@@ -1781,6 +1859,9 @@ msgstr ""
 msgid "Discard"
 msgstr ""
 
+msgid "Discard Voice Recording"
+msgstr ""
+
 msgid "Discard voice message"
 msgstr ""
 
@@ -1914,6 +1995,9 @@ msgid "Editing message. Press Enter to save, Escape to cancel."
 msgstr ""
 
 msgid "Elephant"
+msgstr ""
+
+msgid "Em&oji..."
 msgstr ""
 
 msgid "Email"
@@ -2120,6 +2204,9 @@ msgstr ""
 msgid "Give the channel a name."
 msgstr ""
 
+msgid "Go"
+msgstr ""
+
 msgid "Go back and forward in voice messages by"
 msgstr ""
 
@@ -2150,6 +2237,9 @@ msgstr ""
 msgid "Group added to the community."
 msgstr ""
 
+msgid "Group call ringtone"
+msgstr ""
+
 msgid "Group description"
 msgstr ""
 
@@ -2160,6 +2250,9 @@ msgid "Group name"
 msgstr ""
 
 msgid "Group name is required."
+msgstr ""
+
+msgid "Group notification tone"
 msgstr ""
 
 msgid "Group notifications: show notifications for new group messages"
@@ -2378,6 +2471,9 @@ msgstr ""
 msgid "Join this group call"
 msgstr ""
 
+msgid "Joined your call link"
+msgstr ""
+
 msgid "Joined {}."
 msgstr ""
 
@@ -2388,6 +2484,12 @@ msgid "Joining group..."
 msgstr ""
 
 msgid "July"
+msgstr ""
+
+msgid "Jump to &Messages List"
+msgstr ""
+
+msgid "Jump to Message Fi&eld"
 msgstr ""
 
 msgid "June"
@@ -2639,6 +2741,9 @@ msgstr ""
 msgid "March"
 msgstr ""
 
+msgid "Mark as &Unread"
+msgstr ""
+
 msgid "Mark as &read"
 msgstr ""
 
@@ -2732,9 +2837,6 @@ msgstr ""
 msgid "Message forwarded to {}."
 msgstr ""
 
-msgid "Message forwarded."
-msgstr ""
-
 msgid "Message from {}"
 msgstr ""
 
@@ -2742,6 +2844,9 @@ msgid "Message history sent to {}: {}."
 msgstr ""
 
 msgid "Message kept."
+msgstr ""
+
+msgid "Message notification tone"
 msgstr ""
 
 msgid "Message notifications: show desktop notifications for new messages"
@@ -2903,10 +3008,16 @@ msgstr ""
 msgid "Name: {}\nPhone: {}\n{}WhatsApp Name: Loading...\nAbout/Status: Loading..."
 msgstr ""
 
+msgid "Ne&xt Spelling Error"
+msgstr ""
+
 msgid "Never mark this word again"
 msgstr ""
 
 msgid "New"
+msgstr ""
+
+msgid "New &Group"
 msgstr ""
 
 msgid "New C&ommunity..."
@@ -2940,6 +3051,9 @@ msgid "New messages in this chat will be read aloud."
 msgstr ""
 
 msgid "New messages in this chat won't be read aloud."
+msgstr ""
+
+msgid "New participants will wait until you let them in."
 msgstr ""
 
 msgid "New people now wait for you to let them in."
@@ -3081,6 +3195,9 @@ msgid "No text to copy."
 msgstr ""
 
 msgid "No unread chats"
+msgstr ""
+
+msgid "No unread messages"
 msgstr ""
 
 msgid "No votes yet."
@@ -3290,6 +3407,9 @@ msgstr ""
 msgid "Pause"
 msgstr ""
 
+msgid "Pause Recording"
+msgstr ""
+
 msgid "Pause preview"
 msgstr ""
 
@@ -3416,6 +3536,9 @@ msgstr ""
 msgid "Play voice message"
 msgstr ""
 
+msgid "Play/Pause Voice Preview"
+msgstr ""
+
 msgid "Played"
 msgstr ""
 
@@ -3519,6 +3642,9 @@ msgid "Profile"
 msgstr ""
 
 msgid "Profile Photo"
+msgstr ""
+
+msgid "Protect IP address in calls: calls always go through WhatsApp's servers, on all your devices"
 msgstr ""
 
 msgid "Put Link in &Message Box"
@@ -3626,6 +3752,9 @@ msgstr ""
 msgid "Read"
 msgstr ""
 
+msgid "Read Ne&w Messages Aloud"
+msgstr ""
+
 msgid "Read at"
 msgstr ""
 
@@ -3693,6 +3822,9 @@ msgid "Recording..."
 msgstr ""
 
 msgid "Reject"
+msgstr ""
+
+msgid "Reject Incoming Call"
 msgstr ""
 
 msgid "Reject everyone ({})"
@@ -3804,6 +3936,9 @@ msgid "Replace text with emoji as you type, like :-) or (y)"
 msgstr ""
 
 msgid "Replace text with emoji turns these into emoji as soon as you type their last character. Press Backspace straight after to get the text back. You can turn it off on the Chats tab of Settings."
+msgstr ""
+
+msgid "Reply"
 msgstr ""
 
 msgid "Reply sent to {}."
@@ -3956,6 +4091,9 @@ msgstr ""
 msgid "Ringtone"
 msgstr ""
 
+msgid "S&tarred Messages"
+msgstr ""
+
 msgid "Sale price"
 msgstr ""
 
@@ -4013,13 +4151,22 @@ msgstr ""
 msgid "Saving..."
 msgstr ""
 
+msgid "Say only the status and time"
+msgstr ""
+
 msgid "Say when a word you type is misspelled"
+msgstr ""
+
+msgid "Sc&hedule Message..."
 msgstr ""
 
 msgid "Scan this QR Code with WhatsApp:"
 msgstr ""
 
 msgid "Schedule message"
+msgstr ""
+
+msgid "Scheduled Messa&ges..."
 msgstr ""
 
 msgid "Scheduled for {}: {}"
@@ -4080,6 +4227,9 @@ msgid "Search conversation"
 msgstr ""
 
 msgid "Search emoji"
+msgstr ""
+
+msgid "Search in &Chat"
 msgstr ""
 
 msgid "Search in conversation"
@@ -4196,6 +4346,9 @@ msgstr ""
 msgid "Selection mode off."
 msgstr ""
 
+msgid "Selection mode on or off"
+msgstr ""
+
 msgid "Selection mode. Press Space to select a message. 0 messages selected."
 msgstr ""
 
@@ -4209,6 +4362,9 @@ msgid "Send Message History"
 msgstr ""
 
 msgid "Send Pasted Files"
+msgstr ""
+
+msgid "Send Voice Message"
 msgstr ""
 
 msgid "Send a favorite, recent or WhatsApp sticker, or a sticker file"
@@ -4421,6 +4577,9 @@ msgstr ""
 msgid "Someone in the call muted you."
 msgstr ""
 
+msgid "Someone joined your call link"
+msgstr ""
+
 msgid "Something went wrong."
 msgstr ""
 
@@ -4466,6 +4625,9 @@ msgstr ""
 msgid "Star"
 msgstr ""
 
+msgid "Star or unstar"
+msgstr ""
+
 msgid "Star or unstar this message"
 msgstr ""
 
@@ -4476,6 +4638,9 @@ msgid "Starred Messages"
 msgstr ""
 
 msgid "Starred messages"
+msgstr ""
+
+msgid "Start Recording"
 msgstr ""
 
 msgid "Start a call with this message's sender"
@@ -4592,6 +4757,9 @@ msgstr ""
 msgid "Status: {} Reconnecting..."
 msgstr ""
 
+msgid "Stic&kers..."
+msgstr ""
+
 msgid "Sticker"
 msgstr ""
 
@@ -4610,6 +4778,9 @@ msgstr ""
 msgid "Stop marking this word until whatSnap restarts"
 msgstr ""
 
+msgid "Stop ringing {}"
+msgstr ""
+
 msgid "Stop sharing screen"
 msgstr ""
 
@@ -4617,6 +4788,9 @@ msgid "Stop this contact messaging and calling you"
 msgstr ""
 
 msgid "Stopped"
+msgstr ""
+
+msgid "Stopped ringing {}."
 msgstr ""
 
 msgid "Stopped sharing your screen."
@@ -4803,6 +4977,9 @@ msgid "Thursday"
 msgstr ""
 
 msgid "Today"
+msgstr ""
+
+msgid "Toggle &Mute"
 msgstr ""
 
 msgid "Tuesday"
@@ -5018,6 +5195,9 @@ msgstr ""
 msgid "Video"
 msgstr ""
 
+msgid "Video Call"
+msgstr ""
+
 msgid "Video call"
 msgstr ""
 
@@ -5043,6 +5223,9 @@ msgid "Videos"
 msgstr ""
 
 msgid "View &Business"
+msgstr ""
+
+msgid "View Message Text"
 msgstr ""
 
 msgid "View channel..."
@@ -5084,6 +5267,12 @@ msgstr ""
 msgid "Vivid Violet"
 msgstr ""
 
+msgid "Voice"
+msgstr ""
+
+msgid "Voice Call"
+msgstr ""
+
 msgid "Voice Messages"
 msgstr ""
 
@@ -5097,6 +5286,21 @@ msgid "Voice message"
 msgstr ""
 
 msgid "Voice message sent."
+msgstr ""
+
+msgid "Voice message: faster"
+msgstr ""
+
+msgid "Voice message: go back"
+msgstr ""
+
+msgid "Voice message: go forward"
+msgstr ""
+
+msgid "Voice message: slower"
+msgstr ""
+
+msgid "Voice message: stop"
 msgstr ""
 
 msgid "Voice messages are always downloaded automatically. Other media downloads by itself only from contacts and chats you've written in."
@@ -5157,6 +5361,12 @@ msgid "Waiting for someone in the call to let you in."
 msgstr ""
 
 msgid "Waiting for someone in the call to let you in..."
+msgstr ""
+
+msgid "Want to join your call link"
+msgstr ""
+
+msgid "Wants to join your call link"
 msgstr ""
 
 msgid "Warning: voice messages sent in stereo might not play on iPhones. WhatsApp's own apps always send them in mono. Only useful with a stereo microphone."
@@ -5256,6 +5466,9 @@ msgid "Who can see your status updates:"
 msgstr ""
 
 msgid "Window"
+msgstr ""
+
+msgid "Window title template"
 msgstr ""
 
 msgid "Windows default"
@@ -5496,6 +5709,9 @@ msgid "joining"
 msgstr ""
 
 msgid "left the call."
+msgstr ""
+
+msgid "messages"
 msgstr ""
 
 msgid "muted"
@@ -5870,16 +6086,10 @@ msgstr ""
 msgid "{} unkept."
 msgstr ""
 
-msgid "{} unread messages"
-msgstr ""
-
-msgid "No unread messages"
-msgstr ""
-
-msgid "1 unread chat in other accounts"
-msgstr ""
-
 msgid "{} unread chats in other accounts"
+msgstr ""
+
+msgid "{} unread messages"
 msgstr ""
 
 msgid "{} unstarred."

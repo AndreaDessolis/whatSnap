@@ -6868,3 +6868,57 @@ msgstr "{} non potrà più scriverti né chiamarti."
 msgid "{}, sent at {}"
 msgstr "{}, inviato alle {}"
 
+msgid "Always show the Locked Chats button, even when locked chats are hidden on the phone"
+msgstr "Mostra sempre il pulsante Chat bloccate, anche quando le chat bloccate sono nascoste sul telefono"
+
+msgid "Anyone with the link can join right away."
+msgstr "Chiunque abbia il link può entrare subito."
+
+msgid "Joined your call link"
+msgstr "È entrato nel tuo link di chiamata"
+
+msgid "New participants will wait until you let them in."
+msgstr "I nuovi partecipanti aspetteranno finché non li fai entrare."
+
+msgid "Protect IP address in calls: calls always go through WhatsApp's servers, on all your devices"
+msgstr "Proteggi l'indirizzo IP nelle chiamate: le chiamate passano sempre dai server di WhatsApp, su tutti i tuoi dispositivi"
+
+msgid "Someone joined your call link"
+msgstr "Qualcuno è entrato nel tuo link di chiamata"
+
+msgid "Stop ringing {}"
+msgstr "Smetti di far squillare {}"
+
+msgid "Stopped ringing {}."
+msgstr "Non fai più squillare {}."
+
+msgid "Want to join your call link"
+msgstr "Vogliono entrare nel tuo link di chiamata"
+
+msgid "Wants to join your call link"
+msgstr "Vuole entrare nel tuo link di chiamata"
+
+msgid "Add Attachment"
+msgstr "Aggiungi allegato"
+
+msgid "Chat list template"
+msgstr "Modello dell'elenco chat"
+
+msgid "Say only the status and time"
+msgstr "Leggi solo lo stato e l'ora"
+
+msgid "Video Call"
+msgstr "Videochiamata"
+
+msgid "Voice Call"
+msgstr "Chiamata vocale"
+
+msgid "Voice message: go back"
+msgstr "Messaggio vocale: indietro"
+
+msgid "Voice message: go forward"
+msgstr "Messaggio vocale: avanti"
+
+msgid "Window title template"
+msgstr "Modello del titolo della finestra"
+
