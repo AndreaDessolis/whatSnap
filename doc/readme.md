@@ -382,6 +382,7 @@ In the Calls section, select a call under Recent calls and press `Delete`, or op
 ### Call Links
 - `Call -> Create Call Link...` makes a link that anyone can use to join a call.
 - `Call -> Join Call Link...` joins a call from a link.
+- Like WhatsApp Web, you get a notification when someone joins a call from your link, or is waiting for you to let them in.
 
 ## Status
 The Status section shows the status updates of your contacts, one row for each person, the same as WhatsApp Web. Your own updates are first, as `My status`. Then come the headings `Recent` (people with updates that you did not see yet), `Viewed`, and `Muted`. A row says how many updates the person posted, how many are new, and the time of the newest one. A person with one update shows that update, as before.

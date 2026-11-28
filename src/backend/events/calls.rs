@@ -718,6 +718,33 @@ pub(super) fn handle(t: &str, val: &serde_json::Value, state: &Rc<RefCell<AppSta
 				}
 			}
 		}
+		"call_reminder" => {
+			// WA Web's WACallLinkJoinedNotification / WAWaitingRoomNotification.
+			if let Some(data) = val.get("data") {
+				let s = state.borrow();
+				if s.settings.notifications_enabled && s.settings.call_notifications {
+					let names = data.get("names").and_then(|n| n.as_str()).unwrap_or("");
+					let count = data.get("count").and_then(|c| c.as_u64()).unwrap_or(0);
+					let (title, body) = match data.get("kind").and_then(|k| k.as_str()) {
+						Some("joined") => (
+							if names.is_empty() { crate::i18n::tr("Someone joined your call link").to_string() } else { names.to_string() },
+							crate::i18n::tr("Joined your call link").to_string(),
+						),
+						Some("waiting") => (
+							if names.is_empty() { crate::i18n::tr("Someone").to_string() } else { names.to_string() },
+							if count > 1 {
+								crate::i18n::tr("Want to join your call link").to_string()
+							} else {
+								crate::i18n::tr("Wants to join your call link").to_string()
+							},
+						),
+						_ => return true,
+					};
+					drop(s);
+					show_toast_notification(&title, &body);
+				}
+			}
+		}
 		"call_waiting" => {
 			if let Some(data) = val.get("data")
 				&& let Some(call_id) = data.get("call_id").and_then(|c| c.as_str())

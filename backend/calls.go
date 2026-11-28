@@ -447,6 +447,7 @@ func (acc *Account) initCallClient() {
 	acc.callClient.SetProtectIP(acc.protectIPInCalls())
 	acc.callClient.SetCallerIsContact(acc.isSavedContact)
 	acc.watchJoinableCalls(acc.callClient)
+	acc.watchCallReminders(acc.callClient)
 
 	acc.callClient.OnIncomingCall(func(call *meowcaller.Call) {
 		log.Printf("Incoming call from %v\n", call.Peer())
